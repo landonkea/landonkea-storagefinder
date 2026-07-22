@@ -1,0 +1,46 @@
+gilbert_public_storage:
+  company: Public Storage
+  name: Public Storage - 670 S Gilbert Rd
+  address: 670 S Gilbert Rd
+  city: Gilbert
+  state: AZ
+  zip: "85296"
+  phone: "4805551234"
+  latitude: 33.3460809
+  longitude: -111.7895215
+  distance_miles: 0.5
+  facility_url: https://www.publicstorage.com/self-storage-az-gilbert/6079.html
+  external_id: "6079"
+  created_at: <%= 2.days.ago %>
+  updated_at: <%= 2.days.ago %>
+
+mesa_extra_space:
+  company: Extra Space Storage
+  name: Extra Space Storage - 100 E Main St
+  address: 100 E Main St
+  city: Mesa
+  state: AZ
+  zip: "85201"
+  phone: "4805555678"
+  latitude: 33.4147227
+  longitude: -111.7927245
+  distance_miles: 4.3
+  facility_url: https://www.extraspace.com/storage/facilities/us/arizona/mesa/100
+  external_id: "100"
+  created_at: <%= 2.days.ago %>
+  updated_at: <%= 2.days.ago %>
+
+no_external_id_facility:
+  company: StorAmerica
+  name: StorAmerica - 5 Elm St
+  address: 5 Elm St
+  city: Chandler
+  state: AZ
+  zip: "85286"
+  latitude: 33.2813308
+  longitude: -111.8411085
+  distance_miles: 5.8
+  facility_url: https://www.storamerica.com/locations/5
+  external_id:
+  created_at: <%= 2.days.ago %>
+  updated_at: <%= 2.days.ago %>

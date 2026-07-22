@@ -1,0 +1,128 @@
+<%# =============================================================================
+  SETTINGS PAGE
+  Tabbed interface: Crawl | Email | Discord | SMS | Schedule | Display
+============================================================================= %>
+
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-emerald-400">Settings</h1>
+  <p class="text-sm text-gray-400 mt-1">Configure alerts, crawl options, and data retention</p>
+</div>
+
+<%# Tab navigation %>
+<div class="flex gap-1 border-b border-gray-800 mb-6" id="settings-tabs">
+  <% [["crawl", "🔍 Crawl"], ["schedule", "⏱ Schedule"], ["email", "📧 Email"], ["discord", "💬 Discord"], ["sms", "📱 SMS"], ["display", "📊 Display"]].each_with_index do |(cat, label), i| %>
+    <button
+      onclick="showTab('<%= cat %>')"
+      id="tab-<%= cat %>"
+      class="px-4 py-2 text-sm border-b-2 transition-colors <%= i == 0 ? "border-emerald-500 text-emerald-400" : "border-transparent text-gray-400 hover:text-gray-200" %>">
+      <%= label %>
+    </button>
+  <% end %>
+</div>
+
+<%= form_with url: settings_path, method: :patch do |f| %>
+  <%= f.hidden_field :_method, value: "patch" %>
+
+  <% [["crawl", "Crawl Options"], ["schedule", "Scheduled Crawls"], ["email", "Email Alerts"], ["discord", "Discord Alerts"], ["sms", "SMS Alerts (Requires Twilio)"], ["display", "Display & History"]].each_with_index do |(cat, heading), i| %>
+    <div id="tab-panel-<%= cat %>" class="<%= i == 0 ? "" : "hidden" %>">
+      <div class="card">
+        <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-5"><%= heading %></h2>
+
+        <% (@settings_by_category[cat] || []).each do |setting| %>
+          <div class="mb-4">
+            <label class="form-label" for="settings_<%= setting.key %>">
+              <%= setting.label || setting.key %>
+            </label>
+
+<% case setting.input_type %>
+<% when "boolean" %>
+              <label class="flex items-center gap-2 mt-1 cursor-pointer">
+                <input type="checkbox"
+                       id="settings_<%= setting.key %>"
+                       name="settings[<%= setting.key %>]"
+                       value="true"
+                       <%= "checked" if setting.value == "true" %>
+                       class="accent-emerald-500 w-4 h-4">
+                <span class="text-sm text-gray-300">Enabled</span>
+              </label>
+              <%# Hidden field so unchecking still submits "false" %>
+              <input type="hidden" name="settings[<%= setting.key %>]_unchecked" value="false">
+
+<% when "password" %>
+              <input type="password"
+                     id="settings_<%= setting.key %>"
+                     name="settings[<%= setting.key %>]"
+                     placeholder="<%= setting.value.present? ? "(unchanged — leave blank to keep current value)" : "" %>"
+                     autocomplete="off"
+                     class="form-input">
+
+<% when "number" %>
+              <input type="number"
+                     id="settings_<%= setting.key %>"
+                     name="settings[<%= setting.key %>]"
+                     value="<%= setting.value %>"
+                     class="form-input w-32">
+
+<% else %>
+              <input type="text"
+                     id="settings_<%= setting.key %>"
+                     name="settings[<%= setting.key %>]"
+                     value="<%= setting.value %>"
+                     class="form-input">
+<% end %>
+          </div>
+        <% end %>
+
+        <%# Test buttons for email and discord %>
+        <% if cat == "email" %>
+          <div class="mt-4 pt-4 border-t border-gray-800">
+            <button type="button"
+                    class="btn-secondary"
+                    onclick="testSetting('<%= test_email_settings_path %>', this, 'Email sent!', 'Email test failed')">
+              Send Test Email
+            </button>
+          </div>
+        <% end %>
+
+        <% if cat == "discord" %>
+          <div class="mt-4 pt-4 border-t border-gray-800">
+            <button type="button"
+                    class="btn-secondary"
+                    onclick="testSetting('<%= test_discord_settings_path %>', this, 'Discord message sent!', 'Discord test failed')">
+              Send Test Message
+            </button>
+          </div>
+        <% end %>
+
+        <% if cat == "sms" %>
+          <div class="mt-4 p-3 bg-yellow-900/20 border border-yellow-800/40 rounded text-xs text-yellow-300">
+            ⚠ SMS requires a paid Twilio account. See the README for setup instructions.
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <div class="mt-4">
+    <button type="submit" class="btn-primary">Save Settings</button>
+    <span class="text-xs text-gray-500 ml-3">Changes take effect immediately</span>
+  </div>
+<% end %>
+
+<script>
+function showTab(name) {
+  // Hide all panels
+  document.querySelectorAll('[id^="tab-panel-"]').forEach(el => el.classList.add("hidden"));
+  // Deactivate all tabs
+  document.querySelectorAll('[id^="tab-"]').forEach(el => {
+    el.classList.remove("border-emerald-500", "text-emerald-400");
+    el.classList.add("border-transparent", "text-gray-400");
+  });
+  // Show selected panel
+  document.getElementById("tab-panel-" + name).classList.remove("hidden");
+  // Activate selected tab
+  const tab = document.getElementById("tab-" + name);
+  tab.classList.add("border-emerald-500", "text-emerald-400");
+  tab.classList.remove("border-transparent", "text-gray-400");
+}
+</script>

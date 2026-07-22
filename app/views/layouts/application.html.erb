@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <%# Page title — uses controller-set @page_title or falls back to "StorageFinder" %>
+  <title><%= current_page_title %></title>
+
+  <%# Tailwind CSS — utility classes for styling %>
+  <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+
+  <%# JavaScript — Stimulus + Turbo + our custom JS %>
+  <%= javascript_importmap_tags %>
+
+  <%# ActionCable — WebSocket connection for live crawl progress %>
+  <%= action_cable_meta_tag %>
+
+  <%# CSRF token — needed for all form submissions %>
+  <%= csrf_meta_tags %>
+</head>
+
+<body class="bg-gray-950 text-gray-100 min-h-screen font-mono">
+
+  <%# ======================================================================= %>
+  <%# NAVIGATION BAR %>
+  <%# ======================================================================= %>
+  <nav class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+    <div class="max-w-screen-xl mx-auto px-4 flex items-center justify-between h-14">
+
+      <%# Logo / App name — links back to the dashboard %>
+      <%= link_to root_path, class: "flex items-center gap-2 text-emerald-400 font-bold text-lg hover:text-emerald-300 transition-colors" do %>
+        <span class="text-2xl">🏪</span>
+        <span>StorageFinder</span>
+      <% end %>
+
+      <%# Navigation links %>
+      <div class="flex items-center gap-6">
+        <%= link_to "Dashboard", root_path,
+              class: "text-sm text-gray-300 hover:text-emerald-400 transition-colors" %>
+
+        <%= link_to "Alert Rules", alert_rules_path,
+              class: "text-sm text-gray-300 hover:text-emerald-400 transition-colors" %>
+
+        <%= link_to "Settings", settings_path,
+              class: "text-sm text-gray-300 hover:text-emerald-400 transition-colors" %>
+      </div>
+    </div>
+  </nav>
+
+  <%# ======================================================================= %>
+  <%# FLASH MESSAGES (success / error banners) %>
+  <%# ======================================================================= %>
+  <% if flash[:notice].present? %>
+    <div class="bg-emerald-900/50 border-b border-emerald-700 text-emerald-300 px-4 py-3 text-sm" role="alert">
+      ✓ <%= flash[:notice] %>
+    </div>
+  <% end %>
+
+  <% if flash[:alert].present? %>
+    <div class="bg-red-900/50 border-b border-red-700 text-red-300 px-4 py-3 text-sm" role="alert">
+      ✗ <%= flash[:alert] %>
+    </div>
+  <% end %>
+
+  <%# ======================================================================= %>
+  <%# MAIN CONTENT AREA %>
+  <%# yield renders whatever the current page's view outputs %>
+  <%# ======================================================================= %>
+  <main class="max-w-screen-xl mx-auto px-4 py-6">
+    <%= yield %>
+  </main>
+
+  <%# ======================================================================= %>
+  <%# FOOTER %>
+  <%# ======================================================================= %>
+  <footer class="border-t border-gray-800 mt-12 py-6 text-center text-xs text-gray-600">
+    StorageFinder — self-hosted, runs on your LAN &nbsp;|&nbsp;
+    <span>Last updated: <%= Time.current.strftime("%b %d, %Y") %></span>
+  </footer>
+
+</body>
+</html>

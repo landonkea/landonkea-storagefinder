@@ -1,0 +1,177 @@
+# Mirrors db/seeds.rb so app code that calls Setting.get(key) sees the same
+# keys/categories/input_types in tests as it would in a freshly seeded app.
+
+crawl_default_radius_miles:
+  key: crawl_default_radius_miles
+  value: "100"
+  category: crawl
+  label: Default search radius (miles)
+  input_type: number
+
+crawl_max_retries:
+  key: crawl_max_retries
+  value: "3"
+  category: crawl
+  label: Max retries per page
+  input_type: number
+
+crawl_delay_between_requests_ms:
+  key: crawl_delay_between_requests_ms
+  value: "2000"
+  category: crawl
+  label: Delay between requests (milliseconds)
+  input_type: number
+
+crawl_headless:
+  key: crawl_headless
+  value: "true"
+  category: crawl
+  label: Run browser in headless mode (invisible)
+  input_type: boolean
+
+crawl_parallel_companies:
+  key: crawl_parallel_companies
+  value: "2"
+  category: crawl
+  label: Max companies to crawl simultaneously
+  input_type: number
+
+schedule_enabled:
+  key: schedule_enabled
+  value: "false"
+  category: schedule
+  label: Enable scheduled automatic crawls
+  input_type: boolean
+
+schedule_cron:
+  key: schedule_cron
+  value: "0 6 * * *"
+  category: schedule
+  label: Schedule (cron format)
+  input_type: text
+
+schedule_city:
+  key: schedule_city
+  value: ""
+  category: schedule
+  label: City to search on schedule
+  input_type: text
+
+schedule_radius_miles:
+  key: schedule_radius_miles
+  value: "100"
+  category: schedule
+  label: Radius to use on scheduled crawl (miles)
+  input_type: number
+
+email_enabled:
+  key: email_enabled
+  value: "false"
+  category: email
+  label: Enable email alerts
+  input_type: boolean
+
+email_smtp_host:
+  key: email_smtp_host
+  value: smtp.gmail.com
+  category: email
+  label: SMTP server hostname
+  input_type: text
+
+email_smtp_port:
+  key: email_smtp_port
+  value: "587"
+  category: email
+  label: SMTP port
+  input_type: number
+
+email_smtp_username:
+  key: email_smtp_username
+  value: ""
+  category: email
+  label: SMTP username
+  input_type: text
+
+email_smtp_password:
+  key: email_smtp_password
+  value: ""
+  category: email
+  label: SMTP password or app password
+  input_type: password
+
+email_from_address:
+  key: email_from_address
+  value: ""
+  category: email
+  label: From address
+  input_type: text
+
+email_to_address:
+  key: email_to_address
+  value: ""
+  category: email
+  label: Send alerts to this address
+  input_type: text
+
+discord_enabled:
+  key: discord_enabled
+  value: "false"
+  category: discord
+  label: Enable Discord alerts
+  input_type: boolean
+
+discord_webhook_url:
+  key: discord_webhook_url
+  value: ""
+  category: discord
+  label: Discord webhook URL
+  input_type: text
+
+sms_enabled:
+  key: sms_enabled
+  value: "false"
+  category: sms
+  label: Enable SMS alerts
+  input_type: boolean
+
+sms_twilio_account_sid:
+  key: sms_twilio_account_sid
+  value: ""
+  category: sms
+  label: Twilio Account SID
+  input_type: text
+
+sms_twilio_auth_token:
+  key: sms_twilio_auth_token
+  value: ""
+  category: sms
+  label: Twilio Auth Token
+  input_type: password
+
+sms_from_number:
+  key: sms_from_number
+  value: ""
+  category: sms
+  label: Twilio phone number to send from
+  input_type: text
+
+sms_to_number:
+  key: sms_to_number
+  value: ""
+  category: sms
+  label: Your phone number to receive alerts
+  input_type: text
+
+history_keep_months:
+  key: history_keep_months
+  value: "6"
+  category: display
+  label: Months of price history to keep
+  input_type: number
+
+display_default_sort:
+  key: display_default_sort
+  value: monthly_price asc
+  category: display
+  label: Default sort order for results table
+  input_type: select

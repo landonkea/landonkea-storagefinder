@@ -1,0 +1,134 @@
+# =============================================================================
+# EXCEL EXPORT TEMPLATE
+# =============================================================================
+# This file is processed by caxlsx_rails to generate the .xlsx file. It is
+# PURE RUBY (the axlsx template handler runs the raw file content directly
+# as Ruby, unlike .erb) — no <% %> tags here.
+# `wb` is the Axlsx::Package workbook — available automatically via caxlsx_rails.
+# =============================================================================
+
+wb = xlsx_package.workbook
+
+  # ---------------------------------------------------------------------------
+  # STYLES
+  # ---------------------------------------------------------------------------
+  header_style = wb.styles.add_style(
+    bg_color:  "1F2937",     # Dark background
+    fg_color:  "D1FAE5",     # Emerald text
+    b:         true,         # Bold
+    sz:        11,
+    border:    { style: :thin, color: "374151" }
+  )
+
+  price_green_style = wb.styles.add_style(
+    fg_color: "10B981",   # Emerald-500
+    b:        true,
+    num_fmt:  7   # built-in Excel currency format ($#,##0.00)
+  )
+
+  price_yellow_style = wb.styles.add_style(
+    fg_color: "F59E0B",   # Amber-500
+    b:        true,
+    num_fmt:  7   # built-in Excel currency format ($#,##0.00)
+  )
+
+  price_red_style = wb.styles.add_style(
+    fg_color: "EF4444",   # Red-500
+    b:        true,
+    num_fmt:  7   # built-in Excel currency format ($#,##0.00)
+  )
+
+  default_style = wb.styles.add_style(
+    fg_color: "D1D5DB",
+    sz:       10
+  )
+
+  date_style = wb.styles.add_style(
+    fg_color: "9CA3AF",
+    sz:       9,
+    num_fmt:  14   # mm/dd/yy date format
+  )
+
+  # ---------------------------------------------------------------------------
+  # WORKSHEET: Results
+  # ---------------------------------------------------------------------------
+  wb.add_worksheet(name: "Storage Prices") do |ws|
+    # Header row
+    ws.add_row [
+      "Company", "Facility", "Address", "City", "State", "ZIP",
+      "Phone", "Distance (mi)", "Size", "Sq Ft",
+      "Monthly Price", "Web Special", "Web Special Note",
+      "Climate Controlled", "Available", "Booking URL", "Date Collected"
+    ], style: header_style
+
+    # Freeze the header row so it stays visible when scrolling
+    ws.sheet_view.pane do |p|
+      p.state        = :frozen
+      p.y_split      = 1
+      p.top_left_cell = "A2"
+    end
+
+    # Data rows
+    @units.each do |unit|
+      f = unit.facility
+
+      # Choose price style based on price color
+      price_style = case unit.price_color_class
+      when "price-green"  then price_green_style
+      when "price-yellow" then price_yellow_style
+      when "price-red"    then price_red_style
+      else                     default_style
+      end
+
+      ws.add_row [
+        f.company,
+        f.name,
+        f.address,
+        f.city,
+        f.state,
+        f.zip,
+        f.formatted_phone,
+        f.distance_miles,
+        unit.size,
+        unit.sqft,
+        unit.monthly_price,
+        unit.web_special_price,
+        unit.web_special_note,
+        unit.climate_controlled? ? "Yes" : "No",
+        unit.available? ? "Yes" : "No",
+        unit.booking_url,
+        unit.collected_at
+      ], style: [
+        default_style, default_style, default_style, default_style,
+        default_style, default_style, default_style, default_style,
+        default_style, default_style, price_style,   price_style,
+        default_style, default_style, default_style, default_style,
+        date_style
+      ], types: [
+        :string, :string, :string, :string,
+        :string, :string, :string, :float,
+        :string, :integer, :float, :float,
+        :string, :string, :string, :string,
+        :date
+      ]
+    end
+
+    # Auto-fit column widths (approximate)
+    ws.column_info[0].width  = 22   # Company
+    ws.column_info[1].width  = 28   # Facility
+    ws.column_info[2].width  = 24   # Address
+    ws.column_info[3].width  = 14   # City
+    ws.column_info[4].width  = 6    # State
+    ws.column_info[5].width  = 8    # ZIP
+    ws.column_info[6].width  = 14   # Phone
+    ws.column_info[7].width  = 10   # Distance
+    ws.column_info[8].width  = 8    # Size
+    ws.column_info[9].width  = 7    # Sq Ft
+    ws.column_info[10].width = 12   # Monthly Price
+    ws.column_info[11].width = 12   # Web Special
+    ws.column_info[12].width = 20   # Web Special Note
+    ws.column_info[13].width = 10   # Climate
+    ws.column_info[14].width = 10   # Available
+    ws.column_info[15].width = 35   # Booking URL
+    ws.column_info[16].width = 16   # Date
+  end

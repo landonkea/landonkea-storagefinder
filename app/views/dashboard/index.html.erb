@@ -1,0 +1,455 @@
+<%# =============================================================================
+  DASHBOARD — Main results page
+  This is the primary interface. It contains:
+    1. Search / Run Crawl panel
+    2. Live progress feed (shown during crawl)
+    3. Filter controls
+    4. Results table
+    5. Price trend chart
+    6. Crawl history
+============================================================================= %>
+
+<%# =========================================================================
+  1. PAGE HEADER + CRAWL CONTROLS
+========================================================================= %>
+<div class="flex items-start justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-emerald-400">Storage Price Dashboard</h1>
+    <p class="text-sm text-gray-400 mt-1">
+      <% if @latest_crawl %>
+        Last crawl: <%= @latest_crawl.search_city %> — <%= @latest_crawl.completed_at&.strftime("%b %d at %I:%M %p") %>
+        &nbsp;·&nbsp; <%= @latest_crawl.units_found %> units found
+      <% else %>
+        No crawl data yet — run a crawl below to get started
+      <% end %>
+    </p>
+  </div>
+
+  <%# Export buttons — only shown when there's data %>
+  <% if @latest_crawl %>
+    <div class="flex gap-2">
+      <%= link_to "↓ CSV", exports_csv_path, class: "btn-secondary text-sm" %>
+      <%= link_to "↓ Excel", exports_excel_path, class: "btn-secondary text-sm" %>
+    </div>
+  <% end %>
+</div>
+
+<%# =========================================================================
+  2. CRAWL CONTROL PANEL
+  Shows the search form if no crawl is running.
+  Shows a live progress feed if a crawl is running.
+========================================================================= %>
+<div class="card mb-6">
+
+  <%# --- CRAWL IS RUNNING — show progress feed --- %>
+  <% if @crawl_running && @running_crawl %>
+    <div id="crawl-running-panel">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <%# Spinning indicator so user knows something is happening %>
+          <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+          <span class="font-semibold text-emerald-400">Crawl in progress...</span>
+          <span class="text-sm text-gray-400">
+            <%= @running_crawl.search_city %> — <%= @running_crawl.search_radius_miles %> miles
+          </span>
+        </div>
+
+        <%# Cancel button %>
+        <%= button_to "Cancel Crawl",
+              crawl_path(@running_crawl),
+              method: :delete,
+              class:  "btn-danger text-xs",
+              data:   { confirm: "Cancel the running crawl?" } %>
+      </div>
+
+      <%# Live log feed — new messages appear here via ActionCable %>
+      <div id="crawl-log-feed"
+           class="bg-gray-950 rounded border border-gray-800 p-3 h-48 overflow-y-auto font-mono text-xs"
+           data-crawl-id="<%= @running_crawl.id %>">
+        <div class="text-gray-500">Connecting to live feed...</div>
+      </div>
+
+      <%# Running stats counters %>
+      <div class="flex gap-6 mt-3 text-sm">
+        <span class="text-gray-400">
+          Facilities found: <span id="live-facilities" class="text-white font-semibold">
+            <%= @running_crawl.facilities_found %>
+          </span>
+        </span>
+        <span class="text-gray-400">
+          Units found: <span id="live-units" class="text-white font-semibold">
+            <%= @running_crawl.units_found %>
+          </span>
+        </span>
+        <span class="text-gray-400">
+          Companies done: <span id="live-companies" class="text-white font-semibold">
+            <%= @running_crawl.companies_crawled %>/<%= @running_crawl.companies_included&.length || "?" %>
+          </span>
+        </span>
+      </div>
+    </div>
+
+  <%# --- NO CRAWL RUNNING — show the search form --- %>
+  <% else %>
+    <div id="crawl-form-panel">
+      <h2 class="text-sm font-semibold text-gray-300 mb-4 uppercase tracking-wider">Run a New Crawl</h2>
+
+      <%= form_with url: crawls_path, method: :post, data: { controller: "crawl-form" } do |f| %>
+
+        <%# Row 1: City + Radius %>
+        <div class="flex gap-3 mb-4">
+          <div class="flex-1">
+            <label class="form-label">Search City or ZIP Code</label>
+            <%= f.text_field :search_city,
+                  placeholder: "e.g. Gilbert, AZ  or  85296",
+                  class:       "form-input",
+                  required:    true,
+                  value:       @latest_crawl&.search_city %>
+          </div>
+
+          <div class="w-36">
+            <label class="form-label">Radius (miles)</label>
+            <%= f.number_field :radius_miles,
+                  value: (@latest_crawl&.search_radius_miles || 100),
+                  min:   1,
+                  max:   500,
+                  class: "form-input" %>
+          </div>
+        </div>
+
+        <%# Row 2: Company checkboxes %>
+        <div class="mb-4">
+          <label class="form-label">Companies to crawl</label>
+          <div class="flex flex-wrap gap-2 mt-1">
+            <%# "Select all" / "Deselect all" toggle %>
+            <button type="button"
+                    class="text-xs text-emerald-400 hover:text-emerald-300 underline mr-2"
+                    data-action="click->crawl-form#toggleAllCompanies">
+              Toggle all
+            </button>
+
+            <% @available_companies.each do |company| %>
+              <label class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-xs cursor-pointer transition-colors">
+                <input type="checkbox"
+                       name="companies[]"
+                       value="<%= company %>"
+                       checked
+                       class="accent-emerald-500">
+                <%= company %>
+              </label>
+            <% end %>
+          </div>
+        </div>
+
+        <%# Row 3: Size + filter options %>
+        <div class="flex flex-wrap gap-6 mb-4">
+
+          <%# Unit size checkboxes %>
+          <div>
+            <label class="form-label">Unit Sizes</label>
+            <div class="flex flex-wrap gap-2 mt-1">
+              <% Unit::DEFAULT_SIZES.each do |size| %>
+                <label class="flex items-center gap-1.5 bg-gray-800 px-2 py-1 rounded text-xs cursor-pointer">
+                  <input type="checkbox"
+                         name="sizes[]"
+                         value="<%= size %>"
+                         checked
+                         class="accent-emerald-500">
+                  <%= size %>
+                </label>
+              <% end %>
+            </div>
+          </div>
+
+          <%# Climate control toggle %>
+          <div>
+            <label class="form-label">Filters</label>
+            <div class="mt-1">
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox"
+                       name="climate_only"
+                       value="true"
+                       checked
+                       class="accent-emerald-500">
+                Climate controlled only
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <%# Submit button %>
+        <button type="submit" class="btn-primary">
+          🔍 Run Crawl
+        </button>
+
+        <span class="text-xs text-gray-500 ml-3">
+          Results appear live below as each company is crawled
+        </span>
+
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<%# =========================================================================
+  3. FILTER BAR (for the results table — separate from crawl options)
+========================================================================= %>
+<% if @latest_crawl && @units.any? %>
+  <div class="card mb-4">
+    <div class="flex flex-wrap items-center gap-4 text-sm">
+      <span class="text-gray-400 font-semibold">Filter results:</span>
+
+      <%# Sort selector %>
+      <div class="flex items-center gap-2">
+        <label class="text-gray-400">Sort by:</label>
+        <select id="sort-select" class="form-select-sm"
+                onchange="updateSort(this.value)">
+          <option value="monthly_price|asc"  <%= "selected" if @sort_by == "monthly_price" && @sort_dir == "asc" %>>Price ↑</option>
+          <option value="monthly_price|desc" <%= "selected" if @sort_by == "monthly_price" && @sort_dir == "desc" %>>Price ↓</option>
+          <option value="sqft|desc"          <%= "selected" if @sort_by == "sqft" %>>Largest first</option>
+          <option value="facilities.distance_miles|asc" <%= "selected" if @sort_by == "facilities.distance_miles" %>>Nearest first</option>
+        </select>
+      </div>
+
+      <%# Result count %>
+      <span class="text-gray-500 ml-auto">
+        <span id="result-count"><%= @units.count %></span> units shown
+      </span>
+    </div>
+  </div>
+<% end %>
+
+<%# =========================================================================
+  4. RESULTS TABLE
+========================================================================= %>
+<div class="card mb-6" id="results-container">
+  <% if @latest_crawl.nil? %>
+    <%# No data yet %>
+    <div class="text-center py-16 text-gray-500">
+      <div class="text-5xl mb-4">🏪</div>
+      <p class="text-lg font-semibold text-gray-400">No data yet</p>
+      <p class="text-sm mt-2">Enter a city above and click "Run Crawl" to get started</p>
+    </div>
+
+  <% elsif @units.empty? %>
+    <%# Data exists but no matches with current filters %>
+    <div class="text-center py-12 text-gray-500">
+      <p class="text-lg font-semibold text-gray-400">No units match your current filters</p>
+      <p class="text-sm mt-2">Try adjusting the size or company filters</p>
+    </div>
+
+  <% else %>
+    <%# THE RESULTS TABLE %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm" id="results-table">
+        <thead>
+          <tr class="border-b border-gray-800 text-gray-400 text-xs uppercase tracking-wider">
+            <th class="text-left pb-3 pr-4">Company</th>
+            <th class="text-left pb-3 pr-4">Location</th>
+            <th class="text-left pb-3 pr-4">Distance</th>
+            <th class="text-left pb-3 pr-4">Size</th>
+            <th class="text-right pb-3 pr-4">Monthly</th>
+            <th class="text-right pb-3 pr-4">Web Special</th>
+            <th class="text-left pb-3 pr-4">Features</th>
+            <th class="text-left pb-3">Links</th>
+          </tr>
+        </thead>
+        <tbody id="results-tbody">
+          <% @units.includes(:facility).each do |unit| %>
+            <% f = unit.facility %>
+            <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+
+              <%# Company %>
+              <td class="py-3 pr-4">
+                <div class="font-semibold text-white text-xs"><%= f.company %></div>
+                <div class="text-gray-500 text-xs mt-0.5 truncate max-w-[140px]"><%= f.name %></div>
+              </td>
+
+              <%# Location / Address %>
+              <td class="py-3 pr-4">
+                <div class="text-gray-200 text-xs"><%= f.address %></div>
+                <div class="text-gray-500 text-xs"><%= f.city %>, <%= f.state %> <%= f.zip %></div>
+                <% if f.phone.present? %>
+                  <div class="text-gray-600 text-xs"><%= f.formatted_phone %></div>
+                <% end %>
+              </td>
+
+              <%# Distance %>
+              <td class="py-3 pr-4 text-gray-300 text-xs whitespace-nowrap">
+                <%= f.distance_label %>
+              </td>
+
+              <%# Unit Size %>
+              <td class="py-3 pr-4">
+                <div class="font-semibold text-white"><%= unit.size %></div>
+                <div class="text-gray-500 text-xs"><%= unit.sqft_label %></div>
+              </td>
+
+              <%# Monthly Price — color coded %>
+              <td class="py-3 pr-4 text-right">
+                <% if unit.monthly_price %>
+                  <span class="font-bold text-base <%= unit.price_color_class %>">
+                    <%= unit.formatted_price %>
+                  </span>
+                  <div class="text-gray-600 text-xs">/ mo</div>
+                <% else %>
+                  <span class="text-gray-600 text-xs">Not listed</span>
+                <% end %>
+              </td>
+
+              <%# Web Special %>
+              <td class="py-3 pr-4 text-right">
+                <% if unit.has_web_special? %>
+                  <span class="font-semibold text-emerald-400"><%= unit.formatted_web_special %></span>
+                  <% if unit.web_special_note.present? %>
+                    <div class="text-emerald-600 text-xs truncate max-w-[100px]"><%= unit.web_special_note %></div>
+                  <% end %>
+                <% else %>
+                  <span class="text-gray-700 text-xs">—</span>
+                <% end %>
+              </td>
+
+              <%# Features badges %>
+              <td class="py-3 pr-4">
+                <div class="flex flex-wrap gap-1">
+                  <% if unit.climate_controlled? %>
+                    <span class="badge-blue">❄️ Climate</span>
+                  <% end %>
+                  <% if unit.available? %>
+                    <span class="badge-green">Available</span>
+                  <% else %>
+                    <span class="badge-red">Unavailable</span>
+                  <% end %>
+                </div>
+              </td>
+
+              <%# Links %>
+              <td class="py-3">
+                <div class="flex flex-col gap-1">
+                  <% if unit.booking_url.present? %>
+                    <%= link_to "Book →", unit.booking_url,
+                          target: "_blank",
+                          rel:    "noopener noreferrer",
+                          class:  "text-emerald-400 hover:text-emerald-300 text-xs" %>
+                  <% end %>
+                  <%= link_to "Map →", f.maps_url,
+                        target: "_blank",
+                        rel:    "noopener noreferrer",
+                        class:  "text-blue-400 hover:text-blue-300 text-xs" %>
+                </div>
+              </td>
+
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+
+    <%# Color key legend %>
+    <div class="flex gap-4 mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500">
+      <span>Price color key:</span>
+      <span class="price-green">● Under $100</span>
+      <span class="price-yellow">● $100–$149</span>
+      <span class="price-red">● $150+</span>
+    </div>
+  <% end %>
+</div>
+
+<%# =========================================================================
+  5. PRICE TREND CHART
+========================================================================= %>
+<% if @price_history.any? %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+      Average Price Trend (last <%= Setting.get("history_keep_months", default: 6) %> months)
+    </h2>
+    <%= line_chart @price_history,
+          prefix:     "$",
+          thousands:  ",",
+          colors:     ["#34d399"],
+          library:    {
+            backgroundColor: "transparent",
+            borderColor:     "#34d399",
+            pointRadius:     3
+          } %>
+  </div>
+<% end %>
+
+<%# =========================================================================
+  6. CRAWL HISTORY
+========================================================================= %>
+<%= render "crawl_history" %>
+
+<%# =========================================================================
+  JAVASCRIPT — ActionCable live progress feed
+========================================================================= %>
+<% if @crawl_running && @running_crawl %>
+<script>
+// Connect to the ActionCable channel for live crawl progress
+// This runs in the browser and receives messages pushed from the server
+
+document.addEventListener("DOMContentLoaded", function() {
+  var crawlRunId = <%= @running_crawl.id %>;
+  var logFeed    = document.getElementById("crawl-log-feed");
+
+  if (!logFeed) return;
+
+  // Clear the "Connecting..." placeholder
+  logFeed.innerHTML = "";
+
+  // Create an ActionCable subscription
+  // This opens a WebSocket connection that the server can push messages to
+  var subscription = App.cable.subscriptions.create(
+    { channel: "CrawlProgressChannel", crawl_run_id: crawlRunId },
+    {
+      received: function(data) {
+        // Called every time the server broadcasts a message to this channel
+
+        if (data.type === "log") {
+          // Add a new log line to the feed
+          var line      = document.createElement("div");
+          line.className = "py-0.5 " + (data.level === "error" ? "text-red-400" :
+                                         data.level === "warning" ? "text-yellow-400" :
+                                         "text-gray-300");
+          line.textContent = "[" + data.timestamp + "] [" + data.company + "] " + data.message;
+          logFeed.appendChild(line);
+
+          // Auto-scroll to the bottom so the latest message is always visible
+          logFeed.scrollTop = logFeed.scrollHeight;
+
+        } else if (data.type === "status") {
+          // Update the live counters
+          var el;
+          el = document.getElementById("live-facilities");
+          if (el && data.facilities !== undefined) el.textContent = data.facilities;
+
+          el = document.getElementById("live-units");
+          if (el && data.units !== undefined) el.textContent = data.units;
+
+        } else if (data.type === "finished") {
+          // Crawl is done — reload the page to show results
+          // Small delay so the user can see the "finished" log message
+          setTimeout(function() {
+            window.location.reload();
+          }, 2000);
+        }
+      },
+
+      connected: function() {
+        var line = document.createElement("div");
+        line.className = "text-emerald-600";
+        line.textContent = "Connected to live feed — watching for updates...";
+        logFeed.appendChild(line);
+      },
+
+      disconnected: function() {
+        var line = document.createElement("div");
+        line.className = "text-yellow-600";
+        line.textContent = "Disconnected from live feed — reload page if crawl seems stuck";
+        logFeed.appendChild(line);
+      }
+    }
+  );
+});
+</script>
+<% end %>

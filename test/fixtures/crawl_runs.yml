@@ -1,0 +1,54 @@
+previous_completed:
+  # Explicit id (Rails fixtures otherwise hash the label into a pseudo-random
+  # id) — AlertCheckerJob finds the "previous" run via `where("id < ?", ...)`,
+  # so previous_completed must sort before current_completed numerically.
+  id: 1
+  search_city: Gilbert, Arizona
+  search_lat: 33.3528
+  search_lng: -111.7890
+  search_radius_miles: 50
+  status: completed
+  facilities_found: 2
+  units_found: 2
+  companies_crawled: 2
+  companies_failed: 0
+  started_at: <%= 3.days.ago %>
+  completed_at: <%= 3.days.ago + 10.minutes %>
+  duration_seconds: 600
+  created_at: <%= 3.days.ago %>
+  updated_at: <%= 3.days.ago %>
+
+current_completed:
+  id: 2
+  search_city: Gilbert, Arizona
+  search_lat: 33.3528
+  search_lng: -111.7890
+  search_radius_miles: 50
+  status: completed
+  facilities_found: 2
+  units_found: 2
+  companies_crawled: 2
+  companies_failed: 0
+  started_at: <%= 1.day.ago %>
+  completed_at: <%= 1.day.ago + 10.minutes %>
+  duration_seconds: 600
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>
+
+running_crawl:
+  search_city: Mesa, Arizona
+  search_radius_miles: 25
+  status: running
+  started_at: <%= 2.minutes.ago %>
+  created_at: <%= 2.minutes.ago %>
+  updated_at: <%= 2.minutes.ago %>
+
+failed_crawl:
+  search_city: Nowhere, Arizona
+  search_radius_miles: 10
+  status: failed
+  error_message: Could not find coordinates for 'Nowhere, Arizona'.
+  started_at: <%= 5.days.ago %>
+  completed_at: <%= 5.days.ago %>
+  created_at: <%= 5.days.ago %>
+  updated_at: <%= 5.days.ago %>

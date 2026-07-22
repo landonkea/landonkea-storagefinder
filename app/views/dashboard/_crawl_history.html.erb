@@ -1,0 +1,66 @@
+<% if @crawl_history.any? %>
+  <div class="card" data-controller="crawl-history">
+    <%# Standalone form for bulk delete — its inputs live in the table below and
+        in the header button, wired up by the "form" attribute rather than by
+        nesting, since the per-row delete buttons below are forms of their own. %>
+    <%= form_with url: destroy_selected_crawls_path, method: :delete, id: "bulk-delete-crawls-form",
+          data: { turbo_confirm: "Delete all selected crawl records? This cannot be undone." } do %>
+    <% end %>
+
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Crawl History</h2>
+      <button type="submit" form="bulk-delete-crawls-form" disabled
+              data-crawl-history-target="bulkDeleteButton"
+              class="text-xs text-red-500 hover:text-red-300 bg-transparent border border-red-900/50 rounded px-2 py-1 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-red-500">
+        Delete Selected
+      </button>
+    </div>
+
+    <table class="w-full text-xs">
+      <thead>
+        <tr class="text-gray-500 border-b border-gray-800">
+          <th class="text-left pb-2 w-6">
+            <input type="checkbox" data-crawl-history-target="selectAll" data-action="change->crawl-history#toggleAll">
+          </th>
+          <th class="text-left pb-2">Date</th>
+          <th class="text-left pb-2">City</th>
+          <th class="text-left pb-2">Status</th>
+          <th class="text-left pb-2">Results</th>
+          <th class="text-left pb-2">Duration</th>
+          <th class="text-left pb-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @crawl_history.each do |crawl| %>
+          <tr class="border-b border-gray-800/40 hover:bg-gray-800/20">
+            <td class="py-2">
+              <% if crawl.finished? %>
+                <input type="checkbox" name="ids[]" value="<%= crawl.id %>" form="bulk-delete-crawls-form"
+                       data-crawl-history-target="rowCheckbox" data-action="change->crawl-history#toggleRow">
+              <% end %>
+            </td>
+            <td class="py-2 text-gray-400"><%= crawl.created_at.strftime("%b %d, %Y %I:%M %p") %></td>
+            <td class="py-2 text-gray-300"><%= crawl.search_city %> (<%= crawl.search_radius_miles %> mi)</td>
+            <td class="py-2">
+<% case crawl.status %>
+<% when "completed" %><span class="text-emerald-400">✓ Completed</span>
+<% when "failed" %><span class="text-red-400">✗ Failed</span>
+<% when "running" %><span class="text-yellow-400">⟳ Running</span>
+<% else %><span class="text-gray-500"><%= crawl.status %></span>
+<% end %>
+            </td>
+            <td class="py-2 text-gray-400"><%= crawl.facilities_found %> facilities, <%= crawl.units_found %> units</td>
+            <td class="py-2 text-gray-500"><%= crawl.duration_label %></td>
+            <td class="py-2 flex gap-3 items-center">
+              <%= link_to "Log →", crawl_path(crawl), class: "text-blue-400 hover:text-blue-300" %>
+              <%= button_to (crawl.finished? ? "✕" : "Cancel"), crawl_path(crawl),
+                    method: :delete,
+                    class: "text-red-500 hover:text-red-300 bg-transparent border-0 cursor-pointer p-0 ml-2",
+                    form: { data: { turbo_confirm: crawl.finished? ? "Delete this crawl record?" : "Cancel this running crawl?" } } %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

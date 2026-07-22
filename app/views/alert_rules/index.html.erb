@@ -1,0 +1,76 @@
+<%# Alert Rules Index %>
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-emerald-400">Alert Rules</h1>
+    <p class="text-sm text-gray-400 mt-1">Get notified when prices drop or hit a target</p>
+  </div>
+  <%= link_to "＋ New Alert Rule", new_alert_rule_path, class: "btn-primary" %>
+</div>
+
+<% if @alert_rules.empty? %>
+  <div class="card text-center py-12">
+    <p class="text-gray-400 text-lg">No alert rules yet</p>
+    <p class="text-gray-600 text-sm mt-2">Create one to get notified when prices change</p>
+    <%= link_to "Create your first alert rule →", new_alert_rule_path, class: "text-emerald-400 hover:text-emerald-300 text-sm mt-4 inline-block" %>
+  </div>
+<% else %>
+  <div class="card">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-gray-500 text-xs uppercase border-b border-gray-800">
+          <th class="text-left pb-3">Name</th>
+          <th class="text-left pb-3">Trigger</th>
+          <th class="text-left pb-3">Filters</th>
+          <th class="text-left pb-3">Delivery</th>
+          <th class="text-left pb-3">Last Triggered</th>
+          <th class="text-left pb-3">Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @alert_rules.each do |rule| %>
+          <tr class="border-b border-gray-800/40 hover:bg-gray-800/20">
+            <td class="py-3 font-medium text-white"><%= rule.name %></td>
+            <td class="py-3 text-gray-300">
+              <% if rule.trigger_type == "price_threshold" %>
+                Below $<%= rule.threshold_price %>
+              <% else %>
+                Any price drop
+              <% end %>
+            </td>
+            <td class="py-3 text-gray-400 text-xs">
+              <% if rule.unit_size_filter.present? %><div>Size: <%= rule.unit_size_filter %></div><% end %>
+              <% if rule.company_filter.present? %><div><%= rule.company_filter %></div><% end %>
+              <% if rule.unit_size_filter.blank? && rule.company_filter.blank? %><span class="text-gray-600">All</span><% end %>
+            </td>
+            <td class="py-3 text-xs">
+              <div class="flex flex-wrap gap-1">
+                <% if rule.email_enabled? %><span class="badge-blue">Email</span><% end %>
+                <% if rule.discord_enabled? %><span class="badge-blue">Discord</span><% end %>
+                <% if rule.sms_enabled? %><span class="badge-blue">SMS</span><% end %>
+              </div>
+            </td>
+            <td class="py-3 text-gray-500 text-xs">
+              <%= rule.last_triggered_at ? rule.last_triggered_at.strftime("%b %d at %I:%M %p") : "Never" %>
+            </td>
+            <td class="py-3">
+              <% if rule.active? %>
+                <span class="badge-green">Active</span>
+              <% else %>
+                <span class="badge-gray">Paused</span>
+              <% end %>
+            </td>
+            <td class="py-3">
+              <div class="flex gap-3">
+                <%= link_to "Edit", edit_alert_rule_path(rule), class: "text-blue-400 hover:text-blue-300 text-xs" %>
+                <%= button_to "Delete", alert_rule_path(rule), method: :delete,
+                      class: "text-red-400 hover:text-red-300 text-xs bg-transparent border-0 cursor-pointer p-0",
+                      data: { confirm: "Delete '#{rule.name}'?" } %>
+              </div>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

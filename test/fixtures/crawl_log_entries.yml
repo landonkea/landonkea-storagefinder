@@ -1,0 +1,18 @@
+info_entry:
+  crawl_run_id: 1
+  company: system
+  level: info
+  message: Crawl started
+  retry_count: 0
+  created_at: <%= 3.days.ago %>
+  updated_at: <%= 3.days.ago %>
+
+error_entry:
+  crawl_run_id: 1
+  company: Public Storage
+  level: error
+  message: "Timeout loading page: Timeout 30000ms exceeded."
+  url: https://www.publicstorage.com/self-storage-az-gilbert/6079.html
+  retry_count: 3
+  created_at: <%= 3.days.ago %>
+  updated_at: <%= 3.days.ago %>

@@ -1,0 +1,69 @@
+<%# Alert Rule Show %>
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-emerald-400"><%= @alert_rule.name %></h1>
+    <p class="text-sm text-gray-400 mt-1"><%= @alert_rule.description %></p>
+  </div>
+  <div class="flex gap-3">
+    <%= link_to "Edit", edit_alert_rule_path(@alert_rule), class: "btn-secondary" %>
+    <%= button_to "Delete", alert_rule_path(@alert_rule), method: :delete,
+          class: "btn-danger",
+          data: { confirm: "Delete '#{@alert_rule.name}'?" } %>
+  </div>
+</div>
+
+<div class="card">
+  <dl class="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
+    <div>
+      <dt class="text-gray-500 text-xs uppercase">Status</dt>
+      <dd class="mt-1">
+        <% if @alert_rule.active? %>
+          <span class="badge-green">Active</span>
+        <% else %>
+          <span class="badge-gray">Paused</span>
+        <% end %>
+      </dd>
+    </div>
+
+    <div>
+      <dt class="text-gray-500 text-xs uppercase">Trigger</dt>
+      <dd class="mt-1 text-gray-300">
+        <% if @alert_rule.trigger_type == "price_threshold" %>
+          Price drops below $<%= @alert_rule.threshold_price %>
+        <% else %>
+          Any price drop
+        <% end %>
+      </dd>
+    </div>
+
+    <div>
+      <dt class="text-gray-500 text-xs uppercase">Size filter</dt>
+      <dd class="mt-1 text-gray-300"><%= @alert_rule.unit_size_filter.presence || "All sizes" %></dd>
+    </div>
+
+    <div>
+      <dt class="text-gray-500 text-xs uppercase">Company filter</dt>
+      <dd class="mt-1 text-gray-300"><%= @alert_rule.company_filter.presence || "All companies" %></dd>
+    </div>
+
+    <div>
+      <dt class="text-gray-500 text-xs uppercase">Delivery</dt>
+      <dd class="mt-1 flex flex-wrap gap-1">
+        <% if @alert_rule.email_enabled? %><span class="badge-blue">Email — <%= @alert_rule.email_address.presence || "default address" %></span><% end %>
+        <% if @alert_rule.discord_enabled? %><span class="badge-blue">Discord</span><% end %>
+        <% if @alert_rule.sms_enabled? %><span class="badge-blue">SMS</span><% end %>
+      </dd>
+    </div>
+
+    <div>
+      <dt class="text-gray-500 text-xs uppercase">Last triggered</dt>
+      <dd class="mt-1 text-gray-300">
+        <%= @alert_rule.last_triggered_at ? @alert_rule.last_triggered_at.strftime("%b %d, %Y at %I:%M %p") : "Never" %>
+      </dd>
+    </div>
+  </dl>
+</div>
+
+<div class="mt-6">
+  <%= link_to "← Back to Alert Rules", alert_rules_path, class: "text-blue-400 hover:text-blue-300 text-sm" %>
+</div>
