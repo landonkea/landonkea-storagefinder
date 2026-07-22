@@ -1,0 +1,34 @@
+price_drop_rule:
+  name: Any price drop
+  trigger_type: price_drop
+  active: true
+  email_enabled: true
+  email_address: alerts@example.com
+  discord_enabled: false
+  sms_enabled: false
+  created_at: <%= 1.week.ago %>
+  updated_at: <%= 1.week.ago %>
+
+price_threshold_rule:
+  name: Under $100
+  trigger_type: price_threshold
+  threshold_price: 100.00
+  active: true
+  email_enabled: false
+  discord_enabled: true
+  discord_webhook_url: https://discord.com/api/webhooks/123/abc
+  sms_enabled: false
+  created_at: <%= 1.week.ago %>
+  updated_at: <%= 1.week.ago %>
+
+inactive_rule:
+  name: Disabled rule
+  trigger_type: price_threshold
+  threshold_price: 50.00
+  active: false
+  email_enabled: true
+  email_address: alerts@example.com
+  discord_enabled: false
+  sms_enabled: false
+  created_at: <%= 1.week.ago %>
+  updated_at: <%= 1.week.ago %>

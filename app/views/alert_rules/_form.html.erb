@@ -1,0 +1,85 @@
+<%# Shared form for new and edit alert rule %>
+<%= form_with model: alert_rule, class: "space-y-5" do |f| %>
+
+  <% if alert_rule.errors.any? %>
+    <div class="bg-red-900/30 border border-red-800 rounded p-3 text-sm text-red-300">
+      <strong>Could not save:</strong>
+      <ul class="mt-1 list-disc list-inside">
+        <% alert_rule.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <label class="form-label">Rule name</label>
+    <%= f.text_field :name, class: "form-input", placeholder: "e.g. 10x20 under $100" %>
+  </div>
+
+  <div>
+    <label class="form-label">Trigger type</label>
+    <%= f.select :trigger_type,
+          [["Price drops compared to previous crawl", "price_drop"],
+           ["Price falls below a specific amount", "price_threshold"]],
+          {},
+          class: "form-input" %>
+  </div>
+
+  <div id="threshold-price-field">
+    <label class="form-label">Threshold price (only for "price below" trigger)</label>
+    <%= f.number_field :threshold_price, step: 0.01, class: "form-input w-40", placeholder: "e.g. 99.99" %>
+  </div>
+
+  <div class="flex gap-4">
+    <div class="flex-1">
+      <label class="form-label">Unit size filter (optional)</label>
+      <%= f.text_field :unit_size_filter, class: "form-input", placeholder: "e.g. 10x20 (blank = all sizes)" %>
+    </div>
+    <div class="flex-1">
+      <label class="form-label">Company filter (optional)</label>
+      <%= f.text_field :company_filter, class: "form-input", placeholder: "e.g. Extra Space Storage (blank = all)" %>
+    </div>
+  </div>
+
+  <div class="border-t border-gray-800 pt-5">
+    <div class="text-xs text-gray-400 uppercase tracking-wider mb-3">Delivery Methods</div>
+
+    <div class="space-y-4">
+      <label class="flex items-start gap-3">
+        <%= f.check_box :email_enabled, class: "accent-emerald-500 mt-0.5" %>
+        <div>
+          <span class="text-sm text-gray-200">Email</span>
+          <div class="mt-1">
+            <%= f.email_field :email_address, class: "form-input text-sm", placeholder: "Send to this address (or use default in Settings)" %>
+          </div>
+        </div>
+      </label>
+
+      <label class="flex items-start gap-3">
+        <%= f.check_box :discord_enabled, class: "accent-emerald-500 mt-0.5" %>
+        <div>
+          <span class="text-sm text-gray-200">Discord</span>
+          <div class="mt-1">
+            <%= f.url_field :discord_webhook_url, class: "form-input text-sm", placeholder: "Webhook URL (or use default in Settings)" %>
+          </div>
+        </div>
+      </label>
+
+      <label class="flex items-center gap-3">
+        <%= f.check_box :sms_enabled, class: "accent-emerald-500" %>
+        <span class="text-sm text-gray-400">SMS (requires paid Twilio — see Settings)</span>
+      </label>
+    </div>
+  </div>
+
+  <label class="flex items-center gap-2">
+    <%= f.check_box :active, class: "accent-emerald-500" %>
+    <span class="text-sm text-gray-200">Rule is active</span>
+  </label>
+
+  <div class="flex gap-3">
+    <%= f.submit alert_rule.new_record? ? "Create Alert Rule" : "Save Changes", class: "btn-primary" %>
+    <%= link_to "Cancel", alert_rules_path, class: "btn-secondary" %>
+  </div>
+<% end %>

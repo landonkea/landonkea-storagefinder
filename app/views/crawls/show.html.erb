@@ -1,0 +1,67 @@
+<%# Crawl Run Detail — shows full log for one crawl %>
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-emerald-400">Crawl #<%= @crawl_run.id %></h1>
+    <p class="text-sm text-gray-400 mt-1">
+      <%= @crawl_run.search_city %> — <%= @crawl_run.search_radius_miles %> mile radius
+      · <%= @crawl_run.created_at.strftime("%B %d, %Y at %I:%M %p") %>
+    </p>
+  </div>
+  <%= link_to "← Back to Dashboard", root_path, class: "btn-secondary" %>
+</div>
+
+<%# Summary card %>
+<div class="card mb-6">
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+    <div>
+      <div class="text-xs text-gray-500 uppercase">Status</div>
+      <div class="mt-1 font-semibold
+        <%= @crawl_run.status == "completed" ? "text-emerald-400" : @crawl_run.status == "failed" ? "text-red-400" : "text-yellow-400" %>">
+        <%= @crawl_run.status.capitalize %>
+      </div>
+    </div>
+    <div>
+      <div class="text-xs text-gray-500 uppercase">Duration</div>
+      <div class="mt-1 text-white"><%= @crawl_run.duration_label %></div>
+    </div>
+    <div>
+      <div class="text-xs text-gray-500 uppercase">Facilities Found</div>
+      <div class="mt-1 text-white"><%= @crawl_run.facilities_found %></div>
+    </div>
+    <div>
+      <div class="text-xs text-gray-500 uppercase">Units Found</div>
+      <div class="mt-1 text-white"><%= @crawl_run.units_found %></div>
+    </div>
+  </div>
+
+  <% if @crawl_run.error_message.present? %>
+    <div class="mt-4 p-3 bg-red-900/20 border border-red-800/40 rounded text-sm text-red-300">
+      <strong>Error:</strong> <%= @crawl_run.error_message %>
+    </div>
+  <% end %>
+</div>
+
+<%# Log entries %>
+<div class="card">
+  <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+    Full Log (<%= @log_entries.count %> entries)
+  </h2>
+
+  <div class="bg-gray-950 rounded border border-gray-800 p-4 font-mono text-xs overflow-x-auto max-h-screen overflow-y-auto">
+    <% @log_entries.each do |entry| %>
+      <div class="py-0.5 <%= entry.css_class %>">
+        [<%= entry.created_at.strftime("%H:%M:%S") %>]
+        [<%= entry.level.upcase %>]
+        [<%= entry.company %>]
+        <%= entry.message %>
+        <% if entry.url.present? %>
+          <span class="text-gray-600"> → <%= entry.url.truncate(80) %></span>
+        <% end %>
+      </div>
+    <% end %>
+    <% if @log_entries.empty? %>
+      <div class="text-gray-600">No log entries found for this crawl run.</div>
+    <% end %>
+  </div>
+</div>

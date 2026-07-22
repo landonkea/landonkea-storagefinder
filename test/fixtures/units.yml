@@ -1,0 +1,71 @@
+previous_gilbert_10x10:
+  facility: gilbert_public_storage
+  crawl_run_id: 1
+  size: 10x10
+  width_ft: 10
+  depth_ft: 10
+  sqft: 100
+  monthly_price: 150.00
+  climate_controlled: true
+  available: true
+  drive_up: false
+  indoor: true
+  unit_type: standard
+  booking_url: https://www.publicstorage.com/book/6079
+  collected_at: <%= 3.days.ago %>
+  created_at: <%= 3.days.ago %>
+  updated_at: <%= 3.days.ago %>
+
+current_gilbert_10x10:
+  facility: gilbert_public_storage
+  crawl_run_id: 2
+  size: 10x10
+  width_ft: 10
+  depth_ft: 10
+  sqft: 100
+  monthly_price: 120.00
+  climate_controlled: true
+  available: true
+  drive_up: false
+  indoor: true
+  unit_type: standard
+  booking_url: https://www.publicstorage.com/book/6079
+  collected_at: <%= 1.day.ago %>
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>
+
+previous_mesa_10x15:
+  facility: mesa_extra_space
+  crawl_run_id: 1
+  size: 10x15
+  width_ft: 10
+  depth_ft: 15
+  sqft: 150
+  monthly_price: 200.00
+  climate_controlled: true
+  available: true
+  drive_up: false
+  indoor: true
+  unit_type: standard
+  booking_url: https://www.extraspace.com/book/100
+  collected_at: <%= 3.days.ago %>
+  created_at: <%= 3.days.ago %>
+  updated_at: <%= 3.days.ago %>
+
+current_mesa_10x15:
+  facility: mesa_extra_space
+  crawl_run_id: 2
+  size: 10x15
+  width_ft: 10
+  depth_ft: 15
+  sqft: 150
+  monthly_price: 90.00
+  climate_controlled: true
+  available: true
+  drive_up: false
+  indoor: true
+  unit_type: standard
+  booking_url: https://www.extraspace.com/book/100
+  collected_at: <%= 1.day.ago %>
+  created_at: <%= 1.day.ago %>
+  updated_at: <%= 1.day.ago %>
