@@ -1,3 +1,36 @@
+/*
+ * WHAT IS TAILWIND, AND WHY DOES THIS FILE LOOK SO SHORT?
+ * =============================================================================
+ * Tailwind CSS is a "utility-first" CSS framework. Instead of writing
+ * custom CSS classes like `.card { background: dark gray; padding: 20px; }`
+ * for every component, you style HTML elements directly in your markup
+ * using many small, single-purpose "utility" classes that each do ONE
+ * thing — e.g. `bg-gray-900` sets a dark gray background, `rounded-lg`
+ * rounds the corners, `p-5` adds padding on all sides. You compose these
+ * utility classes together on an element (e.g.
+ * class="bg-gray-900 rounded-lg p-5") to build up a component's look
+ * without writing traditional hand-written CSS rules for it.
+ *
+ * Because most of the actual visual styling in this app lives as utility
+ * classes directly in the ERB view files (e.g. app/views/dashboard/*.erb),
+ * this .css file itself stays fairly short — it doesn't need a rule for
+ * every visual detail. What IS in this file are:
+ *   1. The `@import` line below, which pulls in Tailwind's entire utility
+ *      class library so those classes exist to be used in the views.
+ *   2. A handful of custom, NAMED component classes (like `.card` and
+ *      `.btn-primary`) for pieces of UI that repeat often enough across
+ *      views that it's cleaner to give them one reusable class name built
+ *      FROM Tailwind utilities, rather than repeating the same long list
+ *      of utility classes on every matching HTML element.
+ */
+
+/* `@import` is a CSS at-rule (a special instruction starting with `@`)
+ * that pulls in the contents of another stylesheet as if it were pasted
+ * right here. `"tailwindcss"` isn't a literal file path — Tailwind's build
+ * tool (tailwindcss-rails, per the note in app/assets/stylesheets/
+ * application.css) recognizes this special import and expands it into
+ * Tailwind's full generated utility-class stylesheet when it compiles this
+ * file into app/assets/builds/tailwind.css. */
 @import "tailwindcss";
 
 /*
@@ -25,12 +58,31 @@
  * =============================================================================
  */
 
+/* `@layer components { ... }` tells Tailwind's build process to treat
+ * everything inside these curly braces as belonging to Tailwind's
+ * "components" layer — one of Tailwind's three ordering buckets (base,
+ * components, utilities). This matters for CSS specificity/ordering: it
+ * guarantees these custom classes are output BEFORE Tailwind's own utility
+ * classes in the final compiled stylesheet, so that if a view combines one
+ * of these custom classes with a Tailwind utility (e.g.
+ * class="btn-primary mt-4"), the utility class can still override a
+ * property set here, rather than losing to it unpredictably. */
 @layer components {
 
   /* -------------------------------------------------------------------------
    * CARD — container for dashboard panels
    * ------------------------------------------------------------------------- */
+  /* `.card { ... }` defines a new CSS class named "card" that can be added
+   * to any HTML element via class="card". */
   .card {
+    /* `@apply` is a Tailwind-specific at-rule (not standard CSS) that lets
+     * you write a custom class whose styling is built entirely FROM
+     * existing Tailwind utility classes, instead of writing raw CSS
+     * properties by hand. Here, `.card` is defined as: a dark gray
+     * background (`bg-gray-900`), large rounded corners (`rounded-lg`), a
+     * subtle border in a slightly lighter gray (`border border-gray-800`),
+     * and padding on all sides (`p-5`). Using `.card` in a view is
+     * shorthand for typing out all four of these utility classes every time. */
     @apply bg-gray-900 rounded-lg border border-gray-800 p-5;
   }
 
@@ -38,17 +90,32 @@
    * BUTTONS
    * ------------------------------------------------------------------------- */
   .btn-primary {
+    /* This one class name applies MANY utilities at once (split across two
+     * lines here purely for readability — CSS/Tailwind doesn't care about
+     * line breaks inside the @apply value): a green background that
+     * lightens on hover (`bg-emerald-600 hover:bg-emerald-500` — the
+     * `hover:` prefix means "only apply this when the mouse is over the
+     * element"), white bold text, padding, rounded corners, a smooth color
+     * transition on state changes, a pointer/hand cursor on hover, and
+     * special styling for when the button is disabled (`disabled:`
+     * prefix) — 50% opacity and a "not-allowed" cursor icon, both of which
+     * only take effect if the element has the HTML `disabled` attribute. */
     @apply bg-emerald-600 hover:bg-emerald-500 text-white font-semibold
            px-4 py-2 rounded transition-colors cursor-pointer
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-secondary {
+    /* A visually quieter button: dark gray background that lightens
+     * slightly on hover, medium-weight lighter-gray text, smaller padding
+     * and text size (`text-sm`) than .btn-primary, plus its own border. */
     @apply bg-gray-800 hover:bg-gray-700 text-gray-200 font-medium
            px-3 py-1.5 rounded text-sm transition-colors cursor-pointer border border-gray-700;
   }
 
   .btn-danger {
+    /* Styled to visually signal a destructive/risky action: dark red
+     * background that brightens slightly on hover, with light red/pink text. */
     @apply bg-red-800 hover:bg-red-700 text-red-100 font-medium
            px-3 py-1.5 rounded text-sm transition-colors cursor-pointer;
   }
@@ -57,10 +124,24 @@
    * FORM CONTROLS
    * ------------------------------------------------------------------------- */
   .form-label {
+    /* `block` makes the label take up its own full line (rather than
+     * flowing inline with surrounding text); small, uppercase, gray text
+     * with extra letter spacing (`tracking-wider`) for a label-like look,
+     * plus a small bottom margin to separate it from the field below it. */
     @apply block text-xs text-gray-400 uppercase tracking-wider mb-1;
   }
 
   .form-input {
+    /* Dark background and border matching the rest of the dark theme,
+     * rounded corners, padding, light gray text at a small size, full
+     * width of its container (`w-full`). The `focus:` prefixed utilities
+     * only apply while the input is focused (the user has clicked/tabbed
+     * into it): removes the browser's default focus outline
+     * (`focus:outline-none`) and replaces it with a green border plus a
+     * subtle green glow ring, so keyboard/focus accessibility isn't lost,
+     * just restyled to match the theme. `placeholder:text-gray-600`
+     * styles the placeholder (hint) text specifically, using Tailwind's
+     * `placeholder:` prefix. */
     @apply bg-gray-800 border border-gray-700 rounded px-3 py-2
            text-gray-100 text-sm w-full
            focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500
@@ -68,6 +149,10 @@
   }
 
   .form-select-sm {
+    /* A smaller variant intended for compact dropdowns (like the results
+     * table's sort selector) — same dark theme colors as .form-input but
+     * with tighter padding and smaller text, and a simpler focus style
+     * (just a colored border, no glow ring). */
     @apply bg-gray-800 border border-gray-700 rounded px-2 py-1
            text-gray-200 text-xs
            focus:outline-none focus:border-emerald-500;
@@ -77,21 +162,35 @@
    * BADGES — small status labels
    * ------------------------------------------------------------------------- */
   .badge-blue {
+    /* `inline-flex` lays the badge out as an inline flexible box (so it
+     * sits inline with surrounding text but can align its own contents,
+     * e.g. an icon plus text, cleanly); small rounded padding; blue tinted
+     * background at 50% opacity (`bg-blue-900/50` — the `/50` suffix is
+     * Tailwind's shorthand for applying 50% opacity to that color) with
+     * matching light blue text and a subtle blue border, also at reduced
+     * opacity. */
     @apply inline-flex items-center px-1.5 py-0.5 rounded text-xs
            bg-blue-900/50 text-blue-300 border border-blue-800/50;
   }
 
   .badge-green {
+    /* Same badge shape/sizing as .badge-blue above, but in a green
+     * ("emerald") color scheme — used to signal a positive/success status. */
     @apply inline-flex items-center px-1.5 py-0.5 rounded text-xs
            bg-emerald-900/50 text-emerald-300 border border-emerald-800/50;
   }
 
   .badge-red {
+    /* Same badge shape as above, in red — used to signal a
+     * negative/danger status. */
     @apply inline-flex items-center px-1.5 py-0.5 rounded text-xs
            bg-red-900/50 text-red-300 border border-red-800/50;
   }
 
   .badge-gray {
+    /* A neutral gray badge variant (no `/NN` opacity suffix here, unlike
+     * the three above — it uses fully opaque gray tones instead) for
+     * statuses that aren't clearly positive or negative. */
     @apply inline-flex items-center px-1.5 py-0.5 rounded text-xs
            bg-gray-800 text-gray-400 border border-gray-700;
   }
@@ -100,18 +199,26 @@
    * PRICE COLOR CLASSES — used in the results table price column
    * ------------------------------------------------------------------------- */
   .price-green {
+    /* Just a single text-color utility here — green text signaling a good
+     * price. The `/*` `*\/` after the semicolon is an ordinary CSS inline
+     * comment explaining the price threshold this color represents (this
+     * comment style predates this pass and is preserved). */
     @apply text-emerald-400;   /* Under $100 — good deal */
   }
 
   .price-yellow {
+    /* Yellow text for a "moderate" price tier. */
     @apply text-yellow-400;    /* $100-$149 — moderate */
   }
 
   .price-red {
+    /* Red text for the most expensive price tier. */
     @apply text-red-400;       /* $150+ — expensive */
   }
 
   .price-unknown {
+    /* Dim gray text used when no price data is available at all — visually
+     * de-emphasized compared to any of the three colored price tiers above. */
     @apply text-gray-600;      /* Price not listed */
   }
 
@@ -119,14 +226,22 @@
    * LOG LINE CLASSES — used in the live crawl progress feed
    * ------------------------------------------------------------------------- */
   .log-info {
+    /* Plain light-gray text for routine/informational log lines in the
+     * live crawl progress feed (see the ActionCable-driven <script> block
+     * in app/views/dashboard/index.html.erb, which assigns similarly
+     * themed classes dynamically based on `data.level`). */
     @apply text-gray-300;
   }
 
   .log-warning {
+    /* Yellow text for warning-level log lines — draws more attention than
+     * .log-info without implying a hard failure. */
     @apply text-yellow-400;
   }
 
   .log-error {
+    /* Red text for error-level log lines — the most visually urgent of the
+     * three log classes. */
     @apply text-red-400;
   }
 
@@ -134,10 +249,24 @@
    * TABLE UTILITIES
    * ------------------------------------------------------------------------- */
   .table-header {
+    /* Styles a table's header row/cells: left-aligned, small uppercase
+     * gray text with letter spacing, bottom padding, and a bottom border
+     * separating the header visually from the table body. */
     @apply text-left text-xs text-gray-500 uppercase tracking-wider pb-3 border-b border-gray-800;
   }
 
   .table-row {
+    /* Styles a table body row: a faint bottom border between rows (at 50%
+     * opacity, via the `/50` suffix again) plus a subtle background
+     * highlight on hover (`hover:bg-gray-800/20`, i.e. gray at 20%
+     * opacity) with a smooth color transition, giving the table a
+     * lightweight "row highlight" interaction as the user moves their mouse. */
     @apply border-b border-gray-800/50 hover:bg-gray-800/20 transition-colors;
   }
+  /* `}` — this closing brace ends the `.table-row { ... }` rule
+   * immediately above it. */
 }
+/* `}` — this final closing brace ends the `@layer components { ... }`
+ * block that was opened near the top of this file, after the big header
+ * comment listing all the custom classes. Everything between that opening
+ * `{` and this closing `}` is placed in Tailwind's "components" layer. */

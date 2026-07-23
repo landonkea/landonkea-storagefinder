@@ -1,8 +1,65 @@
+# WHAT IS THIS FILE?
+# RuboCop is a "linter" for Ruby: a tool that reads your `.rb` source files
+# (without ever running them) and flags STYLE problems — things like
+# inconsistent indentation, extra blank lines, or using single quotes where
+# the house style wants double quotes. It does NOT check whether the code
+# actually works; that's what tests are for. `.rubocop.yml`, at the root of
+# a project, is RuboCop's configuration file — RuboCop automatically finds
+# and reads it whenever you run `bin/rubocop` (or plain `rubocop`) anywhere
+# inside this repo, without you having to point it at the file explicitly.
+# The file format is YAML (a plain-text way to write nested key/value
+# settings using indentation instead of curly braces/brackets — two spaces
+# in = "this belongs to the key above").
+
+# Plain-English label (ignored by RuboCop itself — comments have no effect
+# on behavior) documenting which overall style this project follows.
+# "Omakase" is the name Rails creator DHH gave to a curated, opinionated
+# default Ruby style — the word is Japanese for "chef's choice," i.e. "you
+# don't pick individual settings, you trust this preset bundle of them."
 # Omakase Ruby styling for Rails
+#
+# `inherit_gem:` is a special RuboCop config key meaning "don't define all
+# the style rules yourself here — instead, load a whole rule set that's
+# published inside another gem." Its value, written on one line using
+# YAML's inline "flow" mapping syntax `{ key: value }`, is a hash (a
+# key/value lookup table) with one entry: the key `rubocop-rails-omakase`
+# is the name of the gem to pull rules from (that gem must be listed in the
+# Gemfile — see Gemfile line 41 — or RuboCop can't find it), and the value
+# `rubocop.yml` is the path, INSIDE that gem's own files, to the specific
+# config file whose rules should be loaded. Net effect: this one line says
+# "use whatever style rules the rubocop-rails-omakase gem ships as this
+# project's base configuration."
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
+# Blank line — pure visual spacing between the "inherit a base style" section
+# above and the "customize it" section below. Has no effect on RuboCop; YAML
+# (like Ruby) ignores blank lines wherever whitespace is otherwise allowed.
+
+# Instructional comment (for whoever edits this file later) explaining what
+# the block below is for: adding/overriding individual rules on top of the
+# inherited Omakase base, rather than replacing it wholesale.
 # Overwrite or add rules to create your own house style
 #
+# A lone "#" on its own line is a deliberate empty comment, used purely as
+# extra vertical spacing to visually separate the instruction above from
+# the worked example below, while keeping both inside one comment block
+# (a true blank line here would look the same to a reader, but keeping it
+# as "#" signals "still part of this note," a common convention).
+#
+# Everything from here down is a commented-out EXAMPLE showing the syntax
+# for overriding one specific rule — every line still starts with "#", so
+# none of it is active configuration; it's inert documentation. To actually
+# apply this example, someone would delete the leading "# " from each of
+# the three lines below, turning them into real YAML.
+#
+# Plain-English description of the stylistic effect the (currently
+# disabled) override below would have, if it were turned on.
 # # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
+# `Layout/SpaceInsideArrayLiteralBrackets` is the exact name RuboCop uses
+# internally for the specific rule ("cop") that checks whether there's a
+# space just inside `[` and `]` in array literals like `[1, 2, 3]`. Written
+# out (uncommented) as real YAML, the two lines below would set that cop's
+# `Enabled` setting to `false`, turning the rule off project-wide. As
+# written here — still commented out — this has no effect at all.
 # Layout/SpaceInsideArrayLiteralBrackets:
 #   Enabled: false

@@ -1,18 +1,90 @@
+# This file (config/deploy.yml) configures Kamal — a deployment tool (made
+# by the Rails team, bundled by default with new Rails apps) that packages
+# this app into a Docker container image and ships/runs it on one or more
+# remote servers over SSH. It is NOT part of Rails itself and is not loaded
+# while the app is running — it's read only by the separate `bin/kamal`
+# command-line tool (e.g. `bin/kamal deploy`) when a developer/operator
+# actually triggers a deployment from their own machine. A complete novice
+# summary: Docker packages an app together with everything it needs to run
+# (Ruby, gems, system libraries) into one reusable "image," which can then
+# be started as an isolated running "container" on any machine that has
+# Docker installed — Kamal automates building that image, pushing it
+# somewhere servers can pull it from, and telling each configured server to
+# start (or replace) a container running it.
+#
+# YAML primer: lines starting with "#" are comments, ignored by whatever
+# parses this file. Plain "key: value" pairs work like entries in a Ruby
+# Hash; indentation (spaces, not tabs) shows what's nested under what — no
+# braces/"end" keywords the way Ruby has. A line starting with "- " under a
+# key defines one item of a YAML list (like a Ruby Array).
+
+# Explains the purpose of the setting below: Kamal needs a short, stable
+# name identifying this specific app, used e.g. to name the Docker
+# containers it creates/manages on each server so multiple different apps
+# could in principle be deployed to (and coexist on) the same server without
+# their containers colliding by name.
 # Name of your application. Used to uniquely configure containers.
+# "service:" is a top-level YAML key; its plain string value, "storagefinder",
+# is this app's own Kamal service name.
 service: storagefinder
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Explains the purpose of the setting below: names the Docker image Kamal
+# builds for this app. The parenthetical note explains that if pushing to a
+# PUBLIC/external registry (like Docker Hub) shared with other people's
+# images, the image name would typically need a username/org prefix (like
+# "your-user/app-name") to avoid colliding with someone else's image of the
+# same plain name — not needed here since (see "registry:" below) this app
+# pushes to a private, self-hosted registry instead.
 # Name of the container image (use your-user/app-name on external registries).
 image: storagefinder
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Explains the purpose of the section below: which actual server(s) Kamal
+# should deploy this app's containers onto.
 # Deploy to these servers.
+# "servers:" is a top-level key; its value is a nested map (further-indented
+# block below) grouping servers by ROLE — here, a "web" role handling
+# regular HTTP web traffic.
 servers:
+  # "web:" is a role name; its value is a YAML LIST (each "- " line is one
+  # list item) of server addresses that play this role.
   web:
+    # One list item: a single IP address, "192.168.0.1" — a private/LAN IP
+    # (see config/environments/development.rb's config.hosts section for
+    # what makes an IP address "private"), consistent with this being a
+    # self-hosted app running on a home/local network rather than the
+    # public internet.
     - 192.168.0.1
+  # A commented-out example (every line here starts with "#", so none of it
+  # is active configuration) showing how a SECOND role, named "job", could
+  # be defined — this pattern is for splitting background-job processing
+  # onto its own dedicated server, separate from the one serving web
+  # requests, once a single server's capacity isn't enough. It stays
+  # inactive because StorageFinder currently runs both web and job
+  # processing together via the SOLID_QUEUE_IN_PUMA setting further below.
   # job:
   #   hosts:
   #     - 192.168.0.1
   #   cmd: bin/jobs
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# A multi-line comment explaining a feature that stays entirely unused in
+# this file: Kamal can run its own built-in reverse proxy in front of the
+# app to automatically obtain and renew free HTTPS certificates from Let's
+# Encrypt (a certificate authority) — useful for apps reachable over the
+# public internet with a real domain name, less relevant here since this
+# app is LAN-only (private IP address above, no public domain). The comment
+# also notes: using this feature requires separately enabling
+# `config.assume_ssl`/`config.force_ssl` in config/environments/
+# production.rb (both of which are, in fact, left commented out/inactive
+# there — consistent with this proxy feature also being inactive here), and
+# that it should NOT be combined with multiple web servers (since then SSL
+# would need to be terminated at a shared load balancer in front of all of
+# them instead, not per-server).
 # Enable SSL auto certification via Let's Encrypt and allow for multiple apps on a single web server.
 # If used with Cloudflare, set encryption mode in SSL/TLS setting to "Full" to enable CF-to-app encryption.
 #
@@ -20,82 +92,294 @@ servers:
 #
 # Don't use this when deploying to multiple web servers (then you have to terminate SSL at your load balancer).
 #
+# The "proxy:" block below is entirely commented out (every line starts
+# with "#"), meaning it's inactive: if enabled, "ssl: true" would turn on
+# the Let's Encrypt integration described above, and "host: app.example.com"
+# would supply the real public domain name Kamal's proxy would request a
+# certificate for.
 # proxy:
 #   ssl: true
 #   host: app.example.com
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Explains the purpose of the section below: where Kamal pushes the built
+# Docker image so that each deploy-target server can pull/download it.
 # Where you keep your container images.
+# "registry:" is a top-level key; its value is a nested map of settings
+# describing that registry (an image storage/distribution service).
 registry:
+  # A comment listing a few example alternative registry providers this
+  # setting could instead point at.
   # Alternatives: hub.docker.com / registry.digitalocean.com / ghcr.io / ...
+  # "server:" names the actual registry host+port this app pushes to —
+  # "localhost:5555" means a registry running on the SAME machine this
+  # `bin/kamal` command is run from (i.e. presumably a local/self-hosted
+  # registry container, not a public cloud registry), listening on port
+  # 5555. NOTE: this exact port number, 5555, is also the port this app's
+  # own Rails/Puma server listens on (see config/environments/
+  # development.rb and config/initializers/mdns.rb) — worth double-checking
+  # these are genuinely meant to be the same number for two different
+  # purposes and not an accidental copy/paste, see this pass's final
+  # "flagged issues" note.
   server: localhost:5555
 
+  # Blank line — ignored by YAML, purely visual spacing.
+
+  # A commented-out line (starts with "#") showing the syntax for
+  # authenticating to a registry that requires a username — inactive here,
+  # meaning this app's configured registry currently needs no
+  # authentication (consistent with it being a local/self-hosted registry).
   # Needed for authenticated registries.
   # username: your-user
 
+  # Blank line — ignored by YAML, purely visual spacing.
+
+  # A comment recommending best practice (use a scoped access token, not a
+  # real account password) for the commented-out setting below it.
   # Always use an access token rather than real password when possible.
+  # A commented-out "password:" setting — if enabled, its value would be a
+  # YAML list with one item, "KAMAL_REGISTRY_PASSWORD" — Kamal's convention
+  # for secret values: rather than writing the actual secret directly in
+  # this file (which typically gets committed to source control), Kamal
+  # reads the NAMED environment variable from a separate, git-ignored
+  # ".kamal/secrets" file at deploy time instead.
   # password:
   #   - KAMAL_REGISTRY_PASSWORD
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Explains the purpose of the section below: setting environment variables
+# INSIDE the running Docker container, i.e. values this app's own Ruby code
+# can read via Ruby's `ENV["SOME_NAME"]` once deployed and running.
 # Inject ENV variables into containers (secrets come from .kamal/secrets).
+# "env:" is a top-level key grouping two kinds of environment variables:
+# "secret" ones (sensitive; sourced from the separate, git-ignored
+# .kamal/secrets file, same mechanism explained for the registry password
+# above) and "clear" ones (plain, non-sensitive; written directly in this
+# file, safe to commit to source control).
 env:
+  # "secret:" is a YAML list — here, one item.
   secret:
+    # "RAILS_MASTER_KEY" — the single secret environment variable Kamal
+    # injects into the container. This is the key Rails itself uses to
+    # decrypt config/credentials.yml.enc (the app's encrypted credentials
+    # file) at boot; without it, the app can't start.
     - RAILS_MASTER_KEY
+  # "clear:" is a YAML nested map — plain, non-secret KEY: VALUE
+  # environment variables set directly here.
   clear:
+    # A comment explaining the setting below: it introduces the choice to
+    # run Solid Queue's job-processing "supervisor" process (which polls
+    # for and runs enqueued jobs) INSIDE the same container/process as
+    # Puma (Rails' own web server), rather than as a fully separate
+    # process/container — simpler to operate for a small, single-server
+    # deployment, at the cost of web requests and job processing competing
+    # for the same process's resources. NOTE: this app's actual active job
+    # adapter is `:async` (see config/application.rb's BACKGROUND JOBS
+    # section), NOT Solid Queue — see this pass's final "flagged issues"
+    # note, since this setting appears to configure a job backend the app
+    # doesn't currently use.
     # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
     # When you start using multiple servers, you should split out job processing to a dedicated machine.
+    # "SOLID_QUEUE_IN_PUMA: true" — a plain KEY: VALUE pair; "true" here is
+    # interpreted by YAML as its native boolean true (see config/locales/
+    # en.yml's own comment block for the list of case-insensitive strings —
+    # true/false/on/off/yes/no — that YAML treats specially as booleans
+    # unless quoted).
     SOLID_QUEUE_IN_PUMA: true
 
+    # Blank line — ignored by YAML, purely visual spacing.
+
+    # A commented-out example (starts with "#") — its own comment line
+    # explains it would set how many separate Solid Queue worker processes
+    # run, if that feature were actually in use.
     # Set number of processes dedicated to Solid Queue (default: 1)
     # JOB_CONCURRENCY: 3
 
+    # Blank line — ignored by YAML, purely visual spacing.
+
+    # A commented-out example — its own comment explains it would set how
+    # many CPU cores Puma (the web server) is allowed to use, by starting
+    # multiple worker processes.
     # Set number of cores available to the application on each server (default: 1).
     # WEB_CONCURRENCY: 2
 
+    # Blank line — ignored by YAML, purely visual spacing.
+
+    # A commented-out example — its own comment explains this would point
+    # Active Record at an EXTERNAL database server (rather than the local
+    # SQLite files this app actually uses per config/database.yml),
+    # referencing a second Kamal "accessory" server (see the commented-out
+    # "accessories:" section near the bottom of this file) by a
+    # conventional hostname Kamal's internal Docker network would resolve.
     # Match this to any external database server to configure Active Record correctly
     # Use storagefinder-db for a db accessory server on same machine via local kamal docker network.
     # DB_HOST: 192.168.0.2
 
+    # Blank line — ignored by YAML, purely visual spacing.
+
+    # A commented-out example — its own comment explains this would raise
+    # this app's log verbosity to "debug" level once deployed (see
+    # config/environments/production.rb's `config.log_level` setting, which
+    # reads this exact RAILS_LOG_LEVEL environment variable if it's set).
     # Log everything from Rails
     # RAILS_LOG_LEVEL: debug
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Explains the purpose of the section below: Kamal lets you define short
+# shortcut commands runnable as "bin/kamal <alias>", which expand into a
+# longer full Kamal command.
 # Aliases are triggered with "bin/kamal <alias>". You can overwrite arguments on invocation:
 # "bin/kamal logs -r job" will tail logs from the first server in the job section.
+# "aliases:" is a top-level key; its value is a nested map where each key is
+# the short alias name and each value is the full command it expands to.
 aliases:
+  # "console:" expands to a command that opens an interactive Rails console
+  # (`bin/rails console`) running INSIDE the already-deployed container —
+  # "app exec" is Kamal's own subcommand for running a one-off command
+  # inside a running app container; "--interactive" keeps it attached to
+  # your terminal (so you can type into the console); "--reuse" runs it
+  # inside the EXISTING running container rather than starting a brand new
+  # one just for this command.
   console: app exec --interactive --reuse "bin/rails console"
+  # "shell:" expands to opening an interactive bash shell inside the
+  # running container — useful for poking around the deployed filesystem
+  # directly.
   shell: app exec --interactive --reuse "bash"
+  # "logs:" expands to Kamal's own log-tailing command; "-f" ("follow")
+  # keeps streaming new log lines live, rather than just printing existing
+  # ones and exiting.
   logs: app logs -f
+  # "dbc:" expands to opening Rails' database console (a raw SQL prompt
+  # connected to the app's actual production database) — the
+  # "--include-password" flag on `bin/rails dbconsole` includes the
+  # database password in that connection, where applicable (SQLite,
+  # what this app actually uses, has no password at all, so this flag
+  # has no real effect here specifically, but is harmless to include).
   dbc: app exec --interactive --reuse "bin/rails dbconsole --include-password"
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Explains the purpose of the setting below: this app's persistent data —
+# its SQLite database files (see config/database.yml) and any locally-
+# stored Active Storage uploaded files (see config/storage.yml's "local"
+# service) — normally lives INSIDE a container's own filesystem, which gets
+# thrown away and replaced with a fresh, empty one every time Kamal deploys
+# a new version. A Docker "volume" is storage that lives OUTSIDE any one
+# container and gets re-attached ("mounted") into each new container Kamal
+# starts, so this data survives across deploys.
 # Use a persistent storage volume for sqlite database files and local Active Storage files.
 # Recommended to change this to a mounted volume path that is backed up off server.
+# "volumes:" is a top-level key; its value is a YAML list — here, one item.
 volumes:
+  # "storagefinder_storage:/rails/storage" is Docker's own volume-mount
+  # syntax: "storagefinder_storage" (before the colon) names the persistent
+  # Docker volume itself (Docker creates/manages it automatically on the
+  # server); "/rails/storage" (after the colon) is the path INSIDE the
+  # running container where that volume gets mounted — matching this app's
+  # own storage/ directory path once inside the container (Rails apps
+  # deployed via Kamal conventionally live at /rails inside their
+  # container).
   - "storagefinder_storage:/rails/storage"
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# A multi-line comment explaining what "asset_path" is for: this app's
+# compiled JS/CSS assets get a unique, content-based filename each time
+# they're rebuilt (see config/environments/production.rb's asset-caching
+# comment for why). During a deploy, the OLD container (serving the
+# previous version's assets) and the NEW container (serving the new
+# version's assets) briefly run at the same time — a request that started
+# loading the old page's HTML, referencing old asset filenames, needs those
+# OLD asset files to still be reachable even after the new container takes
+# over, or visitors mid-page-load would see broken images/missing styles.
 # Bridge fingerprinted assets, like JS and CSS, between versions to avoid
 # hitting 404 on in-flight requests. Combines all files from new and old
 # version inside the asset_path.
+# "asset_path:" names the directory, inside the container, where compiled
+# assets live — Kamal uses this to carry old-version asset files forward
+# into the new container's copy of this same directory during a deploy.
 asset_path: /rails/public/assets
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Explains the purpose of the section below: settings controlling HOW the
+# Docker image itself gets built (as opposed to where it's deployed to,
+# configured earlier in this file).
 # Configure the image builder.
+# "builder:" is a top-level key; its value is a nested map of build
+# settings.
 builder:
+  # "arch: amd64" tells Docker which CPU architecture to build the image
+  # for — "amd64" (also called x86-64) is the standard architecture used by
+  # most traditional PC/server hardware, as opposed to "arm64" (used by
+  # e.g. Apple Silicon Macs or Raspberry Pis) — this should match whatever
+  # architecture the actual deploy-target server(s) run on.
   arch: amd64
 
+  # Blank line — ignored by YAML, purely visual spacing.
+
+  # A commented-out example and its explanatory comment: building a Docker
+  # image for a DIFFERENT architecture than the machine running `bin/kamal`
+  # itself (e.g. building an amd64 image from an arm64 Mac) can be slow,
+  # because it has to emulate the other architecture; this setting would
+  # instead delegate the actual build work to a separate remote server that
+  # natively runs the target architecture, over SSH.
   # # Build image via remote server (useful for faster amd64 builds on arm64 computers)
   # remote: ssh://docker@docker-builder-server
   #
+  # A comment explaining the further commented-out lines below: it
+  # describes passing extra build-time ARGUMENTS (visible in the final
+  # image, e.g. non-sensitive version numbers) and SECRETS (kept out of the
+  # final image's layers, for genuinely sensitive values needed only
+  # transiently during the build) into the Docker build process.
   # # Pass arguments and secrets to the Docker build process
+  # "args:" would be a nested map of build arguments — here, one example:
+  # "RUBY_VERSION: ruby-3.4.9" pinning which Ruby version the image build
+  # process should use.
   # args:
   #   RUBY_VERSION: ruby-3.4.9
+  # "secrets:" would be a YAML list of secret names (sourced the same way
+  # as the registry password and RAILS_MASTER_KEY above — from the
+  # git-ignored .kamal/secrets file) made available only during the image
+  # build itself: "GITHUB_TOKEN" (e.g. for pulling a private gem from
+  # GitHub during `bundle install`) and "RAILS_MASTER_KEY" (potentially
+  # needed if any build step needs to read encrypted credentials).
   # secrets:
   #   - GITHUB_TOKEN
   #   - RAILS_MASTER_KEY
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# A commented-out example and its explanatory comment: Kamal connects to
+# deploy-target servers over SSH, and by default connects as the "root"
+# user. This shows the syntax for using some OTHER, less-privileged SSH
+# user instead (a common security hardening practice) — inactive here,
+# meaning this app currently deploys using the default root SSH user.
 # Use a different ssh user than root
 # ssh:
 #   user: app
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# A large commented-out example block (every line starts with "#", so none
+# of it is active) demonstrating Kamal "accessories" — auxiliary services
+# (like a separate database server or cache server) that Kamal can also
+# deploy and manage as their own containers, alongside the main app
+# container.
 # Use accessory services (secrets come from .kamal/secrets).
+# "accessories:" would be a top-level key; its value a nested map, one
+# entry per accessory service.
 # accessories:
+#   A first example accessory named "db", running a MySQL database server
+#   image on a specific host/port, with its own env vars (a non-secret
+#   MYSQL_ROOT_HOST and a secret MYSQL_ROOT_PASSWORD, sourced from
+#   .kamal/secrets), config files copied in from this repo, and a
+#   persistent "directories:" mount (similar in purpose to the "volumes:"
+#   section explained earlier, but scoped to this one accessory container)
+#   so its actual database files survive container restarts.
 #   db:
 #     image: mysql:8.0
 #     host: 192.168.0.2
@@ -111,6 +395,10 @@ builder:
 #       - db/production.sql:/docker-entrypoint-initdb.d/setup.sql
 #     directories:
 #       - data:/var/lib/mysql
+#   A second example accessory named "redis", running a Valkey (an open-
+#   source fork/replacement of the Redis in-memory data store) image,
+#   similarly with its own host/port and a persistent directory mount for
+#   its data.
 #   redis:
 #     image: valkey/valkey:8
 #     host: 192.168.0.2

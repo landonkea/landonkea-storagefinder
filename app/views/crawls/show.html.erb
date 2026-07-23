@@ -1,32 +1,91 @@
 <%# Crawl Run Detail — shows full log for one crawl %>
+<%# This is a full page rendered by CrawlsController#show — visited when
+    the user clicks "Log →" on a crawl history row (see
+    app/views/dashboard/_crawl_history.html.erb). The controller has
+    already loaded the specific crawl record into `@crawl_run` and its
+    associated log lines into `@log_entries`. %>
 
+<%# "flex items-center justify-between" lays the heading block (left) and
+    the "Back to Dashboard" button (right) out horizontally, vertically
+    centered, with space pushed between them; "mb-6" adds margin below the
+    row before the summary card underneath it. %>
 <div class="flex items-center justify-between mb-6">
   <div>
+    <%# "text-2xl font-bold text-emerald-400" is a large, bold,
+        green-accented heading. `@crawl_run.id` is this record's database
+        primary key (an integer, auto-assigned when the row was created),
+        printed here as a simple reference number for the crawl. %>
     <h1 class="text-2xl font-bold text-emerald-400">Crawl #<%= @crawl_run.id %></h1>
+    <%# "text-sm text-gray-400 mt-1" is small, muted subtitle text. %>
     <p class="text-sm text-gray-400 mt-1">
+      <%# Prints the city/ZIP that was searched and the radius (in miles)
+          that was used for this crawl — both plain saved column values. %>
       <%= @crawl_run.search_city %> — <%= @crawl_run.search_radius_miles %> mile radius
+      <%# "&middot;" would be the named HTML entity for a bullet character,
+          but this uses "&nbsp;·&nbsp;" instead: "&nbsp;" is the HTML
+          entity for a non-breaking space (a space character the browser
+          will never wrap a line break onto), and "·" here is the literal
+          middle-dot character typed directly into the file — together they
+          render as a bullet point visually separated from the text on
+          both sides. `.strftime(...)` formats the crawl's creation
+          timestamp into text like "July 18, 2026 at 03:45 PM" (%B = full
+          month name, %d = day of month, %Y = 4-digit year, %I = 12-hour
+          clock hour, %M = minutes, %p = AM/PM). %>
       · <%= @crawl_run.created_at.strftime("%B %d, %Y at %I:%M %p") %>
     </p>
   </div>
+  <%# `link_to "← Back to Dashboard", root_path, ...` generates a plain `<a
+      href="...">` link. `root_path` is the URL helper for this app's home
+      page (the dashboard — see config/routes.rb for the `root` route
+      declaration that makes DashboardController#index the site's front
+      page). "btn-secondary" is this app's custom CSS class for a
+      lower-emphasis button style. %>
   <%= link_to "← Back to Dashboard", root_path, class: "btn-secondary" %>
 </div>
 
 <%# Summary card %>
+<%# "card" is this app's boxed/panel styling; "mb-6" adds margin below it,
+    separating it from the log section further down. %>
 <div class="card mb-6">
+  <%# "grid grid-cols-2 md:grid-cols-4 gap-6" lays out four stat blocks in a
+      grid: 2 columns by default (on narrow/mobile screens), switching to 4
+      columns on medium-and-wider screens (the "md:" prefix is a Tailwind
+      "responsive variant" — it only applies at that breakpoint and up),
+      with consistent spacing (gap-6) between every cell either way. %>
   <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
     <div>
+      <%# "text-xs text-gray-500 uppercase" is small, muted, all-caps label
+          text, used consistently as the caption above each stat value
+          below. %>
       <div class="text-xs text-gray-500 uppercase">Status</div>
+      <%# This <div>'s CSS class is itself computed with a Ruby expression,
+          spread across two lines for readability inside the class
+          attribute. `@crawl_run.status` is a string column ("completed",
+          "failed", or something else e.g. "running"). This is a CHAINED
+          (nested) ternary: `a ? b : c ? d : e` reads as "if a, use b;
+          otherwise, if c, use d; otherwise use e." Here: if status is
+          "completed" use green text; otherwise if status is "failed" use
+          red text; otherwise (any other status) use yellow text. "mt-1
+          font-semibold" (static, not conditional) adds top margin and
+          semi-bold weight regardless of status. %>
       <div class="mt-1 font-semibold
         <%= @crawl_run.status == "completed" ? "text-emerald-400" : @crawl_run.status == "failed" ? "text-red-400" : "text-yellow-400" %>">
+        <%# `.capitalize` is a Ruby String method that uppercases just the
+            first letter and lowercases the rest — turns "completed" into
+            "Completed" for display. %>
         <%= @crawl_run.status.capitalize %>
       </div>
     </div>
     <div>
       <div class="text-xs text-gray-500 uppercase">Duration</div>
+      <%# `duration_label` is a method defined on the CrawlRun model (not
+          shown in this file) that presumably formats the elapsed time into
+          a friendly string (e.g. "4m 12s"). %>
       <div class="mt-1 text-white"><%= @crawl_run.duration_label %></div>
     </div>
     <div>
       <div class="text-xs text-gray-500 uppercase">Facilities Found</div>
+      <%# Plain integer column, printed as-is. %>
       <div class="mt-1 text-white"><%= @crawl_run.facilities_found %></div>
     </div>
     <div>
@@ -35,33 +94,89 @@
     </div>
   </div>
 
+  <%# `.present?` is true only if `error_message` is both non-nil and
+      non-empty — i.e. this box only appears when the crawl actually
+      recorded an error. %>
   <% if @crawl_run.error_message.present? %>
+    <%# "mt-4 p-3" adds top margin and inner padding; "bg-red-900/20
+        border border-red-800/40 rounded" gives it a subtle red-tinted
+        alert box appearance; "text-sm text-red-300" is small red text. %>
     <div class="mt-4 p-3 bg-red-900/20 border border-red-800/40 rounded text-sm text-red-300">
       <strong>Error:</strong> <%= @crawl_run.error_message %>
     </div>
   <% end %>
+  <%# Closes the `if @crawl_run.error_message.present?` check above. %>
 </div>
 
 <%# Log entries %>
 <div class="card">
+  <%# "text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4"
+      styles this as a small, bold, all-caps section heading with letter
+      spacing and margin below it. `@log_entries.count` runs a database
+      COUNT query (or counts the already-loaded array, depending on how
+      `@log_entries` was built in the controller) to show how many log
+      lines this crawl produced. %>
   <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
     Full Log (<%= @log_entries.count %> entries)
   </h2>
 
+  <%# "bg-gray-950" is a near-black background, evoking a terminal/console
+      look; "rounded border border-gray-800 p-4" gives it a bordered,
+      padded box; "font-mono text-xs" uses a monospaced (fixed-width) font
+      at small size, typical for log output; "overflow-x-auto" adds a
+      horizontal scrollbar if any single log line is too wide to fit;
+      "max-h-screen overflow-y-auto" caps this box's height to at most the
+      browser window's height and adds a vertical scrollbar for anything
+      taller than that, so a huge log doesn't push the rest of the page
+      far below the fold. %>
   <div class="bg-gray-950 rounded border border-gray-800 p-4 font-mono text-xs overflow-x-auto max-h-screen overflow-y-auto">
+    <%# `@log_entries.each do |entry| ... end` loops over every log entry
+        record, running this block once per entry with `entry` bound to
+        the current one each time — this is what prints one line per log
+        message. %>
     <% @log_entries.each do |entry| %>
+      <%# "py-0.5" adds a small amount of vertical padding per line so
+          lines aren't crammed together. `entry.css_class` is a method
+          defined on the log entry model that presumably returns a
+          different text color class depending on the entry's severity
+          (e.g. red for errors, yellow for warnings) — its exact value is
+          appended into this <div>'s class attribute via `<%= % >`. %>
       <div class="py-0.5 <%= entry.css_class %>">
+        <%# Square brackets here are literal, static text (not Ruby/ERB
+            syntax) — they visually box in each metadata field the way log
+            files conventionally do. `.strftime("%H:%M:%S")` formats the
+            entry's timestamp as 24-hour hours:minutes:seconds, e.g.
+            "14:03:27". %>
         [<%= entry.created_at.strftime("%H:%M:%S") %>]
+        <%# `.upcase` is a Ruby String method converting all letters to
+            uppercase — turns a saved level like "warning" into "WARNING". %>
         [<%= entry.level.upcase %>]
+        <%# Plain saved column — which company this log line pertains to. %>
         [<%= entry.company %>]
+        <%# The actual log message text. %>
         <%= entry.message %>
+        <%# `.present?` is true only if this entry recorded a URL — not
+            every log line has one (e.g. a generic status message might
+            not reference a specific page). %>
         <% if entry.url.present? %>
+          <%# "text-gray-600" is dim gray, de-emphasizing the URL relative
+              to the main message text; the literal " → " arrow is static
+              text pointing from the message to the URL. `.truncate(80)` is
+              a Rails/ActiveSupport String helper that cuts the string down
+              to at most 80 characters, appending "..." if it had to cut
+              anything off — this keeps a very long URL from blowing out
+              the line width. %>
           <span class="text-gray-600"> → <%= entry.url.truncate(80) %></span>
         <% end %>
+        <%# Closes the `if entry.url.present?` check above. %>
       </div>
+    <%# Closes the `@log_entries.each do |entry|` loop opened above. %>
     <% end %>
+    <%# `.empty?` is true only when there are zero log entries at all —
+        shown as a fallback message instead of an empty blank box. %>
     <% if @log_entries.empty? %>
       <div class="text-gray-600">No log entries found for this crawl run.</div>
     <% end %>
+    <%# Closes the `if @log_entries.empty?` check above. %>
   </div>
 </div>

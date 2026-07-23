@@ -1,27 +1,134 @@
+# This file (config/storage.yml) configures Active Storage (Rails' file-
+# upload framework — see config/application.rb for what Active Storage is),
+# defining named "services" — each one a different place uploaded files can
+# actually be stored — that config.active_storage.service (set per
+# environment in config/environments/*.rb) picks between by name.
+#
+# YAML primer: lines starting with "#" are comments, ignored by whatever
+# parses this file. Plain "key: value" pairs work like entries in a Ruby
+# Hash; indentation (spaces, not tabs) shows what's nested under what. This
+# file also contains ERB tags ("<%%= ... %>"), meaning Rails runs it through
+# the ERB template engine first, substituting each Ruby expression's result
+# as plain text, before parsing the result as YAML (see config/cache.yml for
+# a fuller explanation of that two-step process).
+
+# "test:" is a top-level YAML key naming a service configuration — used
+# specifically when config.active_storage.service is set to `:test` (see
+# config/environments/test.rb).
 test:
+  # "service: Disk" selects Active Storage's built-in "Disk" service class,
+  # which stores uploaded files as plain files on the local filesystem
+  # (as opposed to e.g. a cloud storage service like Amazon S3).
   service: Disk
+  # "root:" tells the Disk service WHICH local directory to store files
+  # under. "<%%= Rails.root.join("tmp/storage") %>" is an ERB tag: inside
+  # it, "Rails.root" is this app's root directory as a path object,
+  # ".join("tmp/storage")" appends "tmp/storage" onto it, building the full
+  # absolute path to a temporary directory — appropriate for tests, since
+  # tmp/ is routinely wiped and test file uploads shouldn't pollute the
+  # app's real storage/ directory. ERB substitutes the resulting path as
+  # literal text into the YAML.
   root: <%= Rails.root.join("tmp/storage") %>
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# "local:" is a second named service configuration — this is the one
+# actually selected by `config.active_storage.service = :local` in BOTH
+# config/environments/development.rb and config/environments/production.rb.
 local:
+  # Same "Disk" service class as the "test" section above — files stored as
+  # plain files on the local filesystem.
   service: Disk
+  # "root:" here points at "<%%= Rails.root.join("storage") %>" — this app's
+  # real, permanent storage/ directory at the app's root (the SAME
+  # directory config/database.yml stores its SQLite database files in, and
+  # the same directory config/deploy.yml mounts as a persistent Docker
+  # volume so it survives across deploys).
   root: <%= Rails.root.join("storage") %>
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# A comment explaining the commented-out "amazon:" section below: Amazon S3
+# (a cloud file-storage service) is a common alternative to local-disk
+# storage, but it requires an access key ID and a secret access key to
+# authenticate — this comment says to store those specific secrets through
+# Rails' own ENCRYPTED credentials system (`bin/rails credentials:edit`,
+# which edits config/credentials.yml.enc — see that file's entry in this
+# pass's style guide's excluded-files list for why it isn't itself
+# commented) rather than writing them here in plain text.
 # Use bin/rails credentials:edit to set the AWS secrets (as aws:access_key_id|secret_access_key)
+# The whole "amazon:" block below is commented out (every line starts with
+# "#"), meaning it's currently inactive — this app is NOT configured to use
+# S3 at all right now.
 # amazon:
+#   "service: S3" would select Active Storage's built-in Amazon S3 service
+#   class.
 #   service: S3
-#   access_key_id: <%= Rails.application.credentials.dig(:aws, :access_key_id) %>
-#   secret_access_key: <%= Rails.application.credentials.dig(:aws, :secret_access_key) %>
+#   "access_key_id:" would read the AWS access key ID out of encrypted
+#   credentials — "<%%= Rails.application.credentials.dig(:aws,
+#   :access_key_id) %>" is an ERB tag; inside it, "Rails.application.
+#   credentials" is this app's decrypted credentials object, and ".dig(:aws,
+#   :access_key_id)" safely looks up a nested key (first ":aws", then
+#   ":access_key_id" inside it) without raising an error if a key along the
+#   way is missing — returning `nil` instead in that case.
+#   access_key_id: <%%= Rails.application.credentials.dig(:aws, :access_key_id) %>
+#   Same "dig" mechanism as above, but reading the paired AWS secret access
+#   key instead.
+#   secret_access_key: <%%= Rails.application.credentials.dig(:aws, :secret_access_key) %>
+#   "region:" would set which AWS data-center region the S3 bucket lives
+#   in — "us-east-1" is one of AWS's oldest/most common regions.
 #   region: us-east-1
-#   bucket: your_own_bucket-<%= Rails.env %>
+#   "bucket:" would name the actual S3 "bucket" (a top-level storage
+#   container within S3, similar in concept to a root folder) to use.
+#   "<%%= Rails.env %>" is another ERB tag, interpolating the current
+#   environment's name (e.g. "development") onto the end of the bucket
+#   name, so different environments don't share (and can't accidentally
+#   overwrite) the same S3 bucket.
+#   bucket: your_own_bucket-<%%= Rails.env %>
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# A comment warning about a DIFFERENT cloud provider's example below: Google
+# Cloud Storage (GCS) authenticates via a downloaded JSON "keyfile" rather
+# than a simple access-key/secret pair like AWS above — this comment warns
+# not to commit that keyfile into the git repository (since anyone with it
+# could access the storage account it belongs to).
 # Remember not to checkin your GCS keyfile to a repository
+# The whole "google:" block below is commented out, meaning inactive — this
+# app is NOT configured to use Google Cloud Storage right now.
 # google:
+#   "service: GCS" would select Active Storage's built-in Google Cloud
+#   Storage service class.
 #   service: GCS
+#   "project:" would name the Google Cloud project this storage bucket
+#   belongs to.
 #   project: your_project
-#   credentials: <%= Rails.root.join("path/to/gcs.keyfile") %>
-#   bucket: your_own_bucket-<%= Rails.env %>
+#   "credentials:" would point at the local path of the downloaded GCS
+#   keyfile mentioned in the warning comment above — "<%%= Rails.root.join(
+#   "path/to/gcs.keyfile") %>" is an ERB tag building that file's full
+#   absolute path from this app's root directory, same mechanism as the
+#   "root:" settings explained in the "test:"/"local:" sections above.
+#   credentials: <%%= Rails.root.join("path/to/gcs.keyfile") %>
+#   Same bucket-naming idea as the "amazon:" example above — one bucket per
+#   environment, via the same "<%%= Rails.env %>" ERB interpolation.
+#   bucket: your_own_bucket-<%%= Rails.env %>
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# A commented-out "mirror:" example — inactive, meaning unused. If enabled,
+# Active Storage's "Mirror" service doesn't store files itself; instead it
+# writes every uploaded file to SEVERAL other configured services at once
+# (useful for e.g. migrating from one storage backend to another without
+# downtime, or keeping a redundant backup copy).
 # mirror:
-#   service: Mirror
+#   "primary:" would name which OTHER service (defined elsewhere in this
+#   same file, by name) is treated as the main one — files get READ back
+#   from this one.
 #   primary: local
+#   "mirrors:" would be a YAML flow-style Array (square brackets, comma-
+#   separated) naming every additional service (again, by name, referring
+#   to other sections of this same file) that every upload also gets
+#   copied to — note "microsoft" is not actually defined anywhere in this
+#   file, so this specific example, even if uncommented as-is, would need a
+#   real "microsoft:" service section added first to actually work.
 #   mirrors: [ amazon, google, microsoft ]

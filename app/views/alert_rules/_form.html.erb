@@ -1,24 +1,108 @@
 <%# Shared form for new and edit alert rule %>
+<%# This file's name starts with an underscore ("_form.html.erb") — in Rails
+    that underscore marks it as a PARTIAL: a reusable chunk of view template
+    that isn't a full page on its own, only ever pulled INTO another view.
+    Both app/views/alert_rules/new.html.erb and app/views/alert_rules/edit.html.erb
+    call `render "form", alert_rule: @alert_rule` to include this file's HTML
+    at that point in their own page — Rails strips the leading underscore
+    and the folder is implied, so `render "form"` looks for a file literally
+    named "_form.html.erb" in this same app/views/alert_rules/ folder.
+    Because both the "new rule" page and the "edit rule" page need the exact
+    same set of input fields, this partial lets that markup live in ONE
+    place instead of being copy-pasted onto two pages (and going out of
+    sync when one copy gets edited but not the other). %>
+<%# `alert_rule` below is a "local variable" this partial expects to be
+    handed to it by whoever renders it — new.html.erb and edit.html.erb both
+    pass `alert_rule: @alert_rule` when calling render, which is what makes
+    the plain (non-@) `alert_rule` name usable throughout this file. %>
+<%# `form_with` is a Rails view helper that generates an HTML <form> tag
+    (and everything needed to submit it) for a given ActiveRecord model
+    object. `model: alert_rule` tells it which object the form edits — Rails
+    inspects that object to decide the form's submission URL and HTTP verb
+    automatically: if `alert_rule` is a brand-new, unsaved record (as in the
+    "new" page) it points the form at the "create" action with a POST
+    request; if `alert_rule` already exists in the database (as in the
+    "edit" page) it points at the "update" action with a PATCH request
+    instead. `class: "space-y-5"` is a plain HTML/Tailwind CSS class applied
+    to the <form> element itself — "space-y-5" is a Tailwind utility class
+    that adds vertical spacing between this form's direct child elements, so
+    each field block below isn't crammed against the next.
+    `do |f| ... end` is a Ruby block (a chunk of code passed to a method,
+    here to form_with) — everything between `do` and the matching `end` is
+    the CONTENTS of the form, and `f` is a "form builder" object form_with
+    hands back so the block can call things like `f.text_field` below to
+    generate individual `<input>` fields already wired up to `alert_rule`'s
+    attributes and this form's field-naming convention. The `<%= % >` (with
+    the equals sign) means the HTML that form_with generates — the opening
+    `<form ...>` tag — is inserted directly into the page. %>
 <%= form_with model: alert_rule, class: "space-y-5" do |f| %>
 
+  <%# `alert_rule.errors` is populated automatically by Rails/ActiveRecord
+      after a failed `.save` or `.update` call in the controller (see
+      alert_rules_controller.rb) — it lists which validations failed, if
+      any. `.any?` is true if there's at least one error, false if the list
+      is empty (e.g. a normal first visit to a blank "new" form). This `<%
+      if % >` (no equals sign) runs the Ruby check but prints nothing itself
+      — only the HTML block it wraps gets shown, and only when true. %>
   <% if alert_rule.errors.any? %>
+    <%# Red-tinted box (bg-red-900/30 = a dark red background at 30%
+        opacity, border-red-800 = a red border color, rounded = rounded
+        corners, p-3 = padding on all sides, text-sm/text-red-300 = smaller,
+        red-colored text) that only appears when there's something wrong to
+        report. %>
     <div class="bg-red-900/30 border border-red-800 rounded p-3 text-sm text-red-300">
       <strong>Could not save:</strong>
+      <%# "mt-1" adds a small top margin; "list-disc" gives the <ul> bullet
+          points; "list-inside" keeps those bullets indented inside the
+          text block rather than hanging outside it. %>
       <ul class="mt-1 list-disc list-inside">
+        <%# `.full_messages` turns the raw errors hash into an array of
+            ready-to-read strings, e.g. "Name can't be blank". `.each do
+            |msg| ... end` is Ruby's loop construct: it runs the block once
+            per item in the array, with `msg` holding the current item on
+            each pass. %>
         <% alert_rule.errors.full_messages.each do |msg| %>
+          <%# One bullet-point list item per validation error message.
+              `<%= msg % >` prints that message's text into the page. %>
           <li><%= msg %></li>
         <% end %>
+        <%# Closes the `.each do |msg|` loop opened above. %>
       </ul>
     </div>
   <% end %>
+  <%# Closes the `<% if alert_rule.errors.any? % >` block opened above. %>
 
+  <%# --- Rule name field --- %>
   <div>
+    <%# "form-label" is a custom CSS class (defined in this app's
+        stylesheet, not a built-in Tailwind class) that styles this text
+        consistently as a form field's caption. %>
     <label class="form-label">Rule name</label>
+    <%# `f.text_field :name` generates a single-line text `<input>` bound to
+        `alert_rule.name` — its current value pre-fills the box (blank on a
+        new record, whatever's saved on an edit), and submitting the form
+        sends whatever the user typed back as the `name` attribute.
+        `class: "form-input"` is this app's custom styling for input boxes.
+        `placeholder:` sets the light gray hint text shown only when the
+        field is empty — it disappears once the user starts typing and is
+        never actually submitted as a value. %>
     <%= f.text_field :name, class: "form-input", placeholder: "e.g. 10x20 under $100" %>
   </div>
 
+  <%# --- Trigger type field --- %>
   <div>
     <label class="form-label">Trigger type</label>
+    <%# `f.select` generates an HTML `<select>` dropdown bound to
+        `alert_rule.trigger_type`. Its second argument is an array of
+        two-item arrays — each inner pair is [visible label, underlying
+        value] — so the dropdown shows the friendly English text to the
+        user but submits the short code ("price_drop" or
+        "price_threshold") as the actual saved value. The third argument,
+        `{}`, is an empty hash of SELECT-SPECIFIC options (e.g. things like
+        `include_blank: true` could go here — none are used) — Rails
+        requires this argument to be present, even empty, whenever you also
+        want to pass HTML options (like `class:` below) as a separate,
+        fourth argument. %>
     <%= f.select :trigger_type,
           [["Price drops compared to previous crawl", "price_drop"],
            ["Price falls below a specific amount", "price_threshold"]],
@@ -26,12 +110,29 @@
           class: "form-input" %>
   </div>
 
+  <%# --- Threshold price field (only meaningful for the "price_threshold"
+      trigger type above; always rendered, but only relevant/shown when
+      that option is selected — see the flagged note below) --- %>
   <div id="threshold-price-field">
     <label class="form-label">Threshold price (only for "price below" trigger)</label>
+    <%# `f.number_field` generates an `<input type="number">`, which gives
+        browsers a numeric input UI (e.g. up/down arrows, numeric-only
+        mobile keyboards). `step: 0.01` lets the value include cents (two
+        decimal places) rather than only whole numbers. `class: "form-input
+        w-40"` combines this app's input styling with Tailwind's "w-40"
+        utility, which fixes this particular field's width narrower than a
+        full-width text field (appropriate for a short number). %>
     <%= f.number_field :threshold_price, step: 0.01, class: "form-input w-40", placeholder: "e.g. 99.99" %>
   </div>
 
+  <%# --- Unit size / company filters, side by side --- %>
+  <%# "flex" makes this <div>'s children lay out horizontally instead of
+      stacking vertically (the browser's HTML default); "gap-4" adds
+      spacing between those horizontal children. %>
   <div class="flex gap-4">
+    <%# "flex-1" makes this child grow to fill an equal share of the
+        available horizontal space — combined with the identical "flex-1"
+        on its sibling below, the two fields split the row evenly. %>
     <div class="flex-1">
       <label class="form-label">Unit size filter (optional)</label>
       <%= f.text_field :unit_size_filter, class: "form-input", placeholder: "e.g. 10x20 (blank = all sizes)" %>
@@ -42,30 +143,72 @@
     </div>
   </div>
 
+  <%# --- Delivery methods section --- %>
+  <%# "border-t border-gray-800" draws a thin gray line across the top of
+      this block, visually separating it from the fields above; "pt-5" adds
+      padding above the section's own content so it doesn't touch that
+      line. %>
   <div class="border-t border-gray-800 pt-5">
+    <%# "text-xs" = extra-small text, "text-gray-400" = muted gray color,
+        "uppercase" = force capital letters, "tracking-wider" = extra space
+        between letters, "mb-3" = margin below this heading. Together these
+        make it read as a small section label rather than a normal heading. %>
     <div class="text-xs text-gray-400 uppercase tracking-wider mb-3">Delivery Methods</div>
 
+    <%# "space-y-4" adds vertical spacing between each delivery-method row
+        below (email / discord / SMS), the same spacing technique used on
+        the outer form. %>
     <div class="space-y-4">
+      <%# Wrapping the checkbox AND its label text in one <label> makes the
+          whole block clickable (not just the tiny checkbox square) —
+          that's plain HTML/browser behavior, not something Rails adds.
+          "flex items-start gap-3" lays the checkbox and the text/field next
+          to it horizontally, aligned to the TOP (items-start) since the
+          text side has multiple stacked lines (see the nested <div> below). %>
       <label class="flex items-start gap-3">
+        <%# `f.check_box :email_enabled` generates a checkbox `<input>`
+            bound to the boolean `email_enabled` column — checked/unchecked
+            reflects the saved true/false value, and submitting the form
+            sends true if checked. "accent-emerald-500" recolors the
+            checkbox itself (its check mark/fill color) to this app's green
+            accent instead of the browser's default blue; "mt-0.5" nudges
+            it down slightly to visually align with the multi-line text
+            beside it. %>
         <%= f.check_box :email_enabled, class: "accent-emerald-500 mt-0.5" %>
         <div>
           <span class="text-sm text-gray-200">Email</span>
+          <%# "mt-1" adds a little space between the "Email" label above and
+              the input box below it. %>
           <div class="mt-1">
+            <%# `f.email_field` generates an `<input type="email">`, which
+                gives mobile browsers an email-optimized keyboard and lets
+                desktop browsers do basic "looks like an email" validation.
+                Bound to the `email_address` column. %>
             <%= f.email_field :email_address, class: "form-input text-sm", placeholder: "Send to this address (or use default in Settings)" %>
           </div>
         </div>
       </label>
 
+      <%# Same pattern as the email row above, but for Discord notifications. %>
       <label class="flex items-start gap-3">
         <%= f.check_box :discord_enabled, class: "accent-emerald-500 mt-0.5" %>
         <div>
           <span class="text-sm text-gray-200">Discord</span>
           <div class="mt-1">
+            <%# `f.url_field` generates an `<input type="url">`, hinting to
+                browsers that the value should look like a web address
+                (e.g. a Discord webhook URL). Bound to
+                `discord_webhook_url`. %>
             <%= f.url_field :discord_webhook_url, class: "form-input text-sm", placeholder: "Webhook URL (or use default in Settings)" %>
           </div>
         </div>
       </label>
 
+      <%# SMS row has no extra input field below its checkbox (no phone
+          number box here — see the flagged note at the end of this pass),
+          so it uses "items-center" instead of "items-start" since there's
+          only a single line of text to vertically center against the
+          checkbox. %>
       <label class="flex items-center gap-3">
         <%= f.check_box :sms_enabled, class: "accent-emerald-500" %>
         <span class="text-sm text-gray-400">SMS (requires paid Twilio — see Settings)</span>
@@ -73,13 +216,40 @@
     </div>
   </div>
 
+  <%# --- Active toggle --- %>
+  <%# "flex items-center gap-2" lays the checkbox and its label text
+      horizontally, vertically centered, with a small gap — same idea as
+      the delivery-method rows above but with a tighter gap since there's
+      no multi-line content. %>
   <label class="flex items-center gap-2">
     <%= f.check_box :active, class: "accent-emerald-500" %>
     <span class="text-sm text-gray-200">Rule is active</span>
   </label>
 
+  <%# --- Submit / cancel buttons --- %>
   <div class="flex gap-3">
+    <%# `f.submit` generates a `<input type="submit">` (or `<button
+        type="submit">`) that, when clicked, actually sends this form to
+        the server. Its visible text is computed with a Ruby ternary
+        expression: `condition ? value_if_true : value_if_false`.
+        `alert_rule.new_record?` is an ActiveRecord method that's true if
+        this record has never been saved to the database yet (the "new"
+        page's case) and false once it has a saved row (the "edit" page's
+        case) — so the button reads "Create Alert Rule" on the new-rule
+        form and "Save Changes" on the edit-rule form, even though this is
+        the exact same shared partial in both cases. "btn-primary" is this
+        app's custom CSS class for its main call-to-action button style. %>
     <%= f.submit alert_rule.new_record? ? "Create Alert Rule" : "Save Changes", class: "btn-primary" %>
+    <%# `link_to "Cancel", alert_rules_path, ...` generates a plain `<a
+        href="...">Cancel</a>` link (NOT a form submission — clicking it
+        just navigates away, discarding anything typed) pointing at the
+        alert rules listing page. `alert_rules_path` is a Rails-generated
+        URL helper, defined automatically from config/routes.rb, that
+        returns the path string for that index page. "btn-secondary" is
+        this app's custom CSS class for a less prominent, secondary-style
+        button/link. %>
     <%= link_to "Cancel", alert_rules_path, class: "btn-secondary" %>
   </div>
+<%# Closes the `form_with ... do |f|` block opened at the top of this file —
+    this is also where Rails emits the closing `</form>` HTML tag. %>
 <% end %>

@@ -1,2 +1,33 @@
+# WHAT IS THIS FILE?
+# A "Procfile" is a plain-text list of named processes that should all be
+# started together — the format comes from Heroku, and it's now widely used
+# by local dev tooling too. Each line follows the pattern
+# `<process name>: <shell command>`. A "process manager" program (in this
+# app's case, the `foreman` gem — see how it's invoked in bin/dev) reads
+# this file, starts every listed command AT THE SAME TIME as its own
+# separate process, and interleaves all their console output into one
+# terminal window, each line tagged with its process name and given its own
+# color, so you can tell which process printed what. This specific file,
+# `Procfile.dev`, is for local development only (the ".dev" suffix is just
+# a naming convention distinguishing it from a production Procfile) — you
+# start it by running `bin/dev`, which under the hood runs
+# `foreman start -f Procfile.dev`. Without this file, you'd have to open
+# two separate terminal windows/tabs and manually run each command below
+# yourself every time you wanted both the app server and the CSS watcher
+# running together.
+
+# `web:` names this process "web" (an arbitrary label foreman uses when
+# tagging this process's output lines). The command after the colon,
+# `bin/rails server`, starts Rails' built-in web server (Puma, per the
+# Gemfile) — this is what actually accepts HTTP requests from your browser
+# at http://localhost:3000 and returns rendered pages/JSON.
 web: bin/rails server
+# `css:` names this second process "css". Its command, `bin/rails
+# tailwindcss:watch`, runs a Rake task (see the Rakefile for how Rake tasks
+# get loaded) that watches this app's source files for changes and
+# automatically rebuilds the compiled Tailwind CSS output whenever
+# something changes — so you don't have to manually recompile CSS after
+# every edit while developing. Because Procfile.dev runs this alongside
+# "web" instead of one-at-a-time, both the server and the CSS watcher are
+# live simultaneously during development.
 css: bin/rails tailwindcss:watch

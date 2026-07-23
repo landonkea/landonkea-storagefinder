@@ -1,18 +1,105 @@
+# This file (config/queue.yml) configures Solid Queue, Rails' database-
+# backed background-job processing system, keyed by environment. NOTE: this
+# app's actual active job adapter setting is `:async` (see
+# config/application.rb's BACKGROUND JOBS section, and config/environments/
+# production.rb, both of which set `config.active_job.queue_adapter =
+# :async`), NOT Solid Queue — this file follows the generic shape Rails
+# generates for Solid Queue by default, but does not appear to currently
+# take effect; see this pass's final "flagged issues" note.
+#
+# YAML primer: lines starting with "#" are comments, ignored by whatever
+# parses this file. Plain "key: value" pairs work like entries in a Ruby
+# Hash; indentation (spaces, not tabs) shows what's nested under what. A
+# line starting with "- " under a key defines one item of a YAML list (like
+# a Ruby Array). This file also contains an ERB tag ("<%%= ... %>"), meaning
+# Rails runs it through the ERB template engine first, substituting the Ruby
+# expression's result as plain text, before parsing the result as YAML (see
+# config/cache.yml for a fuller explanation of that two-step process).
+
+# "default:" is a top-level YAML key. "&default" right after the colon is a
+# YAML ANCHOR labeling this whole block so it can be reused elsewhere in
+# this file via "<<: *default" (a "merge key," used in every environment
+# section below) without retyping these same settings each time.
 default: &default
+  # "dispatchers:" is a nested key; its value is a YAML LIST (each "- " line
+  # below is one item) — Solid Queue's "dispatcher" processes are
+  # responsible for finding jobs that are due to run (including scheduled/
+  # recurring ones — see config/recurring.yml) and handing them off to
+  # worker processes to actually execute.
   dispatchers:
+    # One list item, itself a nested map with two settings on the same
+    # line separated by a comma-less YAML flow: "polling_interval: 1"
+    # (below) is actually its OWN key, and "batch_size: 500" (the next
+    # line) is nested one level under it — see the note on the next line
+    # for why.
+    # "polling_interval: 1" sets how often (in seconds) a dispatcher checks
+    # the database for newly-due jobs — 1 means it checks once per second.
     - polling_interval: 1
+      # "batch_size: 500" (indented to align under "polling_interval:"
+      # above, making it a SECOND key in that same one-item list entry, not
+      # a separate list item) caps how many due jobs a dispatcher pulls out
+      # of the database and hands off to workers in one single pass, before
+      # checking again.
       batch_size: 500
+  # "workers:" is a second nested key under "default:", also a YAML list —
+  # Solid Queue's "worker" processes are what actually EXECUTE jobs handed
+  # off by a dispatcher.
   workers:
+    # One list item (a nested map, its keys spanning the next four lines,
+    # all indented consistently to belong to this same single list entry).
+    # "queues: "*"" tells this worker pool to pull jobs from EVERY queue
+    # name (the asterisk "*" acts as a wildcard/catch-all), rather than
+    # being restricted to specific named queues only.
     - queues: "*"
+      # "threads: 3" sets how many jobs this worker pool can run
+      # concurrently, using Ruby threads WITHIN each worker process (as
+      # opposed to "processes:" just below, which is a separate,
+      # process-level concurrency dimension).
       threads: 3
+      # "processes:" sets how many separate WORKER PROCESSES to start
+      # (each of which can itself run "threads:" many jobs concurrently, as
+      # set above). "<%%= ENV.fetch("JOB_CONCURRENCY", 1) %>" is an ERB tag:
+      # inside it, "ENV.fetch("JOB_CONCURRENCY", 1)" reads the
+      # JOB_CONCURRENCY environment variable if set (see the commented-out
+      # "JOB_CONCURRENCY: 3" example in config/deploy.yml, which — if
+      # uncommented — would set this exact environment variable inside the
+      # deployed container), falling back to the plain Integer `1` (passed
+      # directly as `.fetch`'s second argument here, unlike the block-form
+      # fallback seen in config/database.yml) if that variable isn't set at
+      # all. ERB substitutes whatever this expression evaluates to as
+      # literal text into the YAML.
       processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      # "polling_interval: 0.1" sets how often (in seconds) each worker
+      # checks for newly-assigned jobs to run — a fractional value (0.1
+      # seconds = 100 milliseconds) here, much more frequent than the
+      # dispatcher's own 1-second polling interval above, since workers
+      # need to react quickly once a job is actually handed to them.
       polling_interval: 0.1
 
+# Blank line — ignored by YAML, purely visual spacing between the shared
+# "default" anchor block above and the per-environment sections below.
+
+# "development:" is a top-level YAML key matching the RAILS_ENV value Rails
+# defaults to when nothing else is set — see config/environments/
+# development.rb for the fuller explanation of Rails' environment system.
 development:
+  # "<<: *default" is YAML's merge-key syntax: it copies in every key/value
+  # pair from the block anchored above as "&default" (dispatchers, workers),
+  # so they don't need to be repeated here.
   <<: *default
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Settings used while running the automated test suite.
 test:
+  # Same merge-key mechanism as development above.
   <<: *default
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Settings used in the deployed, live production environment.
 production:
+  # Same merge-key mechanism as development/test above — production reuses
+  # the identical dispatcher/worker settings anchored under "default",
+  # rather than defining any production-specific overrides of its own.
   <<: *default

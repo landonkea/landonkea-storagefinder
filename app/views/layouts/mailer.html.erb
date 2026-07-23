@@ -1,13 +1,98 @@
+<%# =============================================================================
+  MAILER LAYOUT (HTML)
+  =============================================================================
+  This is the HTML "wrapper" template for every outgoing email in this app —
+  the same idea as app/views/layouts/application.html.erb wraps every normal
+  web page, but for mail instead of a browser page. Rails' ActionMailer looks
+  for a file named "mailer.html.erb" here because ApplicationMailer (in
+  app/mailers/application_mailer.rb) declares `layout "mailer"` — that one
+  word tells Rails "wrap every mailer's rendered email body in this file."
+  Whatever an individual mailer method renders (e.g. a template for a price
+  alert) gets dropped into this file wherever the output tag near the bottom
+  of this file appears (search below for "yield").
+
+  NOTE ON THIS COMMENT ITSELF: an ERB comment like this one is opened with
+  `<%#` and runs until the FIRST `%` immediately followed by `>` it finds —
+  so anywhere below that needs to show that exact two-character closing
+  sequence as literal example text (rather than as a real, working tag)
+  writes it with a space in the middle, as `% >`, specifically so it does
+  NOT prematurely end whichever comment it's written inside.
+
+  FLAG (see end-of-task report): AlertDeliveryService (used for both real
+  alerts and the "Send Test Email" button) builds and sends email directly
+  with the `mail` gem's `Mail.new` — it does NOT call ActionMailer's `mail`
+  method or render a view. That means this layout is currently never
+  actually applied to any email this app sends; nothing in app/mailers/
+  besides the empty ApplicationMailer base class exists to trigger it. Not
+  fixed here, per the comments-only instructions for this pass. %>
+
+<%# The tag wrapping this whole comment block, `<%#` ... `% >` (see the
+  note above for why that's written with a space), is ERB's comment
+  syntax: Ruby On Rails' "Embedded RuBy" templating system strips
+  everything between them out entirely before the file is rendered, so
+  none of this text reaches an actual email. Contrast this with a plain
+  `<%` ... `% >` tag (runs Ruby, outputs nothing) and `<%=` ... `% >`
+  (runs Ruby AND inserts its result into the output), both used later in
+  this file — but with their REAL closing delimiter, since those two are
+  actual working tags, not text describing one. %>
+
+<%# "<!doctype html>" is a standard HTML5 declaration telling whatever
+  renders this document (here, an email client's HTML viewer) to use
+  modern/standards-compliant parsing rules rather than older quirky ones.
+  This line is plain, static HTML with no Ruby in it. %>
 <!DOCTYPE html>
+<%# `<html>` opens the root element of the email document — every other tag
+  in this file nests inside it, and it's closed by the matching `</html>`
+  at the very end of the file. %>
 <html>
+  <%# `<head>` holds document metadata (nothing inside it is directly
+    visible as email body text) — here it's used only to set the character
+    encoding and hold an (empty) inline stylesheet. %>
   <head>
+    <%# `<meta http-equiv="Content-Type" content="text/html; charset=utf-8">`
+      tells the email client this document's text is HTML and is encoded as
+      UTF-8 (a character encoding that can represent virtually any language's
+      text/symbols) — without it, some email clients could misinterpret
+      special characters (accents, emoji, curly quotes) as garbled text. %>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <%# `<style>` would normally hold CSS (styling rules) for this page/email.
+      Rails' default generator leaves it here, empty, as a starting point. %>
     <style>
+      <%# This is a plain CSS comment (opened with a forward-slash-star,
+        closed with star-forward-slash — not an ERB comment) sitting INSIDE
+        the style tag's CSS content rather than the surrounding HTML — it's
+        a placeholder note left by Rails' own scaffold generator, reminding
+        whoever adds styles later that HTML email clients are notoriously
+        inconsistent about supporting style blocks/external CSS, so styling
+        is usually done with a `style="..."` attribute written directly on
+        each HTML tag ("inline") instead, for reliability across different
+        email apps (Gmail, Outlook, Apple Mail, etc.). %>
       /* Email styles need to be inline */
     </style>
+  <%# The closing head tag below ends the head element opened above. %>
   </head>
 
+  <%# Blank line in the original file, purely for visual spacing between
+    the head section above and the body section below — no code to
+    explain. %>
+
+  <%# `<body>` is the part of the HTML document an email client actually
+    displays to the recipient as the message content. %>
   <body>
+    <%# The line below — an ERB output tag containing just `yield` — is the
+      key line in ANY Rails layout file: `yield` hands control back to
+      whatever inner template is being wrapped (the specific mailer view
+      for one particular email, e.g. a price-alert email's own .html.erb
+      template) and returns its fully-rendered HTML output as a string.
+      Because that tag uses the `<%=` opening form (as opposed to plain
+      `<%`), it then INSERTS that returned string directly into the page
+      at this exact spot — so this one line is where the entire actual
+      email content ends up; everything else in this file is just the
+      shared wrapper around it. %>
     <%= yield %>
+  <%# The closing body tag below ends the body element opened above. %>
   </body>
+<%# The closing html tag below ends the html element opened near the top
+  of the file — this is the last tag, matching the very first real tag in
+  the document. %>
 </html>

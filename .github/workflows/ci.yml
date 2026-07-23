@@ -1,93 +1,416 @@
+# WHAT IS THIS FILE?
+# This is a GitHub Actions "workflow" file. GitHub Actions is GitHub's
+# built-in automation system: it watches for events (like someone pushing
+# code or opening a pull request) and, in response, spins up temporary
+# virtual machines to run whatever commands you list here — tests, linters,
+# security scans, deployments, etc. This file lives at
+# .github/workflows/ci.yml specifically because GitHub auto-discovers any
+# YAML file in that folder as a workflow; you never "run" this file
+# yourself, GitHub's servers do, automatically, on the triggers defined
+# below. Like dependabot.yml, this is YAML — meaning/nesting comes from
+# indentation, and a leading `-` marks an item in a list.
+
+# `name: CI` sets the human-readable name for this workflow — this is what
+# shows up in GitHub's "Actions" tab and next to commit statuses/PR checks,
+# so people can tell which workflow ran (as opposed to any others).
 name: CI
 
+# Blank line — purely visual separation.
+
+# `on:` defines WHEN this workflow should run — the list of events that
+# trigger it.
 on:
+  # `pull_request:` (with nothing after the colon, meaning "use the
+  # defaults") means: run this workflow every time a pull request is
+  # opened, or new commits are pushed to an existing pull request's branch.
   pull_request:
+  # `push:` starts a more specific trigger — "run on pushes, but only under
+  # the conditions listed below" rather than on every push anywhere.
   push:
+    # `branches: [ main ]` restricts the push trigger to pushes that land
+    # directly on the `main` branch (e.g. merges). The square brackets are
+    # YAML's "flow" (inline) list syntax — `[ main ]` is a one-item list
+    # containing the string `main`, written compactly on one line instead
+    # of as multiple `-` bullet lines.
     branches: [ main ]
 
+# Blank line — purely visual separation.
+
+# `jobs:` is a top-level key whose value is a set of named "jobs" — each
+# job is an independent unit of work that runs on its own fresh virtual
+# machine, in parallel with the other jobs by default (unless one is
+# configured to depend on another, which none here do).
 jobs:
+  # `scan_ruby:` names this job "scan_ruby" — an arbitrary identifier you
+  # choose; it's how this job is labeled in GitHub's UI and how other jobs
+  # could refer to it (not used here, since jobs don't depend on each other
+  # in this file).
   scan_ruby:
+    # `runs-on: ubuntu-latest` tells GitHub which kind of virtual machine
+    # to boot for this job — the newest available Ubuntu Linux image that
+    # GitHub maintains.
     runs-on: ubuntu-latest
 
+    # Blank line inside the job — visual separation before the step list.
+
+    # `steps:` is this job's ordered list of commands/actions to run, top
+    # to bottom, on that fresh VM. If any step fails, the job (and the
+    # workflow run) is marked failed and later steps in this job are
+    # normally skipped.
     steps:
+      # `- name: Checkout code` starts the first step; `name:` is just the
+      # human-readable label shown in GitHub's UI for this step.
       - name: Checkout code
+        # `uses: actions/checkout@v6` runs a pre-built, reusable "Action"
+        # (a packaged unit of automation someone else published) instead of
+        # a raw shell command. `actions/checkout` is GitHub's own official
+        # action that clones this repository's code onto the VM — without
+        # it, the VM would be empty and there'd be nothing to test. `@v6`
+        # pins which published version of that action to use.
         uses: actions/checkout@v6
 
+      # Blank line — visual separation between steps.
+
+      # `- name: Install system dependencies` installs Linux packages this
+      # project's gems need in order to COMPILE, before `bundle install`
+      # runs in the next step. The `dnssd` gem (used by
+      # config/initializers/mdns.rb to announce this app over local-network
+      # mDNS/Bonjour) contains native C code that must be built against the
+      # Avahi mDNS library's development headers — without them installed
+      # first, `bundle install` fails and every job below fails with it.
+      # `bin/setup` installs this same package for local development; this
+      # step is CI's equivalent of that one step.
+      - name: Install system dependencies
+        # `run: sudo apt-get update && sudo apt-get install -y ...` updates
+        # the VM's package index, then installs
+        # `libavahi-compat-libdnssd-dev` — Apple Bonjour-compatible mDNS
+        # headers the `dnssd` gem's native extension links against. `-y`
+        # auto-confirms the install (no human is present to answer a
+        # prompt); `sudo` is needed because the runner user isn't root.
+        run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev
+
+      # Blank line — visual separation.
+
+      # `- name: Set up Ruby` starts the next step, which installs a Ruby
+      # interpreter onto the VM (the checkout above only copied files; Ruby
+      # itself isn't preinstalled in the form this project needs).
       - name: Set up Ruby
+        # `uses: ruby/setup-ruby@v1` runs the official community action for
+        # installing Ruby. It reads this project's .ruby-version file
+        # automatically to know which Ruby version to install (that file
+        # isn't shown here, but setup-ruby looks for it by convention).
         uses: ruby/setup-ruby@v1
+        # `with:` supplies configuration options ("inputs") to the action
+        # used just above — indented under it to show it belongs to this
+        # step specifically.
         with:
+          # `bundler-cache: true` tells the action to also run `bundle
+          # install` (installing all gems from the Gemfile) AND to cache
+          # the installed gems between workflow runs, so future runs are
+          # faster instead of reinstalling every gem from scratch each time.
           bundler-cache: true
 
+      # Blank line — visual separation between steps.
+
+      # `- name: Scan for common Rails security vulnerabilities using
+      # static analysis` — this step's human-readable label, describing
+      # what the command below does.
       - name: Scan for common Rails security vulnerabilities using static analysis
+        # `run: bin/brakeman --no-pager` executes a literal shell command
+        # (as opposed to `uses:`, which runs a packaged action) — here,
+        # this project's `bin/brakeman` wrapper script, which runs the
+        # Brakeman gem: a static analyzer that reads Rails source code
+        # WITHOUT running it, looking for common security mistakes (like
+        # SQL injection or mass-assignment bugs). `--no-pager` stops it
+        # from piping output through an interactive pager program, since
+        # there's no human sitting at a terminal to page through — CI just
+        # wants the plain output printed straight to the log.
         run: bin/brakeman --no-pager
-      
+
+      # Blank line — visual separation (this one has trailing whitespace in
+      # the original file; harmless, YAML/CI tooling ignores it).
+
+      # `- name: Scan for known security vulnerabilities in gems used` —
+      # label for the next step.
       - name: Scan for known security vulnerabilities in gems used
+        # `run: bin/bundler-audit` executes this project's wrapper for the
+        # bundler-audit gem, which checks every gem version pinned in
+        # Gemfile.lock against a public database of known security
+        # vulnerabilities (CVEs) — different from Brakeman, which analyzes
+        # THIS app's own code rather than its third-party dependencies.
         run: bin/bundler-audit
-      
+
+  # Blank line (with trailing whitespace, as above) — visual separation
+  # before the next job definition. This line is indented at the `jobs:`
+  # level to start a new sibling job, not nested inside scan_ruby.
   scan_js:
+    # `runs-on: ubuntu-latest` — same meaning as in scan_ruby above: boot a
+    # fresh Ubuntu VM for this separate job.
     runs-on: ubuntu-latest
 
+    # Blank line — visual separation.
+
     steps:
+      # `- name: Checkout code` — same purpose as before: clone this repo's
+      # files onto this job's (separate, fresh) VM. Each job gets its own
+      # VM, so even though scan_ruby already checked out code, this job
+      # must do it again independently.
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # Blank line — visual separation.
+
+      # `- name: Install system dependencies` — same reason as in scan_ruby
+      # above: `bundle install` (run by the Ruby setup step below) needs to
+      # compile the `dnssd` gem's native extension, which needs Avahi's
+      # mDNS development headers present on the VM first.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev
+
+      # Blank line — visual separation.
+
+      # `- name: Set up Ruby` — installs Ruby on this job's VM too. Even
+      # though this step is scanning JAVASCRIPT dependencies, it still
+      # needs Ruby/Bundler installed because the tool used below
+      # (`bin/importmap`) is a Rails binstub — a Ruby script — even though
+      # its job is to audit JS packages declared via Rails' importmap
+      # system (which avoids npm/node_modules for JS dependencies).
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
 
+      # Blank line — visual separation.
+
+      # `- name: Scan for security vulnerabilities in JavaScript
+      # dependencies` — label for the final step in this job.
       - name: Scan for security vulnerabilities in JavaScript dependencies
+        # `run: bin/importmap audit` runs Rails' `importmap` binstub with
+        # the `audit` subcommand, which checks the JS packages pinned in
+        # config/importmap.rb against a vulnerability database — the JS
+        # equivalent of what bundler-audit does for Ruby gems.
         run: bin/importmap audit
 
+  # Blank line — visual separation before the next job. Indented back to
+  # the `jobs:` level, so `lint:` is a new sibling job, not nested inside
+  # scan_js.
   lint:
+    # `runs-on: ubuntu-latest` — this job also gets its own fresh Ubuntu VM.
     runs-on: ubuntu-latest
+    # `env:` sets environment variables that will be visible to every step
+    # in THIS job (as opposed to `with:`, which configures a single action).
     env:
+      # `RUBOCOP_CACHE_ROOT: tmp/rubocop` tells RuboCop (the Ruby linter
+      # run later in this job) where to store its cache files on this VM's
+      # filesystem — set here as an env var so both the cache-restoring
+      # step below and the actual lint step agree on the same location.
       RUBOCOP_CACHE_ROOT: tmp/rubocop
     steps:
+      # `- name: Checkout code` — clone the repo onto this job's VM, same
+      # as in the previous two jobs (each job is isolated and needs its own
+      # copy of the code).
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # Blank line — visual separation.
+
+      # `- name: Install system dependencies` — same reason as in scan_ruby
+      # above: `bundle install` (run by the Ruby setup step below) needs to
+      # compile the `dnssd` gem's native extension, which needs Avahi's
+      # mDNS development headers present on the VM first.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev
+
+      # Blank line — visual separation.
+
+      # `- name: Set up Ruby` — install Ruby on this VM so RuboCop (a Ruby
+      # gem) can actually run.
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
 
+      # Blank line — visual separation.
+
+      # `- name: Prepare RuboCop cache` starts a step that speeds up future
+      # lint runs by reusing RuboCop's analysis cache between workflow
+      # runs, instead of re-analyzing every single file from scratch every
+      # time (RuboCop's own cache mechanism skips re-checking files that
+      # haven't changed since the last run, IF that cache is available).
       - name: Prepare RuboCop cache
+        # `uses: actions/cache@v4` runs GitHub's official caching action,
+        # which can save a folder after the job finishes and restore it at
+        # the start of a later run, keyed by whatever `key:` evaluates to
+        # below.
         uses: actions/cache@v4
+        # `env:` here sets a variable scoped to just THIS step (shadowing/
+        # supplementing the job-level `env:` above), used only to compute
+        # the cache key below.
         env:
+          # `DEPENDENCIES_HASH: ${{ hashFiles(...) }}` computes a hash
+          # (a short fingerprint string) of the listed files' combined
+          # contents. `${{ }}` is GitHub Actions' expression syntax — code
+          # inside those braces is evaluated by GitHub, not passed through
+          # literally. `hashFiles(...)` takes glob patterns (file path
+          # patterns, where `**` means "any number of directories") and
+          # returns one hash representing all matching files together —
+          # here, the Ruby version file, any .rubocop.yml, any
+          # .rubocop_todo.yml, and the locked gem versions. If any of those
+          # change, the hash changes, so the cache key changes too — this
+          # is how the workflow knows the RuboCop cache from before is
+          # still valid (same lint rules/gem versions) or has gone stale.
           DEPENDENCIES_HASH: ${{ hashFiles('.ruby-version', '**/.rubocop.yml', '**/.rubocop_todo.yml', 'Gemfile.lock') }}
+        # `with:` supplies inputs to the actions/cache action used above.
         with:
+          # `path: ${{ env.RUBOCOP_CACHE_ROOT }}` tells the cache action
+          # WHICH folder on disk to save/restore — reading back the
+          # `RUBOCOP_CACHE_ROOT` env var set at the job level above
+          # (tmp/rubocop), via the `env.<name>` expression syntax.
           path: ${{ env.RUBOCOP_CACHE_ROOT }}
+          # `key:` is the cache's unique identifier. It's built by joining
+          # several pieces with `-`: a fixed "rubocop" prefix, the runner's
+          # OS (`runner.os`, e.g. "Linux"), the dependency hash computed
+          # above, and finally either the current run's own numeric ID
+          # (`github.run_id`) — IF this workflow is running on the
+          # repository's default branch (`github.ref_name ==
+          # github.event.repository.default_branch`) — OR the literal
+          # string 'default' otherwise. The `condition ? a : b` syntax here
+          # is a ternary expression: "if condition, use a, else use b."
+          # Using a fresh run_id on the default branch means each run on
+          # main saves a brand-new cache entry (since GitHub Actions caches
+          # are effectively write-once per exact key); using the constant
+          # 'default' key everywhere else means all non-default-branch runs
+          # share and reuse one common cache slot instead of each PR
+          # spawning its own permanent cache entry.
           key: rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-${{ github.ref_name == github.event.repository.default_branch && github.run_id || 'default' }}
+          # `restore-keys:` provides fallback key PREFIXES to search if no
+          # cache exactly matches `key` above — actions/cache will use the
+          # most recent cache whose key starts with one of these prefixes
+          # instead of starting with an empty cache. The `|` right after
+          # the colon is YAML's "literal block scalar" marker: it means
+          # "the following indented lines are the exact string value,
+          # newlines and all" — here producing a (one-line, single-entry)
+          # list of restore-key prefixes to try.
           restore-keys: |
             rubocop-${{ runner.os }}-${{ env.DEPENDENCIES_HASH }}-
 
+      # Blank line — visual separation.
+
+      # `- name: Lint code for consistent style` — label for the step that
+      # actually runs the linter.
       - name: Lint code for consistent style
+        # `run: bin/rubocop -f github` runs this project's RuboCop binstub
+        # (a Ruby style/quality checker that flags code not matching the
+        # project's configured conventions — see .rubocop.yml). `-f github`
+        # selects RuboCop's "github" output formatter, which prints
+        # findings in a special format GitHub Actions understands and turns
+        # into inline annotations on the offending lines, right in the PR
+        # UI, instead of plain unstructured text.
         run: bin/rubocop -f github
 
+  # Blank line — visual separation before the final job, indented back to
+  # the `jobs:` level.
   test:
+    # `runs-on: ubuntu-latest` — this job, too, gets its own fresh VM.
     runs-on: ubuntu-latest
 
+    # Blank line — visual separation.
+
     steps:
+      # `- name: Checkout code` — clone the repo onto this job's VM, same
+      # pattern as every other job (jobs never share a VM or filesystem).
       - name: Checkout code
         uses: actions/checkout@v6
 
+      # Blank line — visual separation.
+
+      # `- name: Install system dependencies` — same reason as in scan_ruby
+      # above: `bundle install` (run by the Ruby setup step below) needs to
+      # compile the `dnssd` gem's native extension, which needs Avahi's
+      # mDNS development headers present on the VM first.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev
+
+      # Blank line — visual separation.
+
+      # `- name: Set up Ruby` — install Ruby (and run `bundle install` via
+      # bundler-cache) so the test suite can actually execute.
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
 
+      # Blank line — visual separation.
+
+      # `- name: Build Tailwind CSS` compiles app/assets/tailwind/
+      # application.css into app/assets/builds/tailwind.css using the
+      # `tailwindcss-rails` gem's Rake task (installed above via `bundle
+      # install`). This build output is listed in .gitignore — it's
+      # regenerated from source, not committed — so unlike a real developer
+      # machine (where `bin/dev` keeps it up to date via `tailwindcss:watch`
+      # in the background), a fresh CI checkout has NO compiled CSS file at
+      # all until this step creates one. Without it, every view that uses
+      # `stylesheet_link_tag "tailwind"` raises "asset not found" the moment
+      # a test tries to render it.
+      - name: Build Tailwind CSS
+        run: bin/rails tailwindcss:build
+
+      # Blank line — visual separation.
+
+      # `- name: Prepare the test database` starts a step that creates and
+      # migrates a fresh database specifically for running tests against.
       - name: Prepare the test database
+        # `env:` sets environment variables visible only to this one step's
+        # `run:` command below.
         env:
+          # `RAILS_ENV: test` tells Rails which environment's config to
+          # boot under — here, the "test" environment (as opposed to
+          # development or production), which uses its own separate
+          # database so tests never touch real/dev data.
           RAILS_ENV: test
+          # This comment (pre-existing, kept as-is) explains WHY the secret
+          # below is required: booting the Rails app at all — even just to
+          # prepare the test database — decrypts config/credentials.yml.enc,
+          # and that decryption needs the master key. Two specific features
+          # depend on what's inside that encrypted file: the Setting model's
+          # `#value` method (which itself encrypts/decrypts stored settings)
+          # and this app's HTTP Basic Auth credentials.
           # Booting the app decrypts config/credentials.yml.enc — Setting#value's
           # encryption keys and the HTTP Basic Auth credentials both live there,
           # so this secret must be set in the repo's Actions settings.
+          # `RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}` reads a
+          # value out of this GitHub repository's encrypted Actions
+          # secrets store (configured separately in GitHub's web UI, not in
+          # this file) and exposes it to this step as the RAILS_MASTER_KEY
+          # environment variable — this is how a real secret gets into a
+          # public workflow file without the secret's actual value ever
+          # being written down in the file itself.
           RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+        # `run: bin/rails db:test:prepare` executes Rails' binstub with the
+        # `db:test:prepare` Rake task, which loads the app's schema into a
+        # freshly created test database, readying it for the test suite.
         run: bin/rails db:test:prepare
 
+      # Blank line — visual separation.
+
+      # `- name: Run tests` — the final step: actually executes the test
+      # suite.
       - name: Run tests
+        # `env:` again supplies the master key, scoped to this step —
+        # needed again here because each `run:` step's environment doesn't
+        # automatically carry over variables set in a PREVIOUS step (only
+        # job-level `env:` would do that, and this workflow sets it
+        # per-step instead).
         env:
+          # Same secret lookup as above, repeated because running the
+          # actual test suite (not just preparing the DB) also boots the
+          # full Rails app and needs to decrypt credentials again.
           RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+        # `run: bin/rails test` executes Rails' built-in Minitest-based
+        # test runner via this project's binstub — this is the step whose
+        # pass/fail ultimately determines whether this job (and the whole
+        # CI run) succeeds.
         run: bin/rails test
 
+# Trailing blank line at the end of the file — has no effect; many editors
+# and linters expect text files to end with a newline.

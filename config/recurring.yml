@@ -1,15 +1,82 @@
+# This file (config/recurring.yml) configures Solid Queue's "recurring
+# tasks" feature — jobs/commands that should run automatically on a
+# repeating schedule (like a cron job), rather than being enqueued one-off
+# by application code. NOTE: as explained in config/queue.yml, this app's
+# actual active job adapter is `:async`, not Solid Queue — so, as with
+# config/queue.yml, it's unclear whether the schedule defined in this file's
+# "production:" section below actually runs at all; see this pass's final
+# "flagged issues" note.
+#
+# YAML primer: lines starting with "#" are comments, ignored by whatever
+# parses this file. Plain "key: value" pairs work like entries in a Ruby
+# Hash; indentation (spaces, not tabs) shows what's nested under what.
+
+# A block of commented-out lines (every line starts with "#", so none of
+# this is active configuration) — Solid Queue's own example, shown by
+# Rails' generator, of the two different ways a recurring task can be
+# defined.
 # examples:
+# "periodic_cleanup:" would be the task's own arbitrary name (used only for
+# logging/identification — you choose it). This first example task style
+# runs an ACTIVE JOB class.
 #   periodic_cleanup:
+#     "class:" names the Ruby Active Job class to run — "CleanSoftDeletedRecordsJob"
+#     would need to be a real job class defined somewhere under app/jobs/.
 #     class: CleanSoftDeletedRecordsJob
+#     "queue:" names which named job queue this task's job gets enqueued
+#     into (matching the "queues:" worker setting in config/queue.yml).
 #     queue: background
+#     "args:" supplies the arguments passed to the job's `perform` method
+#     when it runs — a YAML flow-style Array (square brackets `[ ]`, comma-
+#     separated, all on one line) containing a plain number, `1000`, and a
+#     nested flow-style Hash (curly braces `{ }`), `{ batch_size: 500 }`.
 #     args: [ 1000, { batch_size: 500 } ]
+#     "schedule:" is a human-readable schedule string, in a small English-
+#     like syntax Solid Queue itself parses — "every hour" is
+#     self-explanatory.
 #     schedule: every hour
+# "periodic_cleanup_with_command:" is a second, differently-named example
+# task, showing the OTHER supported style: running a raw Ruby expression
+# instead of an Active Job class.
 #   periodic_cleanup_with_command:
+#     "command:" is a literal String containing actual Ruby code to
+#     evaluate directly (via something like Ruby's `eval`) when the
+#     schedule fires — here, calling a (hypothetical) `due` scope and
+#     `delete_all` on some `SoftDeletedRecord` model.
 #     command: "SoftDeletedRecord.due.delete_all"
+#     "priority:" would set this task's relative Active Job priority (lower
+#     numbers commonly meaning "more urgent," depending on the queue
+#     backend's convention) among other enqueued jobs.
 #     priority: 2
+#     Another example "schedule:" string, this time meaning "run once,
+#     daily, at 5:00 AM."
 #     schedule: at 5am every day
 
+# Blank line — ignored by YAML, purely visual spacing between the
+# commented-out example block above and the real, active configuration
+# below.
+
+# "production:" is a top-level YAML key — unlike config/queue.yml and
+# config/cache.yml, this file has NO "default:" anchor block and no
+# "development:"/"test:" sections at all; it defines recurring tasks ONLY
+# for the production environment, meaning nothing here runs automatically
+# while developing locally or running tests.
 production:
+  # "clear_solid_queue_finished_jobs:" is this task's own chosen name — a
+  # real, active recurring task (unlike the commented-out examples above).
   clear_solid_queue_finished_jobs:
+    # "command:" (see the example block above for what this key means) —
+    # here, a literal Ruby expression calling Solid Queue's own built-in
+    # cleanup method, `SolidQueue::Job.clear_finished_in_batches`, passing
+    # one keyword argument, `sleep_between_batches: 0.3` (pausing 0.3
+    # seconds between each batch of deletions, to avoid a single, long,
+    # database-locking cleanup pass). This deletes JOB RECORDS for jobs
+    # that have already finished running, so Solid Queue's own tracking
+    # tables don't grow forever.
     command: "SolidQueue::Job.clear_finished_in_batches(sleep_between_batches: 0.3)"
+    # "schedule:" — this task's own English-like schedule string: "every
+    # hour at minute 12" means it runs once per hour, specifically at the
+    # 12-minutes-past mark of each hour (e.g. 1:12, 2:12, 3:12, ...) rather
+    # than exactly on the hour, likely to avoid clustering with other
+    # scheduled work that might run exactly on the hour.
     schedule: every hour at minute 12
