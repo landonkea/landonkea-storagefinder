@@ -71,6 +71,26 @@ jobs:
 
       # Blank line — visual separation between steps.
 
+      # `- name: Install system dependencies` installs Linux packages this
+      # project's gems need in order to COMPILE, before `bundle install`
+      # runs in the next step. The `dnssd` gem (used by
+      # config/initializers/mdns.rb to announce this app over local-network
+      # mDNS/Bonjour) contains native C code that must be built against the
+      # Avahi mDNS library's development headers — without them installed
+      # first, `bundle install` fails and every job below fails with it.
+      # `bin/setup` installs this same package for local development; this
+      # step is CI's equivalent of that one step.
+      - name: Install system dependencies
+        # `run: sudo apt-get update && sudo apt-get install -y ...` updates
+        # the VM's package index, then installs
+        # `libavahi-compat-libdnssd-dev` — Apple Bonjour-compatible mDNS
+        # headers the `dnssd` gem's native extension links against. `-y`
+        # auto-confirms the install (no human is present to answer a
+        # prompt); `sudo` is needed because the runner user isn't root.
+        run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev
+
+      # Blank line — visual separation.
+
       # `- name: Set up Ruby` starts the next step, which installs a Ruby
       # interpreter onto the VM (the checkout above only copied files; Ruby
       # itself isn't preinstalled in the form this project needs).
@@ -140,6 +160,15 @@ jobs:
 
       # Blank line — visual separation.
 
+      # `- name: Install system dependencies` — same reason as in scan_ruby
+      # above: `bundle install` (run by the Ruby setup step below) needs to
+      # compile the `dnssd` gem's native extension, which needs Avahi's
+      # mDNS development headers present on the VM first.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev
+
+      # Blank line — visual separation.
+
       # `- name: Set up Ruby` — installs Ruby on this job's VM too. Even
       # though this step is scanning JAVASCRIPT dependencies, it still
       # needs Ruby/Bundler installed because the tool used below
@@ -182,6 +211,15 @@ jobs:
       # copy of the code).
       - name: Checkout code
         uses: actions/checkout@v6
+
+      # Blank line — visual separation.
+
+      # `- name: Install system dependencies` — same reason as in scan_ruby
+      # above: `bundle install` (run by the Ruby setup step below) needs to
+      # compile the `dnssd` gem's native extension, which needs Avahi's
+      # mDNS development headers present on the VM first.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev
 
       # Blank line — visual separation.
 
@@ -283,6 +321,15 @@ jobs:
       # pattern as every other job (jobs never share a VM or filesystem).
       - name: Checkout code
         uses: actions/checkout@v6
+
+      # Blank line — visual separation.
+
+      # `- name: Install system dependencies` — same reason as in scan_ruby
+      # above: `bundle install` (run by the Ruby setup step below) needs to
+      # compile the `dnssd` gem's native extension, which needs Avahi's
+      # mDNS development headers present on the VM first.
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev
 
       # Blank line — visual separation.
 
