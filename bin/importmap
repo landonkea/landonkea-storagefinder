@@ -1,4 +1,23 @@
 #!/usr/bin/env ruby
+# Must be the literal first line — the shebang telling the OS to run this
+# file with whatever `ruby` is found on the system PATH (fully explained
+# in bin/brakeman; this same line appears at the top of every bin/ script).
 
+# Blank line for visual separation between the shebang and the code below.
+
+# Loads config/application.rb (path is relative to this file's own
+# location: up one level out of bin/, then into config/). That file
+# defines the Rails::Application subclass for this whole app and pulls in
+# Rails itself plus all the gems from the Gemfile — it's a heavier boot
+# step than plain config/boot.rb because it needs the full Rails
+# framework loaded (importmap commands inspect the app's asset/JS setup).
 require_relative "../config/application"
+# Loads the command-line commands defined by the importmap-rails gem
+# (e.g. `bin/importmap pin`, `bin/importmap json`). Importmap is Rails'
+# way of managing JavaScript libraries without a Node.js build step —
+# these commands let you add/inspect/remove JS packages from
+# config/importmap.rb. Simply requiring this file is enough to make it
+# parse ARGV (the command-line arguments) and execute the matching
+# command — there's no explicit "run" call visible here because the
+# gem's own code does that as a side effect of being loaded.
 require "importmap/commands"

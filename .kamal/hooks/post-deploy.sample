@@ -1,14 +1,67 @@
 #!/usr/bin/env sh
+# ^ This is a "shebang" line. When a file is executable and run directly,
+# the operating system reads this exact line to pick the interpreter for
+# everything below it. `#!` marks it as a shebang, not a plain comment;
+# `/usr/bin/env` searches your PATH for the named program; `sh` is the
+# POSIX shell (a basic, universally-available command interpreter). So
+# this line says "run the rest of this file as a shell script."
+#
+# --- What is this file? (context for every file in .kamal/hooks/) ---
+# This app is deployed with Kamal (kamal-deploy.org): a tool that builds a
+# Rails app into a Docker container image and ships it to remote servers
+# over SSH, without needing Heroku or Kubernetes. A deploy moves through a
+# fixed sequence of stages, and at specific points in that sequence Kamal
+# runs a "hook" — an executable script in this .kamal/hooks/ directory
+# named after the stage it belongs to — if one exists.
+#
+# This file is the "post-deploy" hook. Kamal runs it once, from your own
+# machine (not on the remote servers), after the ENTIRE deploy has
+# finished successfully across all target hosts — this is the very last
+# step of a deploy.
+#
+# The ".sample" suffix means Kamal will NOT run this file as-is. Kamal
+# only runs a hook when a file with the exact stage name exists (here,
+# "post-deploy", with no ".sample") and is executable. This file is just
+# a template/example. To activate it for real, copy it to "post-deploy"
+# (drop ".sample"), edit as desired, and make it executable.
 
+# Blank line — no effect on execution; just visual separation between the
+# comments above and the rest of the file.
+
+# A plain `#` comment line (no shebang, no special meaning) — human-
+# readable text describing this file's purpose, ignored entirely by the
+# shell when the script runs.
 # A sample post-deploy hook
 #
+# Blank comment line, used purely to visually separate the description
+# above from the environment-variable list below.
+#
+# This comment introduces the list that follows: every hook Kamal runs
+# gets some information passed in via environment variables (values a
+# running process can read from its surrounding shell environment, here
+# via `$NAME` syntax). Not every variable is available at every stage —
+# see the notes below on the ones marked "(if set)".
 # These environment variables are available:
-# KAMAL_RECORDED_AT
-# KAMAL_PERFORMER
-# KAMAL_VERSION
-# KAMAL_HOSTS
-# KAMAL_ROLES (if set)
-# KAMAL_DESTINATION (if set)
-# KAMAL_RUNTIME
+# KAMAL_RECORDED_AT — timestamp string for when this deploy was recorded/started.
+# KAMAL_PERFORMER — the name/identity of whoever (or whatever CI system) triggered the deploy.
+# KAMAL_VERSION — the version identifier (normally a git commit SHA) being deployed.
+# KAMAL_HOSTS — comma-separated list of server addresses/hostnames targeted by this deploy.
+# KAMAL_ROLES (if set) — comma-separated list of Kamal "roles" (e.g. web, worker) involved, only present if roles are configured.
+# KAMAL_DESTINATION (if set) — the named deploy destination/environment (e.g. "production", "staging"), only present if destinations are configured.
+# KAMAL_RUNTIME — how long the deploy took to run, in seconds.
 
+# Blank line — no effect on execution; separates the comment block above
+# from the executable code below.
+
+# `echo` prints the given text to standard output, which Kamal captures
+# into its deploy log. The text is inside double quotes, so each
+# `$VARIABLE` inside it gets "interpolated" — substituted with its current
+# value — rather than printed as literal characters.
+#
+# This line reads four environment variables Kamal set for this hook:
+# `$KAMAL_PERFORMER` (who ran the deploy), `$KAMAL_VERSION` (what version
+# was deployed), `$KAMAL_DESTINATION` (which named environment it went
+# to), and `$KAMAL_RUNTIME` (how many seconds the deploy took). Combined,
+# this would print something like:
+# "alice deployed abc1234 to production in 42 seconds"
 echo "$KAMAL_PERFORMER deployed $KAMAL_VERSION to $KAMAL_DESTINATION in $KAMAL_RUNTIME seconds"

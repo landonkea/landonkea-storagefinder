@@ -1,4 +1,25 @@
 #!/usr/bin/env ruby
+# Must be the literal first line — the shebang telling the OS to run this
+# file with whatever `ruby` is found on the system PATH (fully explained
+# in bin/brakeman; every bin/ script here starts the same way).
+
+# `require_relative` loads a file by a path relative to THIS file's own
+# location on disk. `"../config/boot"` steps up out of bin/ into the app
+# root, then loads config/boot.rb, which sets up Bundler and the gem
+# environment for this app — the standard first step in every bin/
+# script here.
 require_relative "../config/boot"
+# Loads the `rake` gem — Rake ("Ruby Make") is a general task-runner
+# library. Rails uses it under the hood for tasks like `db:migrate`,
+# `assets:precompile`, etc. (those are also reachable via `bin/rails
+# db:migrate`, which internally delegates to Rake — this bin/rake script
+# is the more direct, lower-level entry point). This `require` makes the
+# `Rake` module (used below) available.
 require "rake"
+# `Rake.application` is Rake's single global instance that knows how to
+# find and load Rakefiles / rake tasks (including the ones Rails and its
+# gems define, plus any custom ones in lib/tasks/). `.run` reads ARGV
+# (the command-line arguments, e.g. `bin/rake db:seed` gives ARGV =
+# ["db:seed"]), figures out which task(s) were requested, and executes
+# them. This is the line that actually does the work.
 Rake.application.run

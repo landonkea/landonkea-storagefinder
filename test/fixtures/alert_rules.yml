@@ -1,17 +1,60 @@
+# This is a FIXTURE file — a YAML (a plain-text data format using
+# indentation instead of curly braces/brackets) file listing pre-made, FAKE
+# database rows that Rails automatically loads into the test database
+# before every single test runs (see the `fixtures :all` line in
+# test/test_helper.rb). Fixtures exist so tests can work with realistic,
+# already-saved records without every test having to hand-build and save
+# its own data from scratch.
+#
+# Each top-level key below (like `price_drop_rule:`) is a LABEL you choose
+# — it's not a database column, just a name for referring to that one row
+# from test code, e.g. `alert_rules(:price_drop_rule)` in
+# test/models/alert_rule_test.rb returns the real, saved AlertRule database
+# record built from the block of settings indented underneath that label.
+# Everything indented under a label (`name:`, `trigger_type:`, etc.) becomes
+# that row's column values — matching the columns on the "alert_rules"
+# database table (see app/models/alert_rule.rb and db/schema.rb).
+
+# Fixture labeled "price_drop_rule" — a rule that fires on ANY price drop,
+# with no fixed dollar threshold.
 price_drop_rule:
   name: Any price drop
+  # Matches AlertRule's `trigger_type` inclusion validation
+  # (app/models/alert_rule.rb) — must be "price_drop" or "price_threshold".
   trigger_type: price_drop
+  # Whether this rule is currently turned on — `true` here (a plain YAML
+  # boolean; YAML understands `true`/`false` as actual boolean values, not
+  # just text).
   active: true
   email_enabled: true
   email_address: alerts@example.com
   discord_enabled: false
   sms_enabled: false
+  # `<%%= 1.week.ago %>` is ERB (Embedded RuBy) — fixture YAML files support
+  # embedded Ruby code wrapped in `<%% %>`/`<%%= %>` tags, evaluated once when
+  # fixtures are loaded. `<%% %>` runs Ruby but outputs nothing; `<%%= %>`
+  # runs Ruby AND inserts its result into the YAML at that spot. Here,
+  # `1.week.ago` is a Rails/ActiveSupport method chain — `1.week` builds a
+  # Duration representing one week, and `.ago` subtracts it from the
+  # current time — so this fixture's `created_at` is always "one week
+  # before whenever the test suite runs," rather than a fixed, eventually-
+  # stale date hardcoded into the file.
   created_at: <%= 1.week.ago %>
   updated_at: <%= 1.week.ago %>
 
+# A blank line here is just a visual separator between fixture entries —
+# YAML doesn't require it, but it makes the file easier for a human to scan.
+
+# Fixture labeled "price_threshold_rule" — a rule that fires when a unit's
+# price falls to/below a specific dollar amount ($100, per threshold_price
+# below).
 price_threshold_rule:
   name: Under $100
   trigger_type: price_threshold
+  # `100.00` here is a plain YAML number; ActiveRecord will store/read it
+  # through the `threshold_price` column, which is a `decimal` column in
+  # the database (see db/schema.rb) for exact money math (no floating-point
+  # rounding errors).
   threshold_price: 100.00
   active: true
   email_enabled: false
@@ -21,6 +64,9 @@ price_threshold_rule:
   created_at: <%= 1.week.ago %>
   updated_at: <%= 1.week.ago %>
 
+# Fixture labeled "inactive_rule" — otherwise similar to price_threshold_rule
+# above, but with `active: false`, used by tests checking that the `active`
+# scope in app/models/alert_rule.rb correctly EXCLUDES rules like this one.
 inactive_rule:
   name: Disabled rule
   trigger_type: price_threshold

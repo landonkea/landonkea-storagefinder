@@ -1,24 +1,82 @@
+# This is a FIXTURE file — a YAML (a plain-text, indentation-based data
+# format) file listing pre-made, FAKE database rows that Rails automatically
+# loads into the test database before every test runs (see the `fixtures
+# :all` line in test/test_helper.rb). This lets tests work with realistic,
+# already-saved CrawlRun records (see app/models/crawl_run.rb) without
+# hand-building and saving their own data.
+#
+# Each top-level key below (like `previous_completed:`) is a LABEL chosen
+# for this file — test code refers to a fixture by this label, e.g.
+# `crawl_runs(:previous_completed)` in test/models/crawl_run_test.rb returns
+# the real, saved database record built from the settings indented
+# underneath it. The indented `key: value` lines under each label become
+# that row's actual column values, matching the "crawl_runs" table (see
+# db/schema.rb).
+
+# Fixture labeled "previous_completed" — an older, already-finished crawl
+# run, used by tests that need to compare "the crawl before this one"
+# against a more recent one (e.g. checking price DROPS between crawls).
 previous_completed:
   # Explicit id (Rails fixtures otherwise hash the label into a pseudo-random
   # id) — AlertCheckerJob finds the "previous" run via `where("id < ?", ...)`,
   # so previous_completed must sort before current_completed numerically.
+  #
+  # Expanding on the preserved comment above: normally Rails fixtures assign
+  # each row an automatically-generated, effectively-random integer id based
+  # on hashing the fixture's LABEL — fine for most tests, since they look up
+  # fixtures by name (e.g. `crawl_runs(:previous_completed)`), not by raw id
+  # number. But some application code (AlertCheckerJob, elsewhere in this
+  # app) specifically queries "the crawl run with the next-lowest id" to
+  # find the previous crawl — so this fixture pins its id to the SPECIFIC
+  # number 1 (and current_completed below pins its own id to 2) to
+  # guarantee previous_completed's id is always numerically smaller,
+  # matching that lookup's assumption, rather than leaving it to chance.
   id: 1
   search_city: Gilbert, Arizona
+  # Plain YAML floating-point numbers — the searched location's latitude and
+  # longitude, matching the CrawlRun model's `search_lat`/`search_lng`
+  # float columns (see db/schema.rb).
   search_lat: 33.3528
   search_lng: -111.7890
   search_radius_miles: 50
+  # Must be one of "pending"/"running"/"completed"/"failed" per CrawlRun's
+  # `inclusion:` validation (see app/models/crawl_run.rb).
   status: completed
   facilities_found: 2
   units_found: 2
   companies_crawled: 2
   companies_failed: 0
+  # `<%%= 3.days.ago %>` is ERB (Embedded RuBy) — fixture YAML files support
+  # embedded Ruby wrapped in `<%% %>`/`<%%= %>` tags, evaluated once when
+  # fixtures load. `<%%= %>` runs Ruby AND inserts its result into the YAML
+  # text at that spot. `3.days.ago` is a Rails/ActiveSupport method chain
+  # (`3.days` builds a Duration of three days, `.ago` subtracts it from the
+  # current time), so this stays "3 days before whenever the test suite
+  # runs" instead of a fixed date that would slowly become stale.
   started_at: <%= 3.days.ago %>
+  # `<%%= 3.days.ago + 10.minutes %>` chains further Ruby onto the embedded
+  # expression: `3.days.ago` computes a Time three days back, then `+
+  # 10.minutes` adds a ten-minute Duration to it — giving a completed_at
+  # exactly 10 minutes after started_at above, matching the
+  # duration_seconds value (600 seconds = 10 minutes) a few lines down.
   completed_at: <%= 3.days.ago + 10.minutes %>
+  # Matches the 10-minute gap between started_at and completed_at above,
+  # expressed directly in seconds (600 = 10 * 60) rather than as another
+  # embedded Ruby expression.
   duration_seconds: 600
   created_at: <%= 3.days.ago %>
   updated_at: <%= 3.days.ago %>
 
+# A blank line here is just a visual separator between fixture entries; YAML
+# itself doesn't require it.
+
+# Fixture labeled "current_completed" — the MOST RECENT completed crawl run,
+# used as "the latest results" by many tests across this app (dashboard
+# tests, Facility/Unit tests that need a valid crawl_run to attach records
+# to, etc.).
 current_completed:
+  # Pinned to id 2 — deliberately larger than previous_completed's id (1)
+  # above, for the same "previous run" id-ordering reason explained there.
   id: 2
   search_city: Gilbert, Arizona
   search_lat: 33.3528
@@ -29,25 +87,43 @@ current_completed:
   units_found: 2
   companies_crawled: 2
   companies_failed: 0
+  # `1.day.ago` — this crawl ran much more recently than previous_completed
+  # above (which used `3.days.ago`), making this one the "later" of the two
+  # completed runs whenever both are compared by timestamp.
   started_at: <%= 1.day.ago %>
   completed_at: <%= 1.day.ago + 10.minutes %>
   duration_seconds: 600
   created_at: <%= 1.day.ago %>
   updated_at: <%= 1.day.ago %>
 
+# Fixture labeled "running_crawl" — a crawl that is CURRENTLY IN PROGRESS
+# (status: running), with no completed_at/duration_seconds yet since it
+# hasn't finished. Used by tests checking `running?`/`finished?` and the
+# `any_running?` class method (see app/models/crawl_run.rb).
 running_crawl:
   search_city: Mesa, Arizona
   search_radius_miles: 25
   status: running
+  # Started only 2 minutes ago — recent enough to plausibly still be
+  # running when a test reads it.
   started_at: <%= 2.minutes.ago %>
   created_at: <%= 2.minutes.ago %>
   updated_at: <%= 2.minutes.ago %>
 
+# Fixture labeled "failed_crawl" — a crawl that ended in failure (status:
+# failed), with an error_message explaining what went wrong. Used by tests
+# checking the `summary` method's "FAILED: ..." branch (see
+# app/models/crawl_run.rb).
 failed_crawl:
   search_city: Nowhere, Arizona
   search_radius_miles: 10
   status: failed
+  # Populates CrawlRun's `error_message` text column — the specific reason
+  # this crawl failed (couldn't geocode a nonsense city name).
   error_message: Could not find coordinates for 'Nowhere, Arizona'.
+  # A failed crawl still has both started_at AND completed_at set (it did
+  # run for a while before failing) — both pinned to the same "5 days ago"
+  # moment here for simplicity, rather than modeling any elapsed time.
   started_at: <%= 5.days.ago %>
   completed_at: <%= 5.days.ago %>
   created_at: <%= 5.days.ago %>

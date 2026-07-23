@@ -1,12 +1,54 @@
+# WHAT IS THIS FILE?
+# This is Dependabot's configuration file. Dependabot is a GitHub feature
+# that automatically checks whether your project's dependencies (gems,
+# GitHub Actions, etc.) have newer versions available, and opens pull
+# requests to bump them for you. It lives at .github/dependabot.yml because
+# GitHub looks for it at that exact path in every repo — you don't run this
+# file yourself, GitHub's servers read it on a schedule.
+# This whole file is written in YAML, a format where structure comes from
+# indentation (spaces, not tabs) rather than braces/brackets — a line
+# indented under another line is "inside"/"belongs to" that outer line.
+
+# `version: 2` tells GitHub which Dependabot configuration schema (format
+# version) this file follows — version 2 is the current one; GitHub uses
+# this to know how to parse everything below.
 version: 2
+# `updates:` is a top-level YAML key whose value is a LIST of "update
+# configs" — each list item (marked with a leading `-`) describes one
+# dependency ecosystem Dependabot should watch and how often to check it.
 updates:
+# `- package-ecosystem: bundler` starts the first list item. The leading
+# `-` marks it as a list entry. `package-ecosystem` tells Dependabot WHICH
+# kind of dependency manager to scan; `bundler` means Ruby gems (as listed
+# in this project's Gemfile/Gemfile.lock).
 - package-ecosystem: bundler
+  # `directory: "/"` tells Dependabot where to look for the Gemfile —
+  # here, the root of the repository. Quoting "/" isn't strictly required
+  # in YAML for this value but is a common defensive style.
   directory: "/"
+  # `schedule:` is a nested key (indented under this list item) describing
+  # how often Dependabot should run its check for this ecosystem.
   schedule:
+    # `interval: weekly` means Dependabot checks for new gem versions once
+    # a week (as opposed to `daily` or `monthly`).
     interval: weekly
+  # `open-pull-requests-limit: 10` caps how many update pull requests
+  # Dependabot will have open at once FOR THIS ecosystem — once 10 are
+  # open, it won't create more until some get merged/closed, so your PR
+  # list doesn't get flooded.
   open-pull-requests-limit: 10
+# `- package-ecosystem: github-actions` starts the second list item — same
+# structure as above, but this one watches the versions pinned in this
+# repo's GitHub Actions workflow files (like .github/workflows/ci.yml),
+# e.g. `actions/checkout@v6`, and opens PRs to bump those version tags too.
 - package-ecosystem: github-actions
+  # Same meaning as above: look in the repo root for workflow files (under
+  # .github/workflows/, which Dependabot knows to check automatically for
+  # this ecosystem type).
   directory: "/"
+  # Same nested schedule key as the bundler entry above.
   schedule:
+    # Check for new GitHub Actions versions once a week.
     interval: weekly
+  # Same PR-flooding guard, scoped to this ecosystem's own pull requests.
   open-pull-requests-limit: 10

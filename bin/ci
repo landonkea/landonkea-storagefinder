@@ -1,6 +1,30 @@
 #!/usr/bin/env ruby
+# Must be the literal first line — the "shebang" that tells the OS to run
+# this file with whatever `ruby` is found on the system PATH (see
+# bin/brakeman for the fuller explanation of this repeated pattern).
+
+# `require_relative` loads a file by a path relative to THIS file's own
+# location on disk. `"../config/boot"` steps up out of bin/ into the app
+# root, then loads config/boot.rb, which sets up Bundler and the gem
+# environment — the standard first step for every bin/ script here.
 require_relative "../config/boot"
+# Loads Rails' built-in "Continuous Integration" support code (added in
+# recent Rails versions). This defines a small DSL (domain-specific
+# language — a mini set of custom commands) for describing what a CI run
+# should do (e.g. "run these test suites, run these linters").
 require "active_support/continuous_integration"
 
+# `CI` here is a constant assignment: it creates a short alias/nickname,
+# `CI`, that points at the same class as the long name
+# `ActiveSupport::ContinuousIntegration`. Ruby constants start with a
+# capital letter by convention. This exists purely so the config file
+# loaded on the next line can write the shorter `CI.step "..." do ... end`
+# instead of spelling out the full module path every time.
 CI = ActiveSupport::ContinuousIntegration
+# Loads config/ci.rb (again, relative to this file's own directory, one
+# level up then into config/). That file is expected to use the `CI`
+# constant just defined to declare the actual steps this project's CI
+# pipeline runs (e.g. tests, rubocop, brakeman). This bin/ci script itself
+# is just the boot/setup shim — the real CI step definitions live in
+# config/ci.rb, not here.
 require_relative "../config/ci.rb"

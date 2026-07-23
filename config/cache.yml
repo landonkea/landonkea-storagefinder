@@ -1,16 +1,102 @@
+# This file (config/cache.yml) configures Solid Cache-style / generic Rails
+# cache store options, keyed by environment — but note StorageFinder's own
+# active config.cache_store setting (see config/environments/development.rb
+# and config/environments/production.rb) is actually `:memory_store` in
+# every environment, NOT a store that reads this specific file's
+# `store_options`/`database` keys; see this pass's final "flagged issues"
+# note for more on that mismatch. This file follows the same generic shape
+# Rails generates for Solid Cache regardless.
+#
+# YAML primer, since some of this file's syntax is more advanced: lines
+# starting with "#" are comments, ignored by whatever parses this file (same
+# idea as Ruby's "#" comments). Plain "key: value" pairs work like a Ruby
+# Hash; indentation (spaces, not tabs) shows what's nested under what — no
+# braces or "end" keywords the way Ruby has. This file ALSO has ".erb" style
+# tags like "<%%= ... %>" embedded inside it — Rails actually loads this file
+# by first running it through ERB (the same template engine used for view
+# files), substituting each "<%%= %>" with the RESULT of evaluating the Ruby
+# expression inside it, and only THEN parsing the resulting text as plain
+# YAML. That's how a config file that's supposed to be static text can still
+# contain a dynamically-computed value like "256 megabytes converted to
+# bytes" below.
+
+# "default:" is a top-level YAML key. "&default" immediately after the colon
+# is a YAML ANCHOR — it labels this whole block (the map with `store_options`
+# nested under it) so it can be reused elsewhere in this file via `<<: *default`
+# (a "merge key," seen in the environment sections below), without
+# retyping these same settings under every environment.
 default: &default
+  # "store_options:" is a nested key; because nothing follows the colon on
+  # this line, its value is defined by the further-indented block beneath
+  # it — a nested map of individual cache-store tuning options.
   store_options:
+    # A line starting with "#" inside YAML is a comment, same as anywhere
+    # else in this file — it does not configure anything by itself.
     # Cap age of oldest cache entry to fulfill retention policies
-    # max_age: <%= 60.days.to_i %>
+    # A SECOND commented-out line: if this "max_age:" line were uncommented
+    # (its leading "#" removed), it would set the maximum age, in seconds,
+    # a cache entry is allowed to live before Solid Cache prunes it —
+    # "<%%= 60.days.to_i %>" is an ERB tag; inside it, "60.days" is Rails/
+    # ActiveSupport syntax (`.days` is a method Rails adds onto Integer)
+    # producing an ActiveSupport::Duration representing 60 days, and
+    # ".to_i" converts that into a plain integer number of seconds before
+    # ERB substitutes the resulting number as plain text into the YAML.
+    # max_age: <%%= 60.days.to_i %>
+    # "max_size:" sets the maximum total size, in bytes, the cache database
+    # is allowed to grow to before old entries start getting evicted to
+    # make room for new ones. "<%%= 256.megabytes %>" is an ERB tag: inside
+    # it, "256.megabytes" is Rails/ActiveSupport syntax (`.megabytes` is
+    # another Integer core-extension method, like `.days` above) that
+    # returns a plain Integer number of bytes (256 * 1024 * 1024); ERB
+    # substitutes that computed number as literal text into the YAML before
+    # it's parsed, so the actual stored YAML value here is just a plain
+    # number, not the Ruby expression itself.
     max_size: <%= 256.megabytes %>
+    # "namespace:" prefixes every cache key written by this store with the
+    # given text, so cache entries from different environments never
+    # collide with each other even if they happen to share the same
+    # underlying cache storage. "<%%= Rails.env %>" is another ERB tag:
+    # "Rails.env" returns the current environment as a String-like object
+    # (e.g. "development", "production"); ERB substitutes its text value in
+    # place, so this becomes e.g. "namespace: development" once evaluated.
     namespace: <%= Rails.env %>
 
+# Blank line — ignored by YAML, used only to visually separate the
+# "default" anchor block above from the per-environment sections below.
+
+# "development:" is a top-level YAML key matching the RAILS_ENV value Rails
+# defaults to when nothing else is configured — see config/environments/
+# development.rb for the fuller explanation of Rails' environment system.
 development:
+  # "<<: *default" is YAML's "merge key" syntax: the "*default" part
+  # references the anchor named "default" that was defined with "&default"
+  # above, copying in every key/value pair from that block (here, just
+  # "store_options:" and everything nested under it) as if it had been
+  # typed directly here.
   <<: *default
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Settings used while running the automated test suite.
 test:
+  # Same merge-key mechanism as development above — reuses the identical
+  # "store_options" settings anchored under "default".
   <<: *default
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# Settings used in the deployed, live production environment.
 production:
+  # "database:" here is a Solid-Cache-specific setting naming WHICH
+  # database connection (by key) this cache store should read/write
+  # through — "cache" refers to the connection configured under the
+  # "cache:" key inside production in config/database.yml, which itself
+  # points at a separate SQLite file (storage/production_cache.sqlite3)
+  # dedicated to cache data, kept apart from the app's main data.
   database: cache
+  # Same merge-key mechanism as development/test above, adding in the
+  # shared "store_options" settings anchored under "default" alongside the
+  # "database:" setting just above (order doesn't matter in a YAML map —
+  # both keys end up merged into this one "production:" block regardless of
+  # which line comes first).
   <<: *default

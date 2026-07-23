@@ -1,16 +1,89 @@
 #!/usr/bin/env sh
+# Must be the literal first line of the file — this is a "shebang." It
+# tells the OS which program should interpret the rest of the file when
+# you run it directly (e.g. `bin/dev`). `/usr/bin/env sh` means "find
+# whatever `sh` (the basic POSIX shell) is first on the system's PATH and
+# use it" — more portable than hard-coding `/bin/sh`. Unlike the Ruby
+# bin/ scripts in this project, this one is a shell script: every line
+# below is a shell command, not Ruby code.
 
+# Blank line for visual separation between the shebang and the script body.
+
+# `if ... ; then ... fi` is shell's conditional block — it runs the
+# commands between `then` and `fi` only when the condition is true, then
+# `fi` ("if" spelled backwards) closes the block. `!` negates the exit
+# status of the command that follows: in shell, a command "succeeds" (is
+# treated as true) when it exits with status 0, and "fails" (false)
+# otherwise — `!` flips that. `gem list foreman -i --silent` asks
+# RubyGems "is a gem named exactly 'foreman' installed?" (`-i` means
+# "exact match, print nothing but exit 0/1"; `--silent` suppresses other
+# output). So `if ! gem list foreman -i --silent; then` reads as "if
+# foreman is NOT installed, then...". Foreman is a small tool that reads
+# a Procfile (see below) and runs multiple processes together (e.g. the
+# Rails server and a CSS/JS watcher) in one terminal.
 if ! gem list foreman -i --silent; then
+  # Prints a message to the terminal so the developer knows why the
+  # script is pausing to install something.
   echo "Installing foreman..."
+  # Installs the foreman gem system-wide via RubyGems, so the next line's
+  # `foreman` command becomes available.
   gem install foreman
+# `fi` closes the `if` block opened above — the installation only
+# happens when foreman was missing; otherwise this whole block is skipped.
 fi
 
+# Blank line separating "make sure foreman exists" from "configure
+# environment variables for the dev processes about to start."
+
+# This comment (kept from the original) explains the line below: it sets
+# a fallback port number.
 # Default to port 3000 if not specified
+# `export` makes a shell variable available to any child processes this
+# script launches (like `foreman`, below) — without `export`, a shell
+# variable is only visible inside this script itself. `PORT="${PORT:-3000}"`
+# uses shell's `${VAR:-default}` syntax: if the environment variable
+# `PORT` is already set (e.g. by whoever ran this script) and non-empty,
+# its existing value is kept; otherwise it falls back to `3000`. This
+# lets a developer override the port (e.g. `PORT=4000 bin/dev`) while
+# still having a sensible default.
 export PORT="${PORT:-3000}"
 
+# Blank line before the next related group of environment variables.
+
+# These two comments (kept from the original) explain the purpose of the
+# two `export` lines below together: they configure Ruby's built-in
+# `debug` gem so that calling `debugger` anywhere in the app code will
+# pause execution and let you attach a remote debugger session, without
+# the debug server actually starting up (and adding overhead) until that
+# happens.
 # Let the debug gem allow remote connections,
 # but avoid loading until `debugger` is called
+# Sets (and exports, making it visible to child processes) the
+# environment variable that tells Ruby's debug gem to accept connections
+# from outside the current process — needed so a debugger UI (e.g. in an
+# editor) can attach to the running Rails server. The value "true" is
+# just a string; the debug gem's own code interprets it.
 export RUBY_DEBUG_OPEN="true"
+# Sets (and exports) the environment variable that tells the debug gem to
+# defer starting its debug server until code actually calls `debugger` —
+# so normal requests aren't slowed down by an always-on debug listener.
 export RUBY_DEBUG_LAZY="true"
 
+# Blank line before the final command that actually starts the dev servers.
+
+# `exec` replaces the CURRENTLY RUNNING shell process with the command
+# that follows, instead of starting it as a new child process. This
+# matters because it means `bin/dev` doesn't stick around as an extra
+# wrapper process once foreman is running — foreman directly takes over
+# this script's process ID, so things like Ctrl+C signals go straight to
+# foreman. `foreman start` is the command that reads a Procfile and
+# starts every process line listed in it. `-f Procfile.dev` tells foreman
+# to use the file named `Procfile.dev` (rather than the default
+# `Procfile`) — this project keeps its development-only process list
+# (e.g. Rails server, asset watchers) separate from any production
+# Procfile. `"$@"` expands to all the command-line arguments this script
+# itself was called with, quoted so that arguments containing spaces are
+# passed through correctly as separate arguments (as opposed to unquoted
+# `$@`, which can split them incorrectly) — so any extra flags a
+# developer passes to `bin/dev` get forwarded on to `foreman start`.
 exec foreman start -f Procfile.dev "$@"

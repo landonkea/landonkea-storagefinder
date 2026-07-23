@@ -1,83 +1,243 @@
+<%# =============================================================================
+    APPLICATION LAYOUT
+    This is the main page "wrapper" — Rails automatically renders this file
+    around EVERY view in the app (unless a controller says otherwise). Think
+    of it as the picture frame: the <html>/<head>/<body> boilerplate, the
+    navigation bar, and the footer live here ONCE, and each individual page
+    (dashboard, settings, alert rules, etc.) only has to provide the content
+    that goes in the middle.
+
+    This file's extension is ".html.erb" — ERB (Embedded RuBy) lets you mix
+    Ruby code into an HTML file. Two tag forms matter throughout this file:
+    `<% % >` runs Ruby but outputs nothing to the page (used for logic like
+    if/loops); `<%= % >` runs Ruby AND inserts its result into the HTML as
+    text. `<%# % >` — like this very comment block — is an ERB comment: it is
+    stripped out entirely before the page is sent to a browser, so it's safe
+    to write plain English here without it showing up on the site.
+============================================================================= %>
+<%# `<!DOCTYPE html>` is not Rails/ERB syntax — it's plain HTML, telling the
+    browser "parse this as modern HTML5" (without it, browsers can fall back
+    to quirky, inconsistent rendering rules from the 1990s). %>
 <!DOCTYPE html>
+<%# `<html lang="en">` opens the root element of the whole page; `lang="en"`
+    tells browsers/screen readers/search engines the page's text is English.
+    Every other tag in this file nests inside this one, closed by `</html>`
+    at the very bottom of the file. %>
 <html lang="en">
+<%# `<head>` holds metadata and asset links that aren't visible page
+    content — page title, character encoding, stylesheets, scripts. Nothing
+    inside `<head>` is rendered as visible page body text (except the
+    browser tab title). %>
 <head>
+  <%# `<meta charset="UTF-8">` tells the browser which text-encoding to use
+      when interpreting the bytes of this page, so special characters
+      (accents, emoji, the 🏪 used below) display correctly instead of as
+      garbled symbols. %>
   <meta charset="UTF-8">
+  <%# `<meta name="viewport" ...>` tells mobile browsers to render the page
+      at the device's actual width (instead of zoomed out to fit a
+      desktop-sized layout) and to start at 100% zoom — this is what makes
+      the page look right on phones. %>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <%# Page title — uses controller-set @page_title or falls back to "StorageFinder" %>
+  <%# `<title>` sets the text shown in the browser tab/window title and in
+      bookmarks. `<%= current_page_title % >` calls a helper method (defined
+      elsewhere in the app) and prints whatever string it returns right
+      here, between the `<title>` and `</title>` tags. %>
   <title><%= current_page_title %></title>
 
   <%# Tailwind CSS — utility classes for styling %>
+  <%# `stylesheet_link_tag` is a Rails helper that outputs an HTML `<link>`
+      tag pointing at the compiled "tailwind" stylesheet, so the browser
+      downloads and applies all the CSS classes used throughout this app
+      (like `bg-gray-950` a few lines below). `"data-turbo-track": "reload"`
+      is a Turbo (Rails' page-acceleration library) instruction: if this
+      stylesheet's content changes between page visits, Turbo does a full
+      page reload instead of silently keeping stale CSS. %>
   <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
 
   <%# JavaScript — Stimulus + Turbo + our custom JS %>
+  <%# `javascript_importmap_tags` is a Rails helper (from the "importmap"
+      approach to JS, which lets browsers load JavaScript modules by name
+      without a build step) that outputs all the `<script>` tags needed to
+      boot the app's JavaScript — including Turbo (fast page navigation)
+      and Stimulus (small JS behavior "controllers" attached to HTML). %>
   <%= javascript_importmap_tags %>
 
   <%# ActionCable — WebSocket connection for live crawl progress %>
+  <%# `action_cable_meta_tag` outputs a `<meta>` tag containing the
+      WebSocket URL that ActionCable's JavaScript client reads to open a
+      persistent, two-way connection to the server — used here so the page
+      can receive live updates (e.g. crawl progress) without refreshing. %>
   <%= action_cable_meta_tag %>
 
   <%# CSRF token — needed for all form submissions %>
+  <%# `csrf_meta_tags` outputs `<meta>` tags containing a secret,
+      per-session token. Rails checks this token on every form submission
+      to prove the request really came from this app's own pages (a
+      defense against Cross-Site Request Forgery attacks, where a
+      malicious site tries to submit a form on your behalf). Without this
+      tag present, Rails would reject non-GET form submissions. %>
   <%= csrf_meta_tags %>
+<%# `</head>` closes the `<head>` element opened above. %>
 </head>
 
+<%# `<body class="...">` opens the visible page area. The `class="..."`
+    attribute is a space-separated list of Tailwind CSS utility classes:
+    `bg-gray-950` sets a near-black background, `text-gray-100` sets
+    near-white default text, `min-h-screen` makes the page at least as
+    tall as the browser viewport (so a short page's background still fills
+    the screen), and `font-mono` sets a monospace font for the whole app. %>
 <body class="bg-gray-950 text-gray-100 min-h-screen font-mono">
 
   <%# ======================================================================= %>
   <%# NAVIGATION BAR %>
   <%# ======================================================================= %>
+  <%# `<nav>` is the semantic HTML tag for a block of navigation links (helps
+      screen readers and search engines understand this section's purpose).
+      `bg-gray-900` = dark background, `border-b border-gray-800` = a thin
+      bottom border, `sticky top-0` = the nav bar sticks to the top of the
+      viewport and stays visible while the page scrolls, `z-50` = a high
+      stacking order so it renders above other page content instead of
+      being covered by it. %>
   <nav class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+    <%# This inner `<div>` centers the nav bar's contents and caps their
+        width: `max-w-screen-xl` limits how wide it stretches on large
+        screens, `mx-auto` centers it horizontally, `px-4` adds left/right
+        padding, and `flex items-center justify-between h-14` arranges its
+        children (logo on the left, links on the right) in a single row,
+        vertically centered, at a fixed height of 14 Tailwind spacing units. %>
     <div class="max-w-screen-xl mx-auto px-4 flex items-center justify-between h-14">
 
       <%# Logo / App name — links back to the dashboard %>
+      <%# `link_to` is a Rails helper that outputs an HTML `<a>` (anchor/
+          link) tag. This call form — `link_to path, options do ... end` —
+          passes a BLOCK as the link's inner content instead of a plain
+          text string, so we can put multiple HTML elements (the emoji span
+          and the text span below) inside one clickable link. `root_path`
+          is the URL for the app's home page (defined by the routes file).
+          The `class:` string is more Tailwind styling for the link. %>
       <%= link_to root_path, class: "flex items-center gap-2 text-emerald-400 font-bold text-lg hover:text-emerald-300 transition-colors" do %>
+        <%# A `<span>` is a generic inline HTML container — here it wraps
+            the store emoji at a larger text size. %>
         <span class="text-2xl">🏪</span>
+        <%# A second `<span>` holding the plain app name text. %>
         <span>StorageFinder</span>
+      <%# `<% end % >` closes the `do ... end` block passed to `link_to`
+          above — in ERB, Ruby's block/if/loop keywords still have to
+          balance even though they're split across separate `<% % >` tags. %>
       <% end %>
 
       <%# Navigation links %>
+      <%# A plain `<div>` used purely for layout: `flex items-center gap-6`
+          lays its children out in a row with consistent spacing between
+          them. %>
       <div class="flex items-center gap-6">
+        <%# `link_to "Dashboard", root_path, class: "..."` is the simpler
+            form of `link_to`: first argument is the visible link text,
+            second is the destination URL/path, third is HTML attributes.
+            This one links to the home page. %>
         <%= link_to "Dashboard", root_path,
               class: "text-sm text-gray-300 hover:text-emerald-400 transition-colors" %>
 
+        <%# Links to the Alert Rules page; `alert_rules_path` is a
+            Rails-generated URL helper based on the app's routes. %>
         <%= link_to "Alert Rules", alert_rules_path,
               class: "text-sm text-gray-300 hover:text-emerald-400 transition-colors" %>
 
+        <%# Links to the Settings page; `settings_path` is likewise a
+            routes-generated URL helper. %>
         <%= link_to "Settings", settings_path,
               class: "text-sm text-gray-300 hover:text-emerald-400 transition-colors" %>
+      <%# Closes the `<div class="flex items-center gap-6">` that wraps the
+          three navigation links above. %>
       </div>
+    <%# Closes the centering `<div class="max-w-screen-xl ...">` opened
+        above, which wraps both the logo and the nav links. %>
     </div>
+  <%# Closes the `<nav>` element that opened this whole navigation bar
+      section. %>
   </nav>
 
   <%# ======================================================================= %>
   <%# FLASH MESSAGES (success / error banners) %>
   <%# ======================================================================= %>
+  <%# `flash` is a Rails mechanism for passing short, one-time messages from
+      a controller action to the very next page rendered (commonly used
+      after a redirect, e.g. "Settings saved!"). `flash[:notice]` reads the
+      "notice" (success-style) message, if any was set. `.present?` is a
+      Rails helper meaning "not nil and not empty" — true only when there's
+      an actual message to show. `<% if ... % >` runs Ruby logic but prints
+      nothing itself; the HTML below it only renders when the condition is
+      true. %>
   <% if flash[:notice].present? %>
+    <%# This banner `<div>` only appears when a notice message is present.
+        `bg-emerald-900/50` = a semi-transparent dark-green background (the
+        `/50` is Tailwind's opacity modifier), plus green border/text
+        colors — styled to read as a "success" banner. `role="alert"` is an
+        HTML accessibility attribute telling screen readers to announce
+        this content immediately, since it's a transient status message. %>
     <div class="bg-emerald-900/50 border-b border-emerald-700 text-emerald-300 px-4 py-3 text-sm" role="alert">
+      <%# The ✓ character is a plain literal checkmark, followed by the
+          actual message text printed via `<%= flash[:notice] % >`. %>
       ✓ <%= flash[:notice] %>
     </div>
+  <%# Closes the `<% if flash[:notice].present? % >` conditional above. %>
   <% end %>
 
+  <%# Same pattern as above, but for `flash[:alert]` — Rails' conventional
+      key for error/warning-style one-time messages. %>
   <% if flash[:alert].present? %>
+    <%# Styled as a "danger" banner: dark-red background, red border/text. %>
     <div class="bg-red-900/50 border-b border-red-700 text-red-300 px-4 py-3 text-sm" role="alert">
+      <%# The ✗ character is a plain literal "X" mark preceding the message. %>
       ✗ <%= flash[:alert] %>
     </div>
+  <%# Closes the `<% if flash[:alert].present? % >` conditional above. %>
   <% end %>
 
   <%# ======================================================================= %>
   <%# MAIN CONTENT AREA %>
   <%# yield renders whatever the current page's view outputs %>
   <%# ======================================================================= %>
+  <%# `<main>` is the semantic HTML tag marking the page's primary content
+      region (as opposed to nav/footer/sidebars). The Tailwind classes cap
+      its width, center it, and add horizontal/vertical padding, matching
+      the nav bar's layout above. %>
   <main class="max-w-screen-xl mx-auto px-4 py-6">
+    <%# `yield` (with no arguments) is the heart of a Rails layout: it's the
+        spot where whatever the CURRENT PAGE's own template rendered gets
+        inserted. For example, when visiting Settings, Rails first renders
+        app/views/settings/index.html.erb into a block of HTML, then
+        renders THIS layout file around it, substituting that HTML in right
+        here. `<%= yield % >` both runs `yield` and prints its result. %>
     <%= yield %>
+  <%# Closes the `<main>` element opened above. %>
   </main>
 
   <%# ======================================================================= %>
   <%# FOOTER %>
   <%# ======================================================================= %>
+  <%# `<footer>` is the semantic HTML tag for the page's closing/footer
+      region. Styled with a top border, top margin to separate it from
+      content above, vertical padding, centered small muted text. %>
   <footer class="border-t border-gray-800 mt-12 py-6 text-center text-xs text-gray-600">
+    <%# Plain literal footer text. `&nbsp;` is an HTML entity for a
+        non-breaking space (a space character that browsers won't
+        collapse or line-wrap on), used here around the "|" separator
+        purely for visual spacing. %>
     StorageFinder — self-hosted, runs on your LAN &nbsp;|&nbsp;
+    <%# `Time.current` gets the current time (Rails-aware of the app's
+        configured time zone). `.strftime("%b %d, %Y")` formats it as a
+        string using strftime's format codes: `%b` = abbreviated month
+        name (e.g. "Jul"), `%d` = zero-padded day of month, `%Y` =
+        4-digit year — producing something like "Jul 18, 2026". %>
     <span>Last updated: <%= Time.current.strftime("%b %d, %Y") %></span>
+  <%# Closes the `<footer>` element opened above. %>
   </footer>
 
+<%# Closes the `<body>` element opened near the top of the file. %>
 </body>
+<%# Closes the `<html>` root element opened at the very top of the file. %>
 </html>

@@ -1,6 +1,32 @@
 #!/usr/bin/env ruby
+# Must be the literal first line — shebang telling the OS to run this file
+# with whatever `ruby` is on the system PATH (see bin/brakeman for the
+# full explanation; every bin/ script in this app starts this way).
 
+# Blank line separating the shebang from the code below.
+
+# Loads config/environment.rb (relative to this file: up out of bin/,
+# into config/). This is the FULL Rails boot — it loads the entire
+# application, all models, all initializers, and connects to the
+# database. It's the heaviest of the three boot files used across these
+# bin/ scripts (config/boot.rb < config/application.rb <
+# config/environment.rb) because running background jobs needs the whole
+# app (models, database connection, etc.) available, not just Rails
+# itself.
 require_relative "../config/environment"
+# Loads the command-line interface for Solid Queue, the background job
+# processing library this app uses (it stores queued jobs in the
+# database rather than requiring a separate service like Redis).
+# `SolidQueue::Cli` (used below) is defined in this file.
 require "solid_queue/cli"
 
+# Blank line separating "load code" from "run it."
+
+# `SolidQueue::Cli` is the class just loaded. `.start(ARGV)` is a Thor
+# convention (Thor is the command-line framework this CLI is built on):
+# it reads `ARGV` — the array of arguments this script was invoked with
+# (e.g. running `bin/jobs start` gives ARGV = ["start"]) — figures out
+# which subcommand was requested, and runs it. This is the line that
+# actually starts (or stops, or checks the status of) the background job
+# worker process.
 SolidQueue::Cli.start(ARGV)

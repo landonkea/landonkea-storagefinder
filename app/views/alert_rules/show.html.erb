@@ -1,22 +1,67 @@
 <%# Alert Rule Show %>
+<%# Full page rendered by AlertRulesController#show (see
+    app/controllers/alert_rules_controller.rb) — shown when visiting GET
+    /alert_rules/:id. The controller's `set_alert_rule` before_action has
+    already loaded this specific record into `@alert_rule`. %>
+<%# "flex items-center justify-between" lays the heading block (left) and
+    the Edit/Delete buttons (right) out horizontally, vertically centered,
+    with space pushed between them so the buttons sit flush to the right
+    edge; "mb-6" adds margin below the row. %>
 <div class="flex items-center justify-between mb-6">
   <div>
+    <%# "text-2xl font-bold text-emerald-400" is a large, bold, green-accented
+        heading. `<%= @alert_rule.name % >` prints this record's saved name. %>
     <h1 class="text-2xl font-bold text-emerald-400"><%= @alert_rule.name %></h1>
+    <%# "text-sm text-gray-400 mt-1" is small, muted subtitle text below the
+        heading. `@alert_rule.description` prints another column's saved
+        value — if that column is blank/nil, this line just renders empty. %>
     <p class="text-sm text-gray-400 mt-1"><%= @alert_rule.description %></p>
   </div>
+  <%# "flex gap-3" lays the two action buttons out horizontally with
+      spacing between them. %>
   <div class="flex gap-3">
+    <%# `link_to "Edit", edit_alert_rule_path(@alert_rule), ...` generates a
+        plain `<a href="...">` link to this record's edit form.
+        "btn-secondary" is this app's custom CSS class for a lower-emphasis
+        button style. %>
     <%= link_to "Edit", edit_alert_rule_path(@alert_rule), class: "btn-secondary" %>
+    <%# `button_to` generates a tiny standalone `<form>` (rather than a
+        plain link) because deleting must be a real form submission, not
+        just a clickable link — `method: :delete` makes it submit as an
+        HTTP DELETE request, which the routes map to the controller's
+        `destroy` action. "btn-danger" is this app's custom CSS class
+        signaling a destructive action (typically styled red).
+        `data: { confirm: "..." }` is meant to show a browser confirmation
+        popup before the delete submits — see the flagged note at the end
+        of this pass, since this attribute name may not actually trigger a
+        confirmation under this app's Turbo-based setup. %>
     <%= button_to "Delete", alert_rule_path(@alert_rule), method: :delete,
           class: "btn-danger",
           data: { confirm: "Delete '#{@alert_rule.name}'?" } %>
   </div>
 </div>
 
+<%# "card" is this app's boxed/panel styling for the details box below. %>
 <div class="card">
+  <%# `<dl>` is the HTML "description list" element — meant for
+      label/value pairs. "grid grid-cols-2 gap-y-4 gap-x-8 text-sm" makes
+      its contents lay out as a two-column grid (grid-cols-2), with
+      vertical gaps between rows (gap-y-4) and horizontal gaps between the
+      two columns (gap-x-8), using small text throughout. %>
   <dl class="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
     <div>
+      <%# `<dt>` is the HTML "description term" (the label half of a pair).
+          "text-gray-500 text-xs uppercase" is small, muted, all-caps
+          styling used consistently for every label below. %>
       <dt class="text-gray-500 text-xs uppercase">Status</dt>
+      <%# `<dd>` is the HTML "description details" element (the value half
+          of the pair, paired with the `<dt>` immediately above it).
+          "mt-1" adds a small gap between the label and its value. %>
       <dd class="mt-1">
+        <%# `@alert_rule.active?` is the auto-generated true/false
+            "predicate" method Rails adds for the boolean `active` column.
+            "badge-green"/"badge-gray" are this app's custom pill-badge
+            styles for the two states. %>
         <% if @alert_rule.active? %>
           <span class="badge-green">Active</span>
         <% else %>
@@ -28,6 +73,9 @@
     <div>
       <dt class="text-gray-500 text-xs uppercase">Trigger</dt>
       <dd class="mt-1 text-gray-300">
+        <%# `@alert_rule.trigger_type` is a string column set via the
+            dropdown in _form.html.erb ("price_threshold" or "price_drop").
+            This picks which sentence to display based on that value. %>
         <% if @alert_rule.trigger_type == "price_threshold" %>
           Price drops below $<%= @alert_rule.threshold_price %>
         <% else %>
@@ -38,18 +86,43 @@
 
     <div>
       <dt class="text-gray-500 text-xs uppercase">Size filter</dt>
-      <dd class="mt-1 text-gray-300"><%= @alert_rule.unit_size_filter.presence || "All sizes" %></dd>
+      <dd class="mt-1 text-gray-300">
+        <%# `.presence` is a Rails helper that returns the value itself if
+            it's "present" (not nil/not blank), or `nil` otherwise — it's
+            like `.present?` but returns the value instead of true/false.
+            `||` is Ruby's "or": if the left side evaluates to nil/false,
+            Ruby falls through and uses the right side instead. Combined,
+            this prints the saved filter text if one was set, or the
+            fallback string "All sizes" if the filter is blank. %>
+        <%= @alert_rule.unit_size_filter.presence || "All sizes" %>
+      </dd>
     </div>
 
     <div>
       <dt class="text-gray-500 text-xs uppercase">Company filter</dt>
-      <dd class="mt-1 text-gray-300"><%= @alert_rule.company_filter.presence || "All companies" %></dd>
+      <dd class="mt-1 text-gray-300">
+        <%# Same `.presence || "fallback"` pattern as the size filter above,
+            applied to the company filter column. %>
+        <%= @alert_rule.company_filter.presence || "All companies" %>
+      </dd>
     </div>
 
     <div>
       <dt class="text-gray-500 text-xs uppercase">Delivery</dt>
+      <%# "flex flex-wrap gap-1" lays the enabled delivery-method badges out
+          horizontally, wrapping to a new line if needed, with a small gap. %>
       <dd class="mt-1 flex flex-wrap gap-1">
+        <%# `@alert_rule.email_enabled?` is the auto-generated predicate for
+            the boolean `email_enabled` column. When true, this badge shows
+            "Email — " followed by either the specific address saved on
+            this rule (via `.presence`) or, if none was set, the fallback
+            text "default address" (meaning this app's global default
+            address from Settings will be used instead — see the form's
+            placeholder text). "badge-blue" is this app's pill-badge style. %>
         <% if @alert_rule.email_enabled? %><span class="badge-blue">Email — <%= @alert_rule.email_address.presence || "default address" %></span><% end %>
+        <%# Discord and SMS badges don't show any extra detail text —
+            just their enabled/disabled state — unlike the email badge
+            above. %>
         <% if @alert_rule.discord_enabled? %><span class="badge-blue">Discord</span><% end %>
         <% if @alert_rule.sms_enabled? %><span class="badge-blue">SMS</span><% end %>
       </dd>
@@ -58,12 +131,24 @@
     <div>
       <dt class="text-gray-500 text-xs uppercase">Last triggered</dt>
       <dd class="mt-1 text-gray-300">
+        <%# Same ternary + `.strftime` pattern as the alert rules index
+            page: shows a formatted date/time if this alert has ever fired,
+            or the literal text "Never" if `last_triggered_at` is still
+            nil. The format string here additionally includes ", %Y" (a
+            comma and full 4-digit year) which the index page's shorter
+            format omits. %>
         <%= @alert_rule.last_triggered_at ? @alert_rule.last_triggered_at.strftime("%b %d, %Y at %I:%M %p") : "Never" %>
       </dd>
     </div>
   </dl>
 </div>
 
+<%# "mt-6" adds margin above this block, separating the back-link from the
+    details card above it. %>
 <div class="mt-6">
+  <%# `link_to "← Back to Alert Rules", alert_rules_path, ...` generates a
+      plain `<a href="...">` link back to the alert rules listing page.
+      "text-blue-400 hover:text-blue-300 text-sm" styles it as small blue
+      text that lightens slightly on hover. %>
   <%= link_to "← Back to Alert Rules", alert_rules_path, class: "text-blue-400 hover:text-blue-300 text-sm" %>
 </div>
