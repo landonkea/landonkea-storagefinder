@@ -1,12 +1,52 @@
 # Mirrors db/seeds.rb so app code that calls Setting.get(key) sees the same
 # keys/categories/input_types in tests as it would in a freshly seeded app.
+#
+# Expanding on the preserved note above: this is a FIXTURE file — a YAML (a
+# plain-text, indentation-based data format) file listing pre-made, FAKE
+# database rows that Rails automatically loads into the test database
+# before every test runs (see the `fixtures :all` line in
+# test/test_helper.rb). Each top-level key below (e.g.
+# `crawl_default_radius_miles:`) is both this fixture's LABEL (how test code
+# refers to it, e.g. `settings(:email_smtp_host)` in
+# test/models/setting_test.rb) and, deliberately, ALSO the literal value
+# stored in that row's own `key` column below — matching the real settings
+# db/seeds.rb creates when setting up a brand-new (non-test) database, so
+# tests calling `Setting.get("crawl_default_radius_miles")` behave the same
+# way application code calling that in production would. The indented
+# `key: value` lines under each label become that row's actual column
+# values, matching the "settings" table (see db/schema.rb). Note: unlike
+# most other fixture files in this app, none of these rows use `<%%= %>`
+# embedded-Ruby timestamps — `created_at`/`updated_at` are simply left
+# unset here, which Rails fixtures still handle fine (they're set to a
+# fixture-loading default).
 
+# Fixture/setting "crawl_default_radius_miles" — the default search radius
+# (in miles) suggested when starting a new crawl.
 crawl_default_radius_miles:
+  # As noted above, this repeats the same text as the fixture's own label —
+  # this is the actual `key` COLUMN value read back by `Setting.get(...)`.
   key: crawl_default_radius_miles
+  # Settings' `value` column is stored as encrypted TEXT regardless of its
+  # logical meaning (see `encrypts :value` in app/models/setting.rb) — so
+  # even a "number" setting like this one is written here as the STRING
+  # "100", not the bare YAML number 100. The `input_type` column below is
+  # what tells Setting.get how to convert it back to a real Integer/Float
+  # when read.
   value: "100"
+  # Groups this setting for display/filtering purposes (see
+  # Setting.get_all's `category` scoping in app/models/setting.rb) — not
+  # used in any validation, just organizational.
   category: crawl
+  # Human-readable label shown next to this setting on the Settings page in
+  # the app's UI.
   label: Default search radius (miles)
+  # Tells Setting.cast_value (see app/models/setting.rb) to convert the
+  # stored string to an Integer/Float when read via `.get`, and tells the
+  # Settings page which HTML `<input>` type to render for editing it.
   input_type: number
+
+# A blank line between fixtures is just a visual separator; YAML doesn't
+# require it.
 
 crawl_max_retries:
   key: crawl_max_retries
@@ -22,6 +62,10 @@ crawl_delay_between_requests_ms:
   label: Delay between requests (milliseconds)
   input_type: number
 
+# `input_type: boolean` settings store the literal text "true"/"false" in
+# the encrypted `value` column, converted to a real Ruby true/false by
+# Setting.cast_value's `value.to_s.downcase == "true"` check (see
+# app/models/setting.rb) when read via `.get`.
 crawl_headless:
   key: crawl_headless
   value: "true"
@@ -43,6 +87,8 @@ schedule_enabled:
   label: Enable scheduled automatic crawls
   input_type: boolean
 
+# `input_type: text` settings are read back as a plain string, unchanged,
+# by Setting.cast_value's fallback branch (see app/models/setting.rb).
 schedule_cron:
   key: schedule_cron
   value: "0 6 * * *"
@@ -50,6 +96,10 @@ schedule_cron:
   label: Schedule (cron format)
   input_type: text
 
+# `value: ""` — an explicit, empty-string default (as opposed to leaving
+# this key out of the seed data entirely) since this setting must be filled
+# in by a real user through the Settings UI before scheduled crawling can
+# actually target a city.
 schedule_city:
   key: schedule_city
   value: ""
@@ -73,6 +123,11 @@ email_enabled:
 
 email_smtp_host:
   key: email_smtp_host
+  # Unquoted here, unlike several examples in other fixture files
+  # (facilities.yml's zip/phone) — this is fine because "smtp.gmail.com"
+  # doesn't look like a YAML number, boolean, or other special value, so
+  # YAML parses it as a plain string either way; quoting is only strictly
+  # NEEDED when a value could otherwise be misread as something else.
   value: smtp.gmail.com
   category: email
   label: SMTP server hostname
@@ -92,6 +147,11 @@ email_smtp_username:
   label: SMTP username
   input_type: text
 
+# `input_type: password` settings are stored/cast the same generic way as
+# plain text (Setting.cast_value's `else` branch just does `value.to_s`,
+# see app/models/setting.rb) — "password" only changes which HTML `<input>`
+# type is rendered on the Settings page (masking the characters visually),
+# not how the value itself is processed or encrypted.
 email_smtp_password:
   key: email_smtp_password
   value: ""
@@ -169,6 +229,10 @@ history_keep_months:
   label: Months of price history to keep
   input_type: number
 
+# `input_type: select` — like text/password, cast_value's `else` branch
+# just returns this as a plain string; "select" only tells the Settings
+# page to render a dropdown `<select>` of pre-defined choices rather than a
+# free-text `<input>`.
 display_default_sort:
   key: display_default_sort
   value: monthly_price asc

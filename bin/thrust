@@ -1,5 +1,24 @@
 #!/usr/bin/env ruby
+# Must be the literal first line — the shebang telling the OS to run this
+# file with whatever `ruby` is found on the system PATH (fully explained
+# in bin/brakeman; every bin/ script here starts the same way).
+
+# Loads RubyGems, Ruby's built-in package manager library, so the `Gem`
+# module (used below) is available.
 require "rubygems"
+# Loads Bundler's setup code, restricting `require` to only see the exact
+# gem versions locked in this project's Gemfile.lock — avoiding version
+# mismatches with gems installed elsewhere on the machine.
 require "bundler/setup"
 
+# Blank line before the final "hand off control to the real tool" step.
+
+# `Gem.bin_path("thruster", "thrust")` asks RubyGems for the full path of
+# the executable file named "thrust" that belongs to the gem named
+# "thruster" (note: the gem name and the executable name differ here —
+# Thruster is a small HTTP proxy for Rails apps in production, and its
+# command-line tool is called `thrust`). `load` reads and runs that
+# file's code as if it were pasted right here. Same wrapper pattern as
+# bin/brakeman, bin/kamal, and bin/rubocop — it guarantees this script
+# always runs the exact Thruster version this project depends on.
 load Gem.bin_path("thruster", "thrust")

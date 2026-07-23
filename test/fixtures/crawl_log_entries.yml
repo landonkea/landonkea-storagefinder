@@ -1,18 +1,78 @@
+# This is a FIXTURE file — a YAML (a plain-text, indentation-based data
+# format) file listing pre-made, FAKE database rows that Rails automatically
+# loads into the test database before every test runs (see the `fixtures
+# :all` line in test/test_helper.rb). This lets tests work with realistic,
+# already-saved CrawlLogEntry records (see app/models/crawl_log_entry.rb)
+# without hand-building and saving their own data.
+#
+# Each top-level key below (like `info_entry:`) is a LABEL chosen for this
+# file — test code refers to a fixture by this label, e.g.
+# `crawl_log_entries(:info_entry)` in test/models/crawl_log_entry_test.rb
+# returns the real, saved database record built from the settings indented
+# underneath it. The indented `key: value` lines below each label become
+# that row's actual column values, matching the "crawl_log_entries" table
+# (see db/schema.rb).
+
+# Fixture labeled "info_entry" — a normal informational log line, the kind
+# written when a crawl starts, progresses, or finishes successfully.
 info_entry:
+  # `crawl_run_id: 1` sets the foreign key directly to the numeric id 1,
+  # rather than using the more common `crawl_run: previous_completed`
+  # fixture-name syntax (Rails fixtures can resolve associations either
+  # way). This works here because the crawl_runs.yml fixture file
+  # explicitly pins `previous_completed`'s id to 1 (see
+  # test/fixtures/crawl_runs.yml) — this line is relying on that exact,
+  # explicit id rather than Rails' usual auto-generated pseudo-random ids.
   crawl_run_id: 1
+  # A plain string identifying which company this log entry concerns.
+  # "system" (rather than a real storage company name) marks this as an
+  # internal/administrative log line, matching the convention used by
+  # CrawlRun#start!/#complete! in app/models/crawl_run.rb.
   company: system
+  # Must be one of "info"/"warning"/"error" per CrawlLogEntry's `inclusion:`
+  # validation (see app/models/crawl_log_entry.rb).
   level: info
   message: Crawl started
+  # No retries happened for this entry — 0.
   retry_count: 0
+  # `<%%= 3.days.ago %>` is ERB (Embedded RuBy): fixture YAML files support
+  # embedded Ruby wrapped in `<%% %>`/`<%%= %>` tags, evaluated once when
+  # fixtures load. `<%%= %>` runs the Ruby code AND inserts its result into
+  # the YAML text at that spot. `3.days.ago` is a Rails/ActiveSupport method
+  # chain (`3.days` builds a Duration of three days, `.ago` subtracts it
+  # from the current time) — so this timestamp is always "3 days before
+  # whenever the test suite happens to run," rather than a fixed date that
+  # would slowly become stale/unrealistic over time.
   created_at: <%= 3.days.ago %>
   updated_at: <%= 3.days.ago %>
 
+# A blank line here is just a visual separator between fixture entries; YAML
+# itself doesn't require it.
+
+# Fixture labeled "error_entry" — a failed-page-load log line, the kind
+# written when a scraper hits a timeout or other error partway through a
+# crawl. Used by tests checking error-specific behavior like the `errors`
+# scope, `css_class`, and `emoji_prefix` (see app/models/crawl_log_entry.rb).
 error_entry:
   crawl_run_id: 1
+  # A real storage company name this time, since this simulates an actual
+  # scraping failure for one specific company (as opposed to info_entry's
+  # internal "system" entry above).
   company: Public Storage
   level: error
+  # Quoted because the text itself contains a colon (`:`) — in YAML, an
+  # unquoted colon followed by a space can be misread as starting a new
+  # key/value pair, so wrapping the whole value in double quotes here
+  # avoids any ambiguity.
   message: "Timeout loading page: Timeout 30000ms exceeded."
+  # The specific URL being scraped when the timeout happened — populates
+  # CrawlLogEntry's optional `url` column, later shown in `to_log_line`'s
+  # output when present (see app/models/crawl_log_entry.rb).
   url: https://www.publicstorage.com/self-storage-az-gilbert/6079.html
+  # 3 retries were attempted before this entry was logged — used by
+  # test/models/crawl_log_entry_test.rb's "to_log_line includes timestamp,
+  # level, company, and message" test, which checks the formatted log line
+  # includes the text "retry 3".
   retry_count: 3
   created_at: <%= 3.days.ago %>
   updated_at: <%= 3.days.ago %>

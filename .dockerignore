@@ -1,51 +1,175 @@
+# WHAT IS THIS FILE?
+# A .dockerignore file tells Docker which files and folders to SKIP when it
+# builds a container image from this project. When you run `docker build`,
+# Docker's first step is to copy the whole project directory into the build
+# context (a staging area it sends to the Docker engine) — anything listed
+# here is excluded from that copy. This keeps the image smaller, the build
+# faster, and prevents secrets or throwaway files (like logs or your local
+# .env file) from accidentally ending up baked into a shipped image.
+# Each non-comment line below is a "pattern" describing files/folders to
+# ignore. A leading `/` anchors the pattern to the project root (instead of
+# matching that name anywhere in the tree). A leading `!` means "actually,
+# don't ignore this" — it re-includes something that a broader pattern above
+# it would otherwise have excluded.
+
+# `#` starts a comment in a .dockerignore file — everything after it on the
+# line is ignored by Docker and is purely for humans reading the file.
+# This comment points to Docker's own documentation for the full pattern
+# syntax (wildcards, negation, etc.) in case you need something this file
+# doesn't already demonstrate.
 # See https://docs.docker.com/engine/reference/builder/#dockerignore-file for more about ignoring files.
 
+# Blank line — used purely to visually separate this section from the next.
+# Docker (and most config file formats) ignore blank lines entirely.
+
 # Ignore git directory.
+# `/.git/` excludes the entire hidden .git folder — that's git's internal
+# database (every commit, branch, and history), which the running app never
+# needs and which can be quite large. The trailing `/` means "this must be
+# a directory" (as opposed to a file with the same name).
 /.git/
+# `/.gitignore` excludes the file you're looking at a sibling of — the git
+# ignore-rules file itself. It's metadata for git, not something the app
+# needs inside its container image.
 /.gitignore
 
+# Blank separator line.
+
 # Ignore bundler config.
+# `/.bundle` excludes the local Bundler configuration directory (if one
+# exists). Bundler is Ruby's gem/dependency manager; `.bundle/config` can
+# hold machine-specific settings (like custom gem install paths) that
+# should NOT be copied into a container, which gets its own fresh Bundler
+# setup during the Docker build.
 /.bundle
 
+# Blank separator line.
+
 # Ignore all environment files.
+# `/.env*` excludes any file starting with ".env" (the `*` is a wildcard
+# matching zero or more of any character) — e.g. `.env`, `.env.local`,
+# `.env.production`. These files typically hold secrets (API keys, database
+# passwords) for local development and must never be baked into a shared
+# Docker image, which could be pushed to a registry other people can pull.
 /.env*
 
+# Blank separator line.
+
 # Ignore all default key files.
+# `/config/master.key` excludes Rails' master encryption key — the secret
+# used to decrypt config/credentials.yml.enc. If this leaked into a public
+# image, anyone could decrypt all of the app's stored secrets.
 /config/master.key
+# `/config/credentials/*.key` excludes any per-environment key files inside
+# config/credentials/ (Rails supports one master key per environment, e.g.
+# production.key) — same reasoning: these are secrets, not app code.
 /config/credentials/*.key
 
+# Blank separator line.
+
 # Ignore all logfiles and tempfiles.
+# `/log/*` excludes everything currently inside the log/ directory (but not
+# the log/ directory itself) — log files are generated output from running
+# the app, not something needed to build or ship it.
 /log/*
+# `/tmp/*` excludes everything inside the tmp/ directory for the same
+# reason — tmp/ holds caches, pid files, and other transient runtime data.
 /tmp/*
+# `!/log/.keep` re-includes one specific file: log/.keep. `.keep` is a
+# common convention — an otherwise-empty placeholder file whose only job is
+# to make git (and here, the Docker build) preserve an empty directory,
+# since both git and Docker's COPY normally ignore empty folders entirely.
 !/log/.keep
+# `!/tmp/.keep` does the same thing for the tmp/ directory — keeps the
+# empty folder present in the image even though its contents are ignored.
 !/tmp/.keep
 
+# Blank separator line.
+
 # Ignore pidfiles, but keep the directory.
+# `/tmp/pids/*` excludes the contents of tmp/pids/ — pid files (which store
+# the process ID of a running server) are runtime state, regenerated fresh
+# every time the container starts, so shipping stale ones would be useless
+# or even harmful (a stale pid could be mistaken for a live process).
 /tmp/pids/*
+# `!/tmp/pids/.keep` re-includes the placeholder file so the tmp/pids/
+# directory itself still exists in the built image, ready for the running
+# app to write real pid files into later.
 !/tmp/pids/.keep
 
+# Blank separator line.
+
 # Ignore storage (uploaded files in development and any SQLite databases).
+# `/storage/*` excludes everything in storage/ — this is where Rails'
+# Active Storage keeps locally-uploaded files, and where SQLite database
+# files often live. None of that should be baked into the image; a fresh
+# container should start with an empty storage/ and get its own database.
 /storage/*
+# `!/storage/.keep` keeps the empty storage/ directory present so the app
+# has somewhere to write once it's actually running.
 !/storage/.keep
+# `/tmp/storage/*` excludes contents of a second, tmp-scoped storage
+# folder (used for some test/dev-only file storage scenarios).
 /tmp/storage/*
+# `!/tmp/storage/.keep` keeps that folder's placeholder file so the empty
+# directory still exists in the image.
 !/tmp/storage/.keep
 
+# Blank separator line.
+
 # Ignore assets.
+# `/node_modules/` excludes the node_modules folder (JavaScript package
+# dependencies installed by npm/yarn, if this project uses any) — these are
+# reinstalled fresh during the Docker build rather than copied from your
+# local machine, where they might not even match the target OS/architecture.
 /node_modules/
+# `/app/assets/builds/*` excludes previously-compiled/bundled frontend
+# assets (CSS/JS build output) sitting in your local working copy — the
+# Docker build regenerates these itself so stale local builds don't leak in.
 /app/assets/builds/*
+# `!/app/assets/builds/.keep` keeps the empty builds/ directory present so
+# the asset build step has somewhere to write its output during the build.
 !/app/assets/builds/.keep
+# `/public/assets` excludes any already-precompiled production assets
+# (CSS/JS/images with cache-busting fingerprints in their filenames) that
+# might exist locally — again, these get freshly regenerated in the image.
 /public/assets
 
+# Blank separator line.
+
 # Ignore CI service files.
+# `/.github` excludes the whole .github/ folder (GitHub Actions workflows,
+# Dependabot config, issue templates, etc.) — none of this affects how the
+# app runs, so there's no reason to bloat the image with it.
 /.github
 
+# Blank separator line.
+
 # Ignore Kamal files.
+# `/config/deploy*.yml` excludes Kamal deployment config files (e.g.
+# config/deploy.yml, config/deploy.production.yml) — Kamal is a deploy tool
+# that reads these from OUTSIDE the container (on your own machine or CI),
+# so the container itself never needs a copy of its own deploy instructions.
 /config/deploy*.yml
+# `/.kamal` excludes Kamal's local working/cache directory for the same
+# reason — it's tooling state for the deploy process, not app code.
 /.kamal
 
+# Blank separator line.
+
 # Ignore development files
+# `/.devcontainer` excludes the VS Code "Dev Containers" configuration
+# folder — that's a convenience setup for local development environments,
+# irrelevant to the production image this Dockerfile actually builds.
 /.devcontainer
 
+# Blank separator line.
+
 # Ignore Docker-related files
+# `/.dockerignore` excludes this very file from the build context — Docker
+# doesn't need a copy of its own ignore-rules file inside the image.
 /.dockerignore
+# `/Dockerfile*` excludes any file starting with "Dockerfile" (the build
+# instructions themselves, and variants like Dockerfile.dev) — the running
+# container has no use for the recipe that built it.
 /Dockerfile*

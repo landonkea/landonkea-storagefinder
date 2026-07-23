@@ -1,14 +1,84 @@
+<%# This filename starts with an underscore ("_crawl_history.html.erb"),
+    which in Rails marks it as a PARTIAL — a reusable snippet of view
+    template, not a full page on its own. It's pulled into the bottom of
+    app/views/dashboard/index.html.erb via `render "crawl_history"` (Rails
+    strips the leading underscore and infers the folder/extension when
+    resolving that call). Pulling this out of the main dashboard file keeps
+    that already-large file a bit smaller and keeps this self-contained
+    table-plus-bulk-delete feature grouped together in its own file. %>
+<%# `@crawl_history` is an instance variable set by DashboardController#index
+    (this partial is only ever rendered from that action's view, so it can
+    rely on that controller having already loaded it) — a list of recent
+    crawl run records. `.any?` is true only if there's at least one. %>
 <% if @crawl_history.any? %>
+  <%# "card" is this app's custom boxed/panel CSS styling.
+      `data-controller="crawl-history"` is a Stimulus attribute (Stimulus is
+      a small JavaScript framework this app uses) — it tells Stimulus to
+      attach the JS behavior defined in the "crawl-history" controller
+      (found in app/javascript/controllers/) to this <div> and everything
+      inside it, powering the checkbox select-all/row-toggle behavior used
+      below. %>
   <div class="card" data-controller="crawl-history">
     <%# Standalone form for bulk delete — its inputs live in the table below and
         in the header button, wired up by the "form" attribute rather than by
         nesting, since the per-row delete buttons below are forms of their own. %>
+    <%# The comment above was already here and explains the unusual pattern
+        below: normally an HTML `<form>` needs its `<input>`s physically
+        nested INSIDE its `<form>...</form>` tags, but here the checkboxes
+        that belong to this bulk-delete form live in the table rows further
+        down the page — outside this form's own (empty) body. HTML5 allows
+        that: any input element can specify `form="some-id"` to associate
+        itself with a `<form>` elsewhere on the page by that form's `id`,
+        which is exactly how the checkboxes below opt into this form
+        without being nested inside it (they can't be nested inside it,
+        since each row also has its OWN separate `button_to` delete form,
+        and HTML forbids nesting one `<form>` inside another). %>
+    <%# `form_with url: destroy_selected_crawls_path, method: :delete, ...`
+        generates a `<form>` tag pointed at a custom route (not a standard
+        RESTful resource route) that presumably deletes multiple crawl
+        records at once. `id: "bulk-delete-crawls-form"` sets this form's
+        HTML id attribute — the string other elements reference via their
+        own `form="bulk-delete-crawls-form"` attribute to associate
+        themselves with this form despite not being nested inside it.
+        `data: { turbo_confirm: "..." } }` uses Turbo's (not classic Rails
+        UJS's) confirmation-dialog data attribute — when this form is
+        submitted, Turbo intercepts it and shows a browser confirmation
+        popup with this text before actually sending the request, letting
+        the user back out of an accidental bulk delete. %>
     <%= form_with url: destroy_selected_crawls_path, method: :delete, id: "bulk-delete-crawls-form",
           data: { turbo_confirm: "Delete all selected crawl records? This cannot be undone." } do %>
+    <%# This `form_with` block's body is deliberately empty — no fields are
+        rendered here. Since this form gathers its checkbox inputs from
+        elsewhere on the page (via the `form="bulk-delete-crawls-form"`
+        attribute described above), there's nothing to put inside the
+        `<form>...</form>` tags themselves. %>
     <% end %>
+    <%# Closes the `form_with ... do` block opened above; this is also
+        where Rails emits the form's closing `</form>` HTML tag. %>
 
+    <%# "flex items-center justify-between mb-4" lays the "Crawl History"
+        heading and the "Delete Selected" button out horizontally,
+        vertically centered, with space pushed between them so the button
+        sits at the far right; "mb-4" adds margin below the row. %>
     <div class="flex items-center justify-between mb-4">
+      <%# "text-sm font-semibold text-gray-300 uppercase tracking-wider" is
+          small, bold, all-caps section heading text with extra letter
+          spacing. %>
       <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider">Crawl History</h2>
+      <%# This is a PLAIN HTML `<button>` (not a Rails `button_to` or
+          `f.submit` helper) written by hand — that's why it needs its own
+          explicit `type="submit"` and `form="bulk-delete-crawls-form"`
+          attributes: `type="submit"` makes clicking it attempt to submit a
+          form, and `form="..."` tells the browser WHICH form to submit
+          (the bulk-delete one defined above), since this button isn't
+          nested inside that form's tags either. `disabled` is a plain HTML
+          boolean attribute — its mere presence (regardless of value)
+          starts this button in a disabled/unclickable state; the Stimulus
+          JS controller for "crawl-history" is expected to enable it once
+          at least one row checkbox gets checked. `data-crawl-history-target="bulkDeleteButton"`
+          is a Stimulus attribute marking this specific element as a named
+          "target" the "crawl-history" JS controller can look up and
+          manipulate (e.g. to toggle its `disabled` state) by that name. %>
       <button type="submit" form="bulk-delete-crawls-form" disabled
               data-crawl-history-target="bulkDeleteButton"
               class="text-xs text-red-500 hover:text-red-300 bg-transparent border border-red-900/50 rounded px-2 py-1 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-red-500">
@@ -16,10 +86,28 @@
       </button>
     </div>
 
+    <%# "w-full text-xs" stretches the table to fill its container's width
+        with small text throughout. %>
     <table class="w-full text-xs">
       <thead>
+        <%# "text-gray-500 border-b border-gray-800" is muted gray header
+            text with a thin underline separating it from the data rows. %>
         <tr class="text-gray-500 border-b border-gray-800">
+          <%# "text-left pb-2 w-6" left-aligns this narrow header cell (just
+              wide enough for a checkbox) with padding below it. %>
           <th class="text-left pb-2 w-6">
+            <%# A plain HTML checkbox with no Rails form helper involved —
+                it's not tied to any single database record, just a
+                "select all" control. `data-crawl-history-target="selectAll"`
+                marks it as a named target the Stimulus controller can read
+                (to know its checked state) and set (to visually reflect
+                "all/some/none selected"). `data-action="change->crawl-history#toggleAll"`
+                is Stimulus's action-wiring syntax: it means "when this
+                element fires a 'change' DOM event (i.e. the user
+                checks/unchecks it), call the `toggleAll` method on the
+                'crawl-history' controller" — this is how plain HTML
+                elements get connected to Stimulus JS behavior without any
+                inline `onclick`-style JavaScript. %>
             <input type="checkbox" data-crawl-history-target="selectAll" data-action="change->crawl-history#toggleAll">
           </th>
           <th class="text-left pb-2">Date</th>
@@ -27,40 +115,135 @@
           <th class="text-left pb-2">Status</th>
           <th class="text-left pb-2">Results</th>
           <th class="text-left pb-2">Duration</th>
+          <%# Empty header cell — this column holds the per-row "Log"/"Delete"
+              action links below, which need no text label of their own. %>
           <th class="text-left pb-2"></th>
         </tr>
       </thead>
       <tbody>
+        <%# `@crawl_history.each do |crawl| ... end` loops over each crawl
+            record, running this block once per record with `crawl` bound
+            to the current one — this is what generates one table row per
+            past crawl. %>
         <% @crawl_history.each do |crawl| %>
+          <%# "border-b border-gray-800/40 hover:bg-gray-800/20" draws a
+              faint underline per row and highlights the row on mouse
+              hover — pure CSS, no Ruby. %>
           <tr class="border-b border-gray-800/40 hover:bg-gray-800/20">
             <td class="py-2">
+              <%# `crawl.finished?` is presumably a model method returning
+                  true once a crawl is no longer actively running (e.g.
+                  status is "completed" or "failed", not "running"). Only
+                  finished crawls get a selectable checkbox — a still-running
+                  crawl shouldn't be bulk-deletable through this control. %>
               <% if crawl.finished? %>
+                <%# `name="ids[]"` — the trailing `[]` is a plain HTML form
+                    convention meaning "this is one value in an array of
+                    values sharing this name"; when the bulk-delete form
+                    submits, the server receives ALL checked checkboxes'
+                    values together as an `ids` array (e.g. ids: ["3", "7"]),
+                    not just the last one. `value="<%= crawl.id % >"` sets
+                    which id this particular checkbox represents.
+                    `form="bulk-delete-crawls-form"` associates this
+                    checkbox with the bulk-delete form defined at the top of
+                    this file (again, despite not being nested inside it).
+                    `data-crawl-history-target="rowCheckbox"` marks it as a
+                    Stimulus target the controller can collect/inspect (e.g.
+                    to count how many are checked). `data-action="change->crawl-history#toggleRow"`
+                    wires this checkbox's 'change' event to call the
+                    controller's `toggleRow` method (likely to update the
+                    "select all" checkbox's state and enable/disable the
+                    bulk delete button). %>
                 <input type="checkbox" name="ids[]" value="<%= crawl.id %>" form="bulk-delete-crawls-form"
                        data-crawl-history-target="rowCheckbox" data-action="change->crawl-history#toggleRow">
               <% end %>
+              <%# Closes the `if crawl.finished?` check above. %>
             </td>
+            <%# "text-gray-400" is muted gray. `.strftime(...)` formats the
+                crawl's creation timestamp, e.g. "Jul 18, 2026 02:30 PM"
+                (%b = abbreviated month, %d = day, %Y = 4-digit year, %I =
+                12-hour clock hour, %M = minutes, %p = AM/PM). %>
             <td class="py-2 text-gray-400"><%= crawl.created_at.strftime("%b %d, %Y %I:%M %p") %></td>
+            <%# "text-gray-300" is lighter gray body text. Prints the
+                searched city and, in parentheses, the search radius that
+                was used. %>
             <td class="py-2 text-gray-300"><%= crawl.search_city %> (<%= crawl.search_radius_miles %> mi)</td>
             <td class="py-2">
+<%# `case ... when ... when ... else ... end` is Ruby's multi-branch
+    conditional — cleaner than a long chain of `if/elsif` when comparing one
+    value (here, `crawl.status`) against several exact possibilities. Each
+    `when "..."` line only runs if `crawl.status` equals that exact string;
+    only the FIRST matching branch's content is rendered, others are
+    skipped. This entire case/when block is written starting at the left
+    margin (not indented like the rest of the file) — that's a harmless
+    stylistic inconsistency with the rest of this partial's indentation,
+    not a functional difference; ERB doesn't care about indentation. %>
 <% case crawl.status %>
+<%# "✓ Completed" combines a literal checkmark character with static text,
+    styled green for a successful crawl. %>
 <% when "completed" %><span class="text-emerald-400">✓ Completed</span>
+<%# "✗ Failed" uses a literal X character, styled red. %>
 <% when "failed" %><span class="text-red-400">✗ Failed</span>
+<%# "⟳ Running" uses a literal rotating-arrow character, styled yellow to
+    suggest an in-progress/pending state. %>
 <% when "running" %><span class="text-yellow-400">⟳ Running</span>
+<%# Fallback branch for any other status value not explicitly listed above
+    — prints the raw status text in neutral gray rather than assuming it
+    matches one of the three known states. %>
 <% else %><span class="text-gray-500"><%= crawl.status %></span>
+<%# Closes the `case crawl.status` block opened above. %>
 <% end %>
             </td>
+            <%# "text-gray-400" muted text showing counts pulled from saved
+                integer columns on the crawl record. %>
             <td class="py-2 text-gray-400"><%= crawl.facilities_found %> facilities, <%= crawl.units_found %> units</td>
+            <%# "text-gray-500" dimmer text. `duration_label` is presumably
+                a model method formatting elapsed time as a friendly string. %>
             <td class="py-2 text-gray-500"><%= crawl.duration_label %></td>
+            <%# "flex gap-3 items-center" lays the "Log →" link and the
+                delete/cancel button out horizontally, vertically centered,
+                with spacing between them. %>
             <td class="py-2 flex gap-3 items-center">
+              <%# `link_to "Log →", crawl_path(crawl), ...` generates a
+                  plain `<a href="...">` link to this crawl's detail page
+                  (rendered by app/views/crawls/show.html.erb), where the
+                  full log for this crawl can be read. %>
               <%= link_to "Log →", crawl_path(crawl), class: "text-blue-400 hover:text-blue-300" %>
+              <%# `button_to` generates a small standalone `<form>` that
+                  submits an HTTP DELETE request to `crawl_path(crawl)` when
+                  clicked — deletion (or cancellation) must be a real form
+                  submission per web conventions, not a plain link/GET
+                  request. The button's VISIBLE TEXT is itself a ternary:
+                  if `crawl.finished?` show a small "✕" (delete icon-style
+                  text) for a completed/failed crawl, otherwise show the
+                  word "Cancel" for one that's still actively running — same
+                  DELETE request either way, but the controller presumably
+                  treats deleting a running crawl as "cancel it" instead.
+                  "ml-2" (inside the `class:`) adds a small left margin
+                  separating this button from the "Log →" link beside it.
+                  `form: { data: { turbo_confirm: ... } }` is notable: for
+                  `button_to`, HTML options meant for the generated `<form>`
+                  tag itself (as opposed to the `<button>` inside it, styled
+                  by the plain `class:` above) must be nested under a
+                  `form:` key — that's what routes `data-turbo-confirm`
+                  onto the `<form>` rather than the `<button>`. The
+                  confirmation TEXT itself is also a ternary, matching the
+                  button's own label logic: a finished crawl gets asked
+                  "Delete this crawl record?", a running one gets asked
+                  "Cancel this running crawl?". %>
               <%= button_to (crawl.finished? ? "✕" : "Cancel"), crawl_path(crawl),
                     method: :delete,
                     class: "text-red-500 hover:text-red-300 bg-transparent border-0 cursor-pointer p-0 ml-2",
                     form: { data: { turbo_confirm: crawl.finished? ? "Delete this crawl record?" : "Cancel this running crawl?" } } %>
             </td>
           </tr>
+        <%# Closes the `@crawl_history.each do |crawl|` loop opened above. %>
         <% end %>
       </tbody>
     </table>
   </div>
+<%# Closes the `if @crawl_history.any?` check opened at the very top of
+    this file — if there's no crawl history at all, NOTHING in this
+    partial renders (not even an empty-state message), so the dashboard
+    simply shows nothing where this section would be. %>
 <% end %>

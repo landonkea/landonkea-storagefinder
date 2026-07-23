@@ -1,6 +1,34 @@
+<%# Full page rendered by AlertRulesController#new (see
+    app/controllers/alert_rules_controller.rb) — shown when visiting GET
+    /alert_rules/new. The controller has already built a blank, unsaved
+    `AlertRule.new` object into `@alert_rule`, so every field in the shared
+    form partial below starts empty (or at its model default) rather than
+    erroring out on a missing record. %>
 <div class="mb-6">
+  <%# "mb-6" adds margin below this heading block, before the form card. %>
+  <%# "text-2xl font-bold text-emerald-400" is plain styling — large, bold,
+      green-accented heading text. Unlike edit.html.erb's heading, this one
+      has no `<%= % >` interpolation since there's no existing record name
+      to display yet — it's just static text. %>
   <h1 class="text-2xl font-bold text-emerald-400">New Alert Rule</h1>
 </div>
+<%# "card" is this app's custom boxed/panel styling class; "max-w-2xl" caps
+    the box's maximum width so the form doesn't stretch too wide on large
+    screens. %>
 <div class="card max-w-2xl">
+  <%# `render "form", alert_rule: @alert_rule` pulls in the shared partial
+      at app/views/alert_rules/_form.html.erb (the leading underscore in
+      that filename marks it as a partial — a reusable snippet, not a full
+      page of its own — and `render "form"` finds it by that naming
+      convention). `alert_rule: @alert_rule` passes this page's blank,
+      unsaved record into the partial as a local variable named
+      `alert_rule`, which the partial's form fields read from to decide
+      what to pre-fill (nothing, here) and where the form submits to.
+      Because `@alert_rule.new_record?` is true for this blank record, the
+      shared partial automatically points its <form> at the "create" action
+      and labels its submit button "Create Alert Rule" — see the comments
+      in _form.html.erb for exactly how that happens. This is the SAME
+      partial app/views/alert_rules/edit.html.erb also renders, so the new
+      and edit forms share one single source of truth for their fields. %>
   <%= render "form", alert_rule: @alert_rule %>
 </div>

@@ -8,7 +8,7 @@
 #
 # In views, this is aliased to just `t`:
 #
-#     <%= t("hello") %>
+#     <%%= t("hello") %>
 #
 # To use a different locale, set it with `I18n.locale`:
 #
@@ -26,6 +26,37 @@
 #     en:
 #       "yes": yup
 #       enabled: "ON"
+# (Everything above this line is Rails' own generated explanation of what
+# I18n — Internationalization, commonly abbreviated "i18n" because there are
+# 18 letters between the "i" and the "n" — is for. Plain-English summary for
+# a novice: instead of writing user-facing text like "Hello world" directly
+# inside view templates/controllers, Rails apps look it up by a short KEY
+# (like "hello") through this "translation" system. That indirection means
+# swapping the app to a different human language later just means adding a
+# new locale file — e.g. config/locales/es.yml for Spanish — mapping the
+# SAME keys to Spanish text, without touching any view/controller code that
+# references those keys. This app currently only ships config/locales/
+# en.yml, meaning it only supports English text right now — nothing in this
+# specific file enables or disables multi-language support beyond that.)
 
+# Blank line — ignored by YAML, purely visual spacing between the
+# explanatory comment block above and the actual translation data below.
+
+# "en:" is a top-level YAML key — "en" is the standard two-letter locale
+# code (from the ISO 639-1 standard) for English. Rails' I18n system looks
+# up translations by first finding the block under whichever locale is
+# currently active (via `I18n.locale`, defaulting to `I18n.default_locale`,
+# which itself defaults to `:en` unless configured otherwise), then reading
+# the specific key requested from beneath it.
 en:
+  # "hello:" is a translation key nested one level under "en:" — its value,
+  # `"Hello world"`, is the literal English text that `I18n.t("hello")` (or
+  # the `t("hello")` view helper shorthand, per the guide comment above)
+  # would return/render wherever it's called in this app's code. This is
+  # the one and only translation key StorageFinder currently defines — it's
+  # the default placeholder Rails' project generator creates automatically
+  # for every new app, and nothing in this codebase has replaced or added
+  # to it, meaning this app doesn't actually rely on the I18n system for
+  # any of its real user-facing text today (see this pass's final "flagged
+  # issues" note).
   hello: "Hello world"

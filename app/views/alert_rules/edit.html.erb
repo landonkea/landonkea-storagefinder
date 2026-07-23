@@ -1,6 +1,38 @@
+<%# This is the full page rendered by AlertRulesController#edit (see
+    app/controllers/alert_rules_controller.rb) — the browser sees this
+    when visiting GET /alert_rules/:id/edit. The controller has already
+    loaded the specific record being edited into the `@alert_rule` instance
+    variable (an "instance variable" — starts with @ — is how Rails passes
+    data from a controller action into the view template it renders). %>
 <div class="mb-6">
+  <%# "mb-6" is a Tailwind utility class adding margin below this <div>,
+      separating the heading from the form card underneath it. %>
+  <%# "text-2xl font-bold text-emerald-400" makes this a large, bold
+      heading in this app's green accent color. `<%= @alert_rule.name %>`
+      prints the record's saved `name` value into the page — the equals
+      sign in `<%= %>` means "run this Ruby and insert the result as text
+      here," as opposed to plain `<% %>` (no equals) used elsewhere in this
+      app for logic that produces no visible output on its own. %>
   <h1 class="text-2xl font-bold text-emerald-400">Edit: <%= @alert_rule.name %></h1>
 </div>
+<%# "card" is this app's custom CSS class giving this <div> a consistent
+    boxed/panel look (background, border, padding, etc. — defined in the
+    app's stylesheet, not built into Tailwind or Rails). "max-w-2xl" caps
+    how wide the box can grow on large screens, keeping the form from
+    stretching uncomfortably wide. %>
 <div class="card max-w-2xl">
+  <%# `render "form", alert_rule: @alert_rule` includes the PARTIAL defined
+      in app/views/alert_rules/_form.html.erb at this exact point in the
+      page. A "partial" is a reusable snippet of view template whose
+      filename starts with an underscore; Rails' `render "form"` call
+      strips that underscore convention away and looks for a file named
+      "_form.html.erb" in this same alert_rules view folder. The
+      `alert_rule: @alert_rule` part hands that partial a LOCAL variable
+      named `alert_rule` (no @ — partials receive data explicitly like
+      this, rather than automatically seeing this page's instance
+      variables) so the shared form fields can be pre-filled with this
+      specific record's current values. This exact same partial is also
+      used by app/views/alert_rules/new.html.erb, so the create and edit
+      forms can never drift out of sync with each other. %>
   <%= render "form", alert_rule: @alert_rule %>
 </div>

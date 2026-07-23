@@ -1,19 +1,78 @@
+# This is a FIXTURE file — a YAML (a plain-text, indentation-based data
+# format) file listing pre-made, FAKE database rows that Rails automatically
+# loads into the test database before every test runs (see the `fixtures
+# :all` line in test/test_helper.rb). This lets tests work with realistic,
+# already-saved Facility records (see app/models/facility.rb) without
+# hand-building and saving their own data. Note: saving a Facility normally
+# triggers an automatic geocoding lookup (see the `after_validation
+# :geocode` callback in app/models/facility.rb) — but test/test_helper.rb
+# configures the "geocoder" gem to use a fake, canned response in test mode,
+# so loading these fixtures never makes a real network request.
+#
+# Each top-level key below (like `gilbert_public_storage:`) is a LABEL
+# chosen for this file — test code refers to a fixture by this label, e.g.
+# `facilities(:gilbert_public_storage)` in test/models/facility_test.rb
+# returns the real, saved database record built from the settings indented
+# underneath it. The indented `key: value` lines under each label become
+# that row's actual column values, matching the "facilities" table (see
+# db/schema.rb).
+
+# Fixture labeled "gilbert_public_storage" — a fully-fleshed-out facility
+# (has an external_id, phone number, coordinates, etc.) used as the "main"
+# example facility across many tests in this app.
 gilbert_public_storage:
   company: Public Storage
   name: Public Storage - 670 S Gilbert Rd
   address: 670 S Gilbert Rd
   city: Gilbert
   state: AZ
+  # Quoted (`"85296"`) because without quotes, YAML would parse this as a
+  # NUMBER (85296) instead of a string — and a bare number would lose a
+  # leading zero if one were ever needed (e.g. a ZIP like "02116"), plus the
+  # `zip` column is a text/string column in the database (see
+  # db/schema.rb), not numeric, matching Facility's ZIP-format validation
+  # which expects a STRING to run its regular expression against.
   zip: "85296"
+  # Quoted for the same reason as zip above — this is meant to be a string
+  # of digits, not a numeric value (and as a number, leading digits could
+  # theoretically be misinterpreted or reformatted by YAML).
   phone: "4805551234"
+  # Plain YAML floating-point numbers for this facility's exact geocoded
+  # coordinates, matching Facility's `latitude`/`longitude` float columns.
+  # (Note: these are used directly here rather than relying on the
+  # after_validation geocode callback's stubbed response from
+  # test/test_helper.rb, giving each fixture its own precise, realistic
+  # coordinates instead of one shared fake point.)
   latitude: 33.3460809
   longitude: -111.7895215
+  # Distance (in miles) from a reference search point — pre-computed here
+  # rather than calculated live, since Facility#distance_label (see
+  # app/models/facility.rb) just formats whatever is already stored in this
+  # column.
   distance_miles: 0.5
   facility_url: https://www.publicstorage.com/self-storage-az-gilbert/6079.html
+  # Quoted for the same reason as zip/phone above — kept as a string even
+  # though it looks numeric, since Facility's uniqueness/dedup logic (see
+  # app/models/facility.rb) treats external_id as an opaque per-company
+  # identifier string, not a number to do arithmetic on.
   external_id: "6079"
+  # `<%%= 2.days.ago %>` is ERB (Embedded RuBy) — fixture YAML files support
+  # embedded Ruby wrapped in `<%% %>`/`<%%= %>` tags, evaluated once when
+  # fixtures load. `<%%= %>` runs Ruby AND inserts its result into the YAML
+  # text at that spot. `2.days.ago` is a Rails/ActiveSupport method chain
+  # (`2.days` builds a Duration of two days, `.ago` subtracts it from the
+  # current time), keeping this timestamp "2 days before whenever the test
+  # suite runs" instead of a fixed date that would slowly go stale.
   created_at: <%= 2.days.ago %>
   updated_at: <%= 2.days.ago %>
 
+# A blank line here is just a visual separator between fixture entries; YAML
+# itself doesn't require it.
+
+# Fixture labeled "mesa_extra_space" — a second, different-company facility
+# in a different city, used by tests that need to distinguish between
+# facilities/companies (e.g. AlertRule's company_filter tests in
+# test/models/alert_rule_test.rb).
 mesa_extra_space:
   company: Extra Space Storage
   name: Extra Space Storage - 100 E Main St
@@ -24,12 +83,22 @@ mesa_extra_space:
   phone: "4805555678"
   latitude: 33.4147227
   longitude: -111.7927245
+  # Farther from the reference search point than gilbert_public_storage
+  # above (4.3 miles vs. 0.5 miles) — used by tests exercising sorting/
+  # distance-related behavior.
   distance_miles: 4.3
   facility_url: https://www.extraspace.com/storage/facilities/us/arizona/mesa/100
   external_id: "100"
   created_at: <%= 2.days.ago %>
   updated_at: <%= 2.days.ago %>
 
+# Fixture labeled "no_external_id_facility" — deliberately has NO
+# external_id set (see the blank `external_id:` line below), used
+# specifically to exercise Facility's address-uniqueness validation, which
+# only applies `if: -> { external_id.blank? }` (see app/models/facility.rb)
+# — i.e. this fixture represents a storage company whose website doesn't
+# expose a stable per-location identifier, so this app falls back to
+# deduping by address instead.
 no_external_id_facility:
   company: StorAmerica
   name: StorAmerica - 5 Elm St
@@ -41,6 +110,11 @@ no_external_id_facility:
   longitude: -111.8411085
   distance_miles: 5.8
   facility_url: https://www.storamerica.com/locations/5
+  # An empty value after the colon — in YAML, a key with nothing after it
+  # (and nothing indented underneath) means the value is `nil` (Ruby's
+  # "nothing"/"no value" object), not an empty string. This is what makes
+  # `external_id.blank?` true for this fixture, triggering the address-
+  # uniqueness validation path described above.
   external_id:
   created_at: <%= 2.days.ago %>
   updated_at: <%= 2.days.ago %>

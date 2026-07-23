@@ -1,59 +1,170 @@
 <%# Alert Rules Index %>
+<%# `<%# ... % >` is an ERB comment — everything inside it is stripped out
+    before the page is ever sent to a browser, so it's purely a note for
+    people reading the source code (like this whole file's exhaustive
+    comments). This is the full page rendered by
+    AlertRulesController#index (see app/controllers/alert_rules_controller.rb)
+    — shown when visiting GET /alert_rules. The controller has already
+    loaded every AlertRule record, sorted by name, into `@alert_rules`. %>
+<%# "flex items-center justify-between" lays this <div>'s two children (the
+    heading block on the left, the "New Alert Rule" button on the right)
+    out horizontally, vertically centered, with maximum space pushed
+    between them — this is what puts the button flush to the right edge
+    while the heading stays flush left. "mb-6" adds margin below the whole
+    row, separating it from the table further down. %>
 <div class="flex items-center justify-between mb-6">
   <div>
+    <%# "text-2xl font-bold text-emerald-400" is a large, bold heading in
+        this app's green accent color. %>
     <h1 class="text-2xl font-bold text-emerald-400">Alert Rules</h1>
+    <%# "text-sm text-gray-400 mt-1" is small, muted gray subtitle text with
+        a little top margin separating it from the heading above. %>
     <p class="text-sm text-gray-400 mt-1">Get notified when prices drop or hit a target</p>
   </div>
+  <%# `link_to "＋ New Alert Rule", new_alert_rule_path, class: "..."`
+      generates a plain HTML `<a href="...">` link styled to look like a
+      button. `new_alert_rule_path` is a URL helper Rails auto-generates
+      from config/routes.rb; it returns the path to the "new alert rule"
+      form page (GET /alert_rules/new). "btn-primary" is this app's custom
+      CSS class for its main call-to-action button styling. %>
   <%= link_to "＋ New Alert Rule", new_alert_rule_path, class: "btn-primary" %>
 </div>
 
+<%# `@alert_rules` was set by the controller's index action to every
+    AlertRule row in the database. `.empty?` is true only when there are
+    zero rows — i.e. no alert rules have ever been created. `<% if % >`
+    (no equals sign) runs this check and decides which HTML block below
+    gets shown, but prints nothing on its own. %>
 <% if @alert_rules.empty? %>
+  <%# "card" is this app's boxed/panel styling; "text-center" centers the
+      text inside it; "py-12" adds generous vertical padding top and
+      bottom, since this box needs to look intentional even though it has
+      little content (an empty-state message). %>
   <div class="card text-center py-12">
+    <%# "text-gray-400 text-lg" is medium-gray, slightly larger text for
+        the main empty-state message. %>
     <p class="text-gray-400 text-lg">No alert rules yet</p>
+    <%# "text-gray-600 text-sm mt-2" is dimmer, smaller helper text below
+        the main message, with a little top margin. %>
     <p class="text-gray-600 text-sm mt-2">Create one to get notified when prices change</p>
+    <%# Another link to the "new alert rule" form, styled as plain
+        green-accented text (not a button) since it's a secondary call to
+        action inside this empty-state box; "inline-block" lets the margin
+        utility (mt-4) actually apply even though this is a text-level `<a>`
+        element. %>
     <%= link_to "Create your first alert rule →", new_alert_rule_path, class: "text-emerald-400 hover:text-emerald-300 text-sm mt-4 inline-block" %>
   </div>
 <% else %>
+  <%# Closes/branches the `if @alert_rules.empty?` check above — everything
+      from here down only renders when there IS at least one alert rule. %>
   <div class="card">
+    <%# "w-full text-sm" makes the table stretch to fill its container's
+        width, with small-sized text throughout. %>
     <table class="w-full text-sm">
       <thead>
+        <%# "text-gray-500 text-xs uppercase border-b border-gray-800" styles
+            this header row as small, muted, all-caps column labels with a
+            thin line underneath separating it from the data rows. %>
         <tr class="text-gray-500 text-xs uppercase border-b border-gray-800">
+          <%# "text-left pb-3" left-aligns each header cell's text and adds
+              padding below it, spacing the header text away from the
+              underline border. Repeated identically across most columns
+              below. %>
           <th class="text-left pb-3">Name</th>
           <th class="text-left pb-3">Trigger</th>
           <th class="text-left pb-3">Filters</th>
           <th class="text-left pb-3">Delivery</th>
           <th class="text-left pb-3">Last Triggered</th>
           <th class="text-left pb-3">Status</th>
+          <%# Empty header cell — this column holds the Edit/Delete action
+              links for each row below, which doesn't need a text label. %>
           <th></th>
         </tr>
       </thead>
       <tbody>
+        <%# `@alert_rules.each do |rule| ... end` is a Ruby loop: it runs
+            the block once per record in `@alert_rules`, with `rule` bound
+            to the current record on each pass — this is what generates one
+            `<tr>` table row per alert rule. %>
         <% @alert_rules.each do |rule| %>
+          <%# "border-b border-gray-800/40" draws a faint line under each
+              row separating it from the next; "hover:bg-gray-800/20" is a
+              Tailwind "hover" variant — it only applies this subtle
+              background highlight while the mouse pointer is over the row,
+              purely a visual/CSS behavior with no Ruby involved. %>
           <tr class="border-b border-gray-800/40 hover:bg-gray-800/20">
+            <%# "py-3" adds vertical padding inside each cell; "font-medium
+                text-white" makes the rule's name stand out as the row's
+                primary identifier. %>
             <td class="py-3 font-medium text-white"><%= rule.name %></td>
             <td class="py-3 text-gray-300">
+              <%# `rule.trigger_type` is a string column on the AlertRule
+                  model ("price_threshold" or "price_drop" — see the select
+                  dropdown in _form.html.erb that sets this value). This
+                  `<% if % >` picks which sentence to show based on that
+                  saved value. %>
               <% if rule.trigger_type == "price_threshold" %>
+                <%# `<%= rule.threshold_price % >` prints the saved numeric
+                    threshold — the literal "$" before it is static text,
+                    not Ruby. %>
                 Below $<%= rule.threshold_price %>
               <% else %>
                 Any price drop
               <% end %>
+              <%# Closes the `if rule.trigger_type == "price_threshold"`
+                  check above. %>
             </td>
+            <%# "text-gray-400 text-xs" is small, muted text for the
+                filters summary column. %>
             <td class="py-3 text-gray-400 text-xs">
+              <%# `.present?` is a Rails helper meaning "not nil and not an
+                  empty string" — true only if this rule actually has a
+                  size filter set. Written as a single-line `<% if % > ...
+                  <% end % >` (all on one line) since the content is tiny;
+                  ERB allows tags to be as short or as spread out as needed. %>
               <% if rule.unit_size_filter.present? %><div>Size: <%= rule.unit_size_filter %></div><% end %>
+              <%# Same pattern for the company filter — shown only if set. %>
               <% if rule.company_filter.present? %><div><%= rule.company_filter %></div><% end %>
+              <%# `.blank?` is the opposite of `.present?` — true for nil OR
+                  an empty string. `&&` requires BOTH filters to be unset
+                  before showing the muted "All" fallback text, so this row
+                  never shows both "All" and a specific filter at once. %>
               <% if rule.unit_size_filter.blank? && rule.company_filter.blank? %><span class="text-gray-600">All</span><% end %>
             </td>
             <td class="py-3 text-xs">
+              <%# "flex flex-wrap gap-1" lays the delivery-method badges out
+                  horizontally, allowing them to wrap onto a new line if
+                  there isn't room, with a small gap between each. %>
               <div class="flex flex-wrap gap-1">
+                <%# `rule.email_enabled?` is an ActiveRecord-generated
+                    "predicate" method (Rails automatically adds a `?`
+                    version of any boolean column) returning true/false.
+                    "badge-blue" is this app's custom CSS class for a small
+                    pill-shaped label. One `<span>` badge appears per
+                    enabled delivery method, none at all if nothing is
+                    enabled. %>
                 <% if rule.email_enabled? %><span class="badge-blue">Email</span><% end %>
                 <% if rule.discord_enabled? %><span class="badge-blue">Discord</span><% end %>
                 <% if rule.sms_enabled? %><span class="badge-blue">SMS</span><% end %>
               </div>
             </td>
             <td class="py-3 text-gray-500 text-xs">
+              <%# Ruby ternary: `condition ? value_if_true : value_if_false`.
+                  `rule.last_triggered_at` is nil until this alert has fired
+                  at least once, so this prints a formatted date/time if
+                  it's set, or the literal word "Never" if it's still nil.
+                  `.strftime("%b %d at %I:%M %p")` formats a Ruby Time/Date
+                  value into text like "Jul 18 at 03:45 PM" — each %-code is
+                  a format placeholder (%b = abbreviated month name, %d =
+                  day of month, %I = 12-hour clock hour, %M = minutes, %p =
+                  AM/PM). %>
               <%= rule.last_triggered_at ? rule.last_triggered_at.strftime("%b %d at %I:%M %p") : "Never" %>
             </td>
             <td class="py-3">
+              <%# `rule.active?` is the auto-generated predicate method for
+                  the boolean `active` column (toggled via the checkbox in
+                  _form.html.erb). "badge-green"/"badge-gray" are this app's
+                  custom CSS pill-badge styles for the two states. %>
               <% if rule.active? %>
                 <span class="badge-green">Active</span>
               <% else %>
@@ -61,16 +172,45 @@
               <% end %>
             </td>
             <td class="py-3">
+              <%# "flex gap-3" lays the Edit link and Delete button out
+                  horizontally with spacing between them. %>
               <div class="flex gap-3">
+                <%# `link_to "Edit", edit_alert_rule_path(rule), ...`
+                    generates a plain `<a href="...">Edit</a>` link.
+                    `edit_alert_rule_path(rule)` is a Rails URL helper —
+                    passing `rule` lets Rails read its id and build the
+                    correct URL, e.g. "/alert_rules/5/edit". %>
                 <%= link_to "Edit", edit_alert_rule_path(rule), class: "text-blue-400 hover:text-blue-300 text-xs" %>
+                <%# `button_to` generates an entire small, invisible
+                    `<form>` (not just a link) that submits when clicked —
+                    this matters because deleting a record must be a
+                    POST/DELETE HTTP request, not a plain link click/GET
+                    request, per web conventions and this app's routes.
+                    `alert_rule_path(rule)` builds the URL for this specific
+                    record (e.g. "/alert_rules/5"); `method: :delete` makes
+                    the generated form submit as an HTTP DELETE request,
+                    which Rails' routes map to the controller's `destroy`
+                    action. The `class:` here styles the generated `<button>`
+                    to look like a plain text link rather than a boxy button
+                    (bg-transparent border-0 cursor-pointer p-0 strip away
+                    default button chrome). `data: { confirm: "..." }` is
+                    meant to pop up a browser "Are you sure?" dialog before
+                    the delete actually submits — see the flagged note at
+                    the end of this pass, since this app appears to use
+                    Turbo (not classic Rails UJS), which listens for a
+                    DIFFERENT attribute name for this behavior. %>
                 <%= button_to "Delete", alert_rule_path(rule), method: :delete,
                       class: "text-red-400 hover:text-red-300 text-xs bg-transparent border-0 cursor-pointer p-0",
                       data: { confirm: "Delete '#{rule.name}'?" } %>
               </div>
             </td>
           </tr>
+        <%# Closes the `@alert_rules.each do |rule|` loop opened above —
+            everything between it and here was repeated once per record. %>
         <% end %>
       </tbody>
     </table>
   </div>
+<%# Closes the `if @alert_rules.empty? / else` branch opened near the top
+    of this file. %>
 <% end %>

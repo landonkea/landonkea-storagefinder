@@ -1,17 +1,70 @@
+# This file (config/cable.yml) configures Action Cable — Rails' framework
+# for WebSockets, i.e. long-lived, two-way connections used for real-time
+# features (live-updating pages, chat, notifications, etc). It tells Rails
+# which "adapter" (the underlying mechanism used to broadcast messages
+# between server processes and connected browsers) to use, per environment.
+#
 # Async adapter only works within the same process, so for manually triggering cable updates from a console,
 # and seeing results in the browser, you must do so from the web console (running inside the dev process),
 # not a terminal started via bin/rails console! Add "console" to any action or any ERB template view
 # to make the web console appear.
+
+# "development:" is a top-level YAML key naming one of Rails' standard
+# environments. At boot, Rails checks the RAILS_ENV environment variable
+# (which defaults to "development") and reads ONLY the indented block
+# under the matching key here — "test:" and "production:" below are
+# simply skipped. Indentation (two spaces) is what makes "adapter: async"
+# belong to "development" rather than being some unrelated top-level
+# setting; YAML uses indentation, not braces/"end", to express nesting.
 development:
+  # "adapter: async" is a plain YAML key: value pair. It tells Action
+  # Cable to use the in-process "Async" adapter: broadcasts are handled
+  # entirely in memory, inside the current Ruby process. This needs no
+  # extra services (no database, no Redis), but — per the comment block
+  # above — only works if the code broadcasting a message and the browser
+  # receiving it are talking to the SAME running process; a separate
+  # `bin/rails console` process can't reach the dev server's memory.
   adapter: async
 
+# Blank line: ignored by YAML, used only to visually separate the
+# development/test/production sections from each other.
+
+# Settings used while running the automated test suite.
 test:
+  # "adapter: test" swaps in Action Cable's Test adapter, which records
+  # broadcasts in memory so the test framework can assert on what was
+  # broadcast, instead of delivering messages over a real connection.
   adapter: test
 
+# Settings used in the deployed, live production environment.
 production:
+  # "adapter: solid_cable" uses the Solid Cable gem: it stores and relays
+  # Action Cable messages through a real SQL database table instead of
+  # only in-memory. Unlike the async adapter above, this lets multiple
+  # server processes/machines all share the same Action Cable messages in
+  # production — something a single process's memory can't do.
   adapter: solid_cable
+  # "connects_to:" is a nested mapping — its value is itself another
+  # set of key/value pairs, indented one level deeper below. It tells
+  # Rails' multi-database support which database connection Solid Cable
+  # should read/write through.
   connects_to:
+    # One more level of nesting: "database:" groups the connection roles
+    # (e.g. writing/reading) that Solid Cable needs.
     database:
+      # "writing: cable" means: for write operations (inserting new
+      # broadcast messages), use the database connection configured under
+      # the "cable" key inside production in config/database.yml.
       writing: cable
+  # How often (in seconds) Solid Cable polls its database table for new
+  # messages to deliver to connected browsers. This is written as plain
+  # text "0.1.seconds" rather than inside an ERB "<%%= %>" tag, so YAML
+  # parses it as a literal string, NOT as Ruby's Integer#seconds method
+  # call — it's Solid Cable's own configuration-loading code (not YAML,
+  # not Ruby) that recognizes this "<number>.<unit>" text and converts it
+  # into an actual 0.1-second duration internally.
   polling_interval: 0.1.seconds
+  # How long delivered messages are kept in the database before Solid
+  # Cable prunes them — here, one day. Same "plain string that Solid
+  # Cable itself parses" mechanism as polling_interval above.
   message_retention: 1.day

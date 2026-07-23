@@ -1,135 +1,497 @@
+<!--
+  WHAT IS THIS FILE?
+  This is a plain, static HTML file — there is no Ruby/ERB code in it at all
+  (that's why every comment in this file uses the HTML comment syntax
+  `<!-- ... -->` instead of Rails' `<%# ... %>`). Rails serves this exact
+  file, byte-for-byte, whenever a request results in an HTTP 404 "Not Found"
+  error.
+
+  WHY IS IT A STATIC FILE INSTEAD OF A NORMAL RAILS VIEW?
+  Normal Rails pages (like app/views/*.html.erb) require the whole Rails
+  application to be loaded and working — the router, the controllers, the
+  database connection, etc. A 404 can happen very early in request
+  handling (before any controller even runs, e.g. the router itself found
+  no matching route), so Rails falls back to handing the browser this
+  plain file directly from public/ instead of routing through the full
+  Rails view-rendering pipeline, which keeps this page reliable even if
+  something else in the app is misbehaving.
+
+  WHAT DOES "404 NOT FOUND" MEAN?
+  It's one of the standard HTTP status codes a server sends back to a
+  browser. 404 means the server understood the request just fine, but
+  couldn't find anything at the requested address — usually because of a
+  mistyped URL, a link to a page that was later removed/renamed, or a
+  route that was never defined in this app's routing config at all.
+-->
+
+<!-- Every HTML document should start with a doctype declaration. This
+     tells the browser "interpret this file using the modern HTML5 rules"
+     rather than guessing based on old, inconsistent browser quirks modes. -->
 <!doctype html>
 
+<!-- Blank line used purely for visual spacing between sections of this
+     file — it has no effect on how the page renders. -->
+
+<!-- <html> is the root element that wraps the entire page. The
+     lang="en" attribute tells browsers/screen readers/translation tools
+     that the page's text is in English. -->
 <html lang="en">
 
+<!-- Blank line for spacing only. -->
+
+  <!-- <head> holds metadata about the page (title, character encoding,
+       styling) — nothing inside <head> is directly visible as page
+       content; it configures how the page should be interpreted/displayed. -->
   <head>
 
+    <!-- Blank line for spacing only. -->
+
+    <!-- <title> sets the text shown in the browser tab / window title and
+         used by search engines and screen readers. This one embeds the
+         numeric HTTP status code (404) so anyone glancing at the tab, or
+         a developer checking logs, immediately knows which error this is. -->
     <title>The page you were looking for doesn't exist (404 Not found)</title>
 
+    <!-- Blank line for spacing only. -->
+
+    <!-- Declares the character encoding used to interpret the bytes of
+         this file as text. UTF-8 is the standard choice — it can represent
+         essentially every character/emoji from every language. Without
+         this, browsers might guess wrong and garble special characters. -->
     <meta charset="utf-8">
+    <!-- Tells mobile browsers not to auto-zoom the page out to "desktop
+         width" and instead render it at the device's actual pixel width
+         (width=device-width) with no initial zoom (initial-scale=1) — this
+         is what makes the page look right on a phone instead of tiny. -->
     <meta name="viewport" content="initial-scale=1, width=device-width">
+    <!-- Tells well-behaved search engine crawlers (Google, Bing, etc.) not
+         to index this page (noindex) and not to follow any links found on
+         it (nofollow). Makes sense here: this is an error page, not real
+         content, so it shouldn't show up in search results. -->
     <meta name="robots" content="noindex, nofollow">
 
+    <!-- Blank line for spacing only. -->
+
+    <!-- <style> opens an embedded block of CSS (Cascading Style Sheets) —
+         the language that controls how HTML elements look (colors, sizes,
+         spacing, layout). It's inlined directly in this file, rather than
+         linked from a separate .css file, so the page can render correctly
+         with zero extra network requests — important because if the app
+         server is having problems, we don't want THIS error page to also
+         depend on some other resource loading successfully. -->
     <style>
 
+      /* Blank line for spacing only. */
+
+      /* A CSS rule has the form `selector { property: value; }`. This
+           selector matches every element (`*`), plus every element's
+           generated `::before` and `::after` pseudo-elements. box-sizing:
+           border-box changes how width/height are calculated so that
+           padding and border are included INSIDE the stated width, rather
+           than added on top of it — this avoids a common surprise where
+           elements end up wider than expected. */
       *, *::before, *::after {
+        /* The single property/value pair this rule sets, as described above. */
         box-sizing: border-box;
+      /* `}` closes the rule opened above (`*, *::before, *::after {`). */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects literally every element on the page. */
       * {
+        /* Removes the default margin (outer spacing) browsers normally
+             apply to elements like <body>, <h1>, <p>, etc. Browsers ship
+             with different default margins, so zeroing them out here gives
+             this page full manual control over spacing instead of relying
+             on inconsistent browser defaults. */
         margin: 0;
+      /* `}` closes the `* {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects the root <html> element. */
       html {
+        /* Sets the base font size to 16 pixels. CSS units like `em` and
+             `rem` used later in this file are calculated relative to a
+             font size — `rem` specifically means "relative to THIS root
+             font size" — so this line anchors what "1rem" means everywhere
+             else in the stylesheet. */
         font-size: 16px;
+      /* `}` closes the `html {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects the <body> element — the main visible container for the
+           whole page's content. */
       body {
+        /* Background color: pure white, in hex color notation (#FFF is
+             shorthand for #FFFFFF, i.e. full red+green+blue = white). Used
+             in "light mode"; overridden further down for dark mode. */
         background: #FFF;
+        /* Default text color: a dark near-black shade with a slight
+             purple tint, chosen for readability against the white
+             background above. */
         color: #261B23;
+        /* Makes body a CSS Grid container, which lets its direct
+             children be positioned using grid placement rules — here it's
+             mainly used together with `place-items: center` below to
+             center the page's content both horizontally and vertically. */
         display: grid;
+        /* A prioritized list of fonts to try, in order, falling back to
+             the next one if a font isn't available on the visitor's
+             device. `ui-sans-serif`/`system-ui` etc. mean "use whatever
+             clean sans-serif font this operating system already has
+             installed" (fast, no download needed), with specific named
+             fallbacks (Roboto, Segoe UI, Helvetica...) for older browsers,
+             and emoji-specific fonts at the end so emoji render in color. */
         font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Aptos, Roboto, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+        /* `clamp(min, preferred, max)` is a CSS function that picks a
+             fluid value: it uses the "preferred" value (here, 2.5% of the
+             viewport width, via `vw`) but never lets it shrink below 1rem
+             or grow above 2rem. This makes the text scale smoothly with
+             screen size while staying within sane bounds on very small or
+             very large screens. */
         font-size: clamp(1rem, 2.5vw, 2rem);
+        /* A Safari/Chrome-on-Mac-specific (WebKit) hint that asks the
+             browser to render text with antialiasing (smoothed edges)
+             tuned for legibility rather than raw pixel sharpness. */
         -webkit-font-smoothing: antialiased;
+        /* Explicitly sets non-italic text, overriding any inherited
+             italic styling (defensive default). */
         font-style: normal;
+        /* Sets the text weight to 400, which is "normal"/regular weight
+             (as opposed to bold, which is typically 700). */
         font-weight: 400;
+        /* Slightly tightens the spacing between letters (a small
+             negative value pulls them very slightly closer together) — a
+             subtle typographic polish. */
         letter-spacing: -0.0025em;
+        /* Sets the spacing between lines of text to 1.4x the font size,
+             for comfortable reading (single-spaced text with a bit of
+             breathing room). */
         line-height: 1.4;
+        /* Ensures the body is at least the full height of the visible
+             browser viewport. `dvh` is "dynamic viewport height" — it
+             correctly accounts for mobile browser UI (address bars, etc.)
+             showing/hiding, unlike the older `vh` unit which can be
+             inaccurate on phones. This is what lets the centered content
+             actually center vertically on any screen size. */
         min-height: 100dvh;
+        /* Combined with `display: grid` above, this centers the grid's
+             child content both horizontally and vertically within body. */
         place-items: center;
+        /* Another rendering hint (like font-smoothing) asking the
+             browser to prioritize crisp, legible text rendering. */
         text-rendering: optimizeLegibility;
+        /* A WebKit/mobile-Safari-specific property that prevents the
+             browser from automatically bumping up text size when the
+             device is rotated to landscape — keeps sizing predictable. */
         -webkit-text-size-adjust: 100%;
+      /* `}` closes the `body {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* `#error-description` selects the element with id="error-description"
+           further down in the page — that id is used on one of the <path>
+           shapes inside the inline SVG logo graphic (the smaller text-like
+           artwork under the big status-code numeral). */
       #error-description {
+        /* `fill` is the SVG equivalent of `color` for shapes — it sets
+             what color the shape is painted with. This is a red, used in
+             light mode. */
         fill: #d30001;
+      /* `}` closes the `#error-description {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* `#error-id` selects the OTHER <path> in the SVG — the large
+           numeral graphic representing the status code itself (404). */
       #error-id {
+        /* A very light near-white gray fill, used in light mode — subtle
+             so the big numeral reads as a soft background watermark rather
+             than competing with the red "error-description" text/graphic. */
         fill: #f0eff0;
+      /* `}` closes the `#error-id {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* `@media (...)` is a CSS "media query" — a conditional block of
+           rules that only applies when the stated condition is true.
+           `prefers-color-scheme: dark` is true when the visitor's
+           operating system / browser is set to dark mode. Everything
+           inside this block overrides the light-mode colors defined above,
+           purely via CSS — no JavaScript is needed to support dark mode. */
       @media (prefers-color-scheme: dark) {
+        /* Re-selects <body>, but this version of the rule only takes
+             effect inside the dark-mode media query above. */
         body {
+          /* Near-black background for dark mode, replacing the white
+               background set in the light-mode `body` rule earlier. */
           background: #101010;
+          /* Light gray text color for dark mode, replacing the dark text
+               color set earlier — keeps contrast readable on a dark
+               background. */
           color: #e0e0e0;
+        /* `}` closes this nested `body {` rule. */
         }
 
+        /* Blank line for spacing only. */
+
+        /* Re-selects the SVG "description" shape for dark mode. */
         #error-description {
+          /* A brighter red, adjusted so it stays vivid and readable
+               against the near-black dark-mode background (the light-mode
+               red would look too muddy/dark here). */
           fill: #FF6161;
+        /* `}` closes this nested `#error-description {` rule. */
         }
 
+        /* Blank line for spacing only. */
+
+        /* Re-selects the SVG "id" (numeral) shape for dark mode. */
         #error-id {
+          /* A dark gray fill for the big background numeral in dark
+               mode — the inverse idea of the light near-white fill used
+               in light mode: still subtle, but appropriate for a dark
+               background. */
           fill: #2c2c2c;
+        /* `}` closes this nested `#error-id {` rule. */
         }
+      /* `}` closes the `@media (prefers-color-scheme: dark) {` block
+           opened above — everything between here and that line only
+           applies when the visitor's system is in dark mode. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects every <a> (hyperlink) element on the page. */
       a {
+        /* `inherit` means "use whatever text color the surrounding
+             content already has" instead of the browser's default blue —
+             so links blend into the page's color scheme (light or dark)
+             rather than standing out as a mismatched blue. */
         color: inherit;
+        /* Bold link text, to give links visual emphasis in place of the
+             color change removed by the line above. */
         font-weight: 700;
+        /* Explicitly underlines links (defensive default, since some
+             browsers/resets remove underlines). */
         text-decoration: underline;
+        /* Nudges the underline slightly further away from the letters
+             it sits under, for a cleaner look than the browser default. */
         text-underline-offset: 0.0925em;
+      /* `}` closes the `a {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects both <b> and <strong> elements — two different HTML
+           tags that both traditionally render as bold text (`<strong>`
+           additionally signals semantic importance to screen readers,
+           `<b>` is purely visual), grouped here since they should look
+           the same. */
       b, strong {
+        /* Explicitly bold, in case a browser default or reset elsewhere
+             weakened it. */
         font-weight: 700;
+      /* `}` closes the `b, strong {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects both <i> and <em> elements — similarly, two tags that
+           both traditionally render as italic text (`<em>` additionally
+           signals semantic emphasis, `<i>` is purely visual). */
       i, em {
+        /* Explicitly italic (defensive default, same reasoning as bold
+             above). */
         font-style: italic;
+      /* `}` closes the `i, em {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects the <main> element — the single big content block that
+           wraps this whole error message (the logo/graphic plus the
+           explanatory paragraph). */
       main {
+        /* Makes <main> a grid container so its two children (<header>
+             and <article>, further down) stack and can be centered. */
         display: grid;
+        /* Adds 1 character-height worth of empty space between grid
+             items (between the header/logo and the article/text). */
         gap: 1em;
+        /* Adds inner spacing on all sides of <main>, so the content
+             doesn't touch the very edge of the browser window. */
         padding: 2em;
+        /* Centers <main>'s grid children both horizontally and
+             vertically within it. */
         place-items: center;
+        /* Centers the text itself (not just the block) — matters for
+             the multi-line paragraph text inside <article>. */
         text-align: center;
+      /* `}` closes the `main {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects a <header> element specifically when it's inside <main>
+           (this is a "descendant selector" — it does NOT match a <header>
+           anywhere else on the page, only one nested inside <main>). This
+           is the wrapper around the SVG logo graphic. */
       main header {
+        /* Caps the header's width at 12 character-heights, but lets it
+             shrink to 100% of its container on narrower screens — the
+             `min()` function picks whichever of the two values is
+             smaller for the current screen size. */
         width: min(100%, 12em);
+      /* `}` closes the `main header {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects an <svg> element nested inside `main header` — i.e. the
+           actual logo graphic itself. */
       main header svg {
+        /* Lets the SVG's rendered height scale automatically to keep its
+             original proportions once the width is constrained below. */
         height: auto;
+        /* Prevents the SVG from ever rendering wider than its container,
+             even if the SVG's own width attribute (480, set inside the
+             <svg> tag itself) would otherwise make it bigger. */
         max-width: 100%;
+        /* Makes the SVG fill the full width of its container (up to the
+             max-width cap above). */
         width: 100%;
+      /* `}` closes the `main header svg {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects an <article> element nested inside <main> — the wrapper
+           around the explanatory error text. */
       main article {
+        /* Caps the article's width at 30 character-heights (a
+             comfortable reading line-length), but shrinks to fit smaller
+             screens, same `min()` technique as `main header` above. */
         width: min(100%, 30em);
+      /* `}` closes the `main article {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects a <p> (paragraph) nested inside `main article`. */
       main article p {
+        /* Shrinks the paragraph's text to 75% of the size it would
+             otherwise inherit — makes the explanatory text visually
+             secondary to the big logo/numeral graphic above it. */
         font-size: 75%;
+      /* `}` closes the `main article p {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+      /* Selects a <br> (line break) nested inside `main article`. Not
+           every one of this file's error pages actually uses a <br> in
+           its text, but this rule harmlessly applies to any that do. */
       main article br {
+        /* Hides the line break by default (on narrow/mobile screens):
+             `display: none` makes the browser treat it as if it weren't
+             there, so the text just wraps naturally instead of forcing an
+             early break on a cramped small screen. */
         display: none;
 
+        /* Blank line for spacing only. */
+
+        /* A media query NESTED inside this rule (modern CSS allows
+             nesting `@media` blocks directly inside a selector's braces).
+             `min-width: 48em` means "only when the browser viewport is at
+             least 48 character-heights wide" — i.e. tablet/desktop-sized
+             screens. */
         @media(min-width: 48em) {
+          /* On wider screens, restore the <br> to a normal inline line
+               break, overriding the `display: none` set above — so the
+               deliberate line break shows up once there's enough room for
+               it to look intentional rather than cramped. */
           display: inline;
+        /* `}` closes the nested `@media(min-width: 48em) {` block. */
         }
+      /* `}` closes the `main article br {` rule opened above. */
       }
 
+      /* Blank line for spacing only. */
+
+    /* `</style>` closes the embedded CSS block opened by `<style>`
+         above — everything between them is CSS, not HTML. */
     </style>
 
+    <!-- Blank line for spacing only. -->
+
+  <!-- `</head>` closes the `<head>` element opened above — everything
+       from here down is the page's visible body content. -->
   </head>
 
+  <!-- Blank line for spacing only. -->
+
+  <!-- `<body>` opens the element holding everything actually shown on
+       screen (as opposed to <head>, which only holds metadata). -->
   <body>
 
+    <!-- Blank line for spacing only. -->
+
+    <!-- A plain HTML comment (not connected to the annotation comments in
+         this file — this one shipped with the original Rails-generated
+         file) noting where this file lives in the project, which is handy
+         if someone views the page source directly and wants to find the
+         file on disk. -->
     <!-- This file lives in public/404.html -->
 
+    <!-- Blank line for spacing only. -->
+
+    <!-- <main> opens the content wrapper styled by the `main { ... }`
+         rule above — it holds the logo graphic and the error text. -->
     <main>
+      <!-- <header> opens the wrapper around the SVG logo graphic, styled
+           by `main header { ... }` above. -->
       <header>
+        <!-- This is an inline SVG (Scalable Vector Graphics) image — the
+             actual decorative artwork combining the big "404" numeral with
+             smaller descriptive lettering, drawn using <path> elements
+             whose `d` attribute contains compressed vector drawing
+             instructions (a long string of move/line/curve commands).
+             That data is not meant to be human-read; it was generated by
+             design software. The two <path> elements' `id`s
+             ("error-id" and "error-description") are exactly what the
+             `#error-id`/`#error-description` CSS rules above target to
+             color the two parts of the graphic differently in light vs.
+             dark mode. -->
         <svg height="172" viewBox="0 0 480 172" width="480" xmlns="http://www.w3.org/2000/svg"><path d="m124.48 3.00509-45.6889 100.02991h26.2239v-28.1168h38.119v28.1168h21.628v35.145h-21.628v30.82h-37.308v-30.82h-72.1833v-31.901l50.2851-103.27391zm115.583 168.69891c-40.822 0-64.884-35.146-64.884-85.7015 0-50.5554 24.062-85.700907 64.884-85.700907 40.823 0 64.884 35.145507 64.884 85.700907 0 50.5555-24.061 85.7015-64.884 85.7015zm0-133.2831c-17.572 0-22.709 21.8984-22.709 47.5816 0 25.6835 5.137 47.5815 22.709 47.5815 17.303 0 22.71-21.898 22.71-47.5815 0-25.6832-5.407-47.5816-22.71-47.5816zm165.328-35.41581-45.689 100.02991h26.224v-28.1168h38.119v28.1168h21.628v35.145h-21.628v30.82h-37.308v-30.82h-72.184v-31.901l50.285-103.27391z" id="error-id"/><path d="m157.758 68.9967v34.0033h-7.199l-14.233-19.8814v19.8814h-8.584v-34.0033h8.307l13.125 18.7184v-18.7184zm28.454 21.5428c0 7.6978-5.15 13.0145-12.737 13.0145-7.532 0-12.738-5.3167-12.738-13.0145s5.206-13.0143 12.738-13.0143c7.587 0 12.737 5.3165 12.737 13.0143zm-8.528 0c0-3.4336-1.496-5.8703-4.209-5.8703-2.659 0-4.154 2.4367-4.154 5.8703s1.495 5.8149 4.154 5.8149c2.713 0 4.209-2.3813 4.209-5.8149zm13.184 3.8766v-9.5807h-3.655v-6.7564h3.655v-6.8671h8.584v6.8671h5.205v6.7564h-5.205v8.307c0 1.9383.941 2.769 2.658 2.769.941 0 1.994-.2216 2.769-.5538v7.3654c-.997.443-2.88.775-4.818.775-5.87 0-9.193-2.769-9.193-9.0819zm37.027 8.5839h-8.806v-34.0033h23.924v7.6978h-15.118v6.7564h13.9v7.5316h-13.9zm41.876-12.4605c0 7.6978-5.15 13.0145-12.737 13.0145-7.532 0-12.738-5.3167-12.738-13.0145s5.206-13.0143 12.738-13.0143c7.587 0 12.737 5.3165 12.737 13.0143zm-8.529 0c0-3.4336-1.495-5.8703-4.208-5.8703-2.659 0-4.154 2.4367-4.154 5.8703s1.495 5.8149 4.154 5.8149c2.713 0 4.208-2.3813 4.208-5.8149zm35.337-12.4605v24.921h-8.695v-2.16c-1.329 1.551-3.821 2.714-6.646 2.714-5.482 0-8.75-3.5999-8.75-9.1379v-16.3371h8.64v14.288c0 2.1045.997 3.5997 3.212 3.5997 1.606 0 3.101-1.0522 3.544-2.769v-15.1187zm4.076 24.921v-24.921h8.694v2.1598c1.385-1.5506 3.822-2.7136 6.701-2.7136 5.538 0 8.806 3.5997 8.806 9.1377v16.3371h-8.639v-14.2327c0-2.049-1.053-3.5443-3.268-3.5443-1.717 0-3.156.9969-3.6 2.7136v15.0634zm44.113 0v-1.994c-1.163 1.329-3.6 2.548-6.147 2.548-7.2 0-11.132-5.8151-11.132-13.0145s3.932-13.0143 11.132-13.0143c2.547 0 4.984 1.2184 6.147 2.5475v-13.0697h8.695v35.997zm0-9.1931v-6.5902c-.665-1.3291-2.16-2.326-3.821-2.326-2.991 0-4.763 2.4368-4.763 5.6488s1.772 5.5934 4.763 5.5934c1.717 0 3.156-.9415 3.821-2.326z" id="error-description"/></svg>
+      <!-- `</header>` closes the `<header>` element opened above. -->
       </header>
+      <!-- <article> opens the wrapper around the human-readable error
+           message, styled by `main article { ... }` above. -->
       <article>
+        <!-- The actual visible error message: a bold (<strong>) headline
+             sentence, followed by plain-text guidance. `p` = paragraph. -->
         <p><strong>The page you were looking for doesn't exist.</strong> You may have mistyped the address or the page may have moved. If you're the application owner check the logs for more information.</p>
+      <!-- `</article>` closes the `<article>` element opened above. -->
       </article>
+    <!-- `</main>` closes the `<main>` element opened above. -->
     </main>
 
+    <!-- Blank line for spacing only. -->
+
+  <!-- `</body>` closes the `<body>` element opened above. -->
   </body>
 
+  <!-- Blank line for spacing only. -->
+
+<!-- `</html>` closes the root `<html>` element opened at the top of the
+     file — this is the very last tag, matching the very first tag. -->
 </html>

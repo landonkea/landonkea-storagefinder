@@ -1,8 +1,43 @@
 #!/usr/bin/env ruby
+# Must be the literal first line — the shebang telling the OS to run this
+# file with whatever `ruby` is found on the system PATH (fully explained
+# in bin/brakeman; every bin/ script here starts the same way).
+
+# Loads RubyGems, Ruby's built-in package manager library, so the `Gem`
+# module (used a few lines down) is available.
 require "rubygems"
+# Loads Bundler's setup code, which restricts `require` to only see the
+# exact gem versions locked in this project's Gemfile.lock, avoiding
+# version mismatches with gems installed elsewhere on the machine.
 require "bundler/setup"
 
+# Blank line separating "load the environment" from "configure the tool."
+
+# Existing comment (kept as-is): explains WHY the next line exists —
+# passing an explicit config path avoids RuboCop spending time searching
+# parent directories for a config file, and avoids accidentally picking
+# up a different .rubocop.yml if one exists somewhere unexpected.
 # Explicit RuboCop config increases performance slightly while avoiding config confusion.
+# `ARGV` is the array of command-line arguments this script was invoked
+# with. `.unshift(a, b)` inserts multiple values at the FRONT of that
+# array, in the order given — so this prepends the two arguments
+# "--config" and the config file's full path. `File.expand_path("../.rubocop.yml",
+# __dir__)` resolves to an absolute path: `__dir__` is this file's own
+# directory (bin/), and "../.rubocop.yml" means "go up one level to the
+# app root, then find .rubocop.yml there." The net effect: every
+# `bin/rubocop` run is forced to use this project's specific RuboCop
+# config file, no matter what arguments the user adds or what directory
+# they run the command from.
 ARGV.unshift("--config", File.expand_path("../.rubocop.yml", __dir__))
 
+# Blank line before the final "hand off control to the real tool" step.
+
+# `Gem.bin_path("rubocop", "rubocop")` asks RubyGems for the full path of
+# the executable named "rubocop" belonging to the gem also named
+# "rubocop" (using the exact version locked by Bundler above). `load`
+# reads and runs that file's code as if it were pasted right here. This
+# is the same wrapper pattern used by bin/brakeman, bin/kamal, and
+# bin/thrust — it exists so this script always runs the exact RuboCop
+# version this project depends on, rather than whatever `rubocop` command
+# happens to be first on the system PATH.
 load Gem.bin_path("rubocop", "rubocop")

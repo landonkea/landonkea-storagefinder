@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
+# Must be the literal first line of the file — a "shebang" that tells the
+# OS which program interprets the rest of the file when run directly
+# (e.g. `./bin/setup`). `/usr/bin/env bash` means "find whatever `bash`
+# is first on the system's PATH" — more portable across machines than
+# hard-coding `/bin/bash`. This script uses `bash`-specific features
+# (like `[[ ]]` tests and `${BASH_SOURCE[0]}` below), not just plain
+# POSIX `sh`, which is why it needs bash specifically rather than the
+# more generic `sh` used by bin/dev.
 # =============================================================================
 # STORAGEFINDER — SETUP SCRIPT
 # =============================================================================
@@ -17,117 +25,487 @@
 #   6. Installs Playwright + Chromium browser
 #   7. Makes start.sh executable
 # =============================================================================
+# The banner block above (between the `====` lines) is a plain comment —
+# every line starts with `#`, so bash ignores it entirely when running
+# the script. It exists purely as documentation for a human reading the
+# file, describing what the script is for and what it will do, in order,
+# before you run it.
 
+# `set -e` is a shell option: it tells bash to immediately stop running
+# the script (exit) the moment ANY command in it fails (returns a
+# non-zero exit status), instead of the default behavior of plowing
+# ahead to the next line. This is important safety behavior for a setup
+# script — without it, an early failure (e.g. a missing system package)
+# could go unnoticed and later steps (like running database migrations)
+# could run against a half-broken environment. The trailing `# ...` text
+# is an inline comment (kept from the original) explaining the same thing.
 set -e  # Stop immediately if any command fails unexpectedly
 
+# Blank line for visual separation between shell options and the color
+# variable definitions below.
+
+# This comment (kept from the original) introduces the block of variable
+# assignments below: they hold ANSI terminal escape codes used to print
+# colored text.
 # Color output helpers — makes the script easier to read
+# Each of these is a plain shell variable assignment: `NAME='value'`
+# (single quotes mean the value is used literally, with no expansion of
+# `$variables` or escape sequences at assignment time — the escaping
+# happens later, when `echo -e` interprets the string). The value
+# `'\033[0;31m'` is an ANSI escape code: `\033` is the ESC control
+# character, and `[0;31m` tells the terminal "switch to red text from now
+# on." Different terminals support this; most modern ones do.
 RED='\033[0;31m'
+# Same pattern as above — this escape code switches subsequent terminal
+# text to green.
 GREEN='\033[0;32m'
+# Same pattern — switches to yellow (used for warnings).
 YELLOW='\033[1;33m'
+# Same pattern — switches to blue (used for informational messages).
 BLUE='\033[0;34m'
+# Same pattern — `1` here means "bold" rather than a color; this doesn't
+# change color, just text weight.
 BOLD='\033[1m'
+# `\033[0m` is the "reset" escape code — it turns off all color/bold
+# formatting, returning the terminal to its normal appearance. `NC`
+# stands for "No Color." The trailing `# No Color (reset)` is an inline
+# comment explaining the variable's purpose, kept from the original.
 NC='\033[0m' # No Color (reset)
 
+# Blank line separating color definitions from the function definitions
+# that use them.
+
+# This defines a shell FUNCTION named `ok`. In bash, `name() { commands; }`
+# declares a function: `name` is the function's name, `()` (empty here)
+# is just required function-definition syntax (bash functions don't
+# declare parameters this way — they read `$1`, `$2`, etc. instead), and
+# the `{ ... }` braces contain the function body, with a semicolon
+# separating statements packed on one line. Inside: `echo -e` prints text
+# and (`-e`) interprets backslash escape sequences like the `\033...`
+# codes stored in the color variables, rather than printing them as
+# literal backslash-and-numbers text. `"${GREEN}  ✓ $1${NC}"` is a
+# double-quoted string with variable interpolation: `${GREEN}` inserts
+# the green color code, `$1` inserts this function's first argument
+# (whatever text is passed when the function is called, e.g. `ok "Ruby
+# found"`), and `${NC}` resets the color afterward so later terminal
+# output isn't stuck green. Calling this function anywhere below (e.g.
+# `ok "npm available"`) prints a green checkmark line.
 ok()   { echo -e "${GREEN}  ✓ $1${NC}"; }
+# Same function pattern as `ok` above, but prints in blue with an arrow
+# symbol — used throughout the script for "here's what I'm about to do"
+# progress messages.
 info() { echo -e "${BLUE}  → $1${NC}"; }
+# Same function pattern, but yellow with a warning symbol — used for
+# non-fatal issues the developer should know about but that don't stop
+# the script.
 warn() { echo -e "${YELLOW}  ⚠ $1${NC}"; }
+# Same function pattern, but red with an X symbol, PLUS an extra command:
+# `exit 1` after the `echo -e`. `exit 1` immediately stops the entire
+# script and reports a non-zero ("failure") status to whatever invoked
+# it. This function is used for unrecoverable errors — printing the
+# message and then always terminating the script right there.
 fail() { echo -e "${RED}  ✗ $1${NC}"; exit 1; }
+# Same function pattern, but for section headers: `\n` inside the
+# double-quoted string is a literal newline escape (also interpreted
+# because of `-e`), so this prints a blank line before the bold header
+# text — used to visually separate each numbered setup step in the
+# terminal output.
 header() { echo -e "\n${BOLD}$1${NC}"; }
 
+# Blank line separating the helper function definitions from the
+# "figure out where we are" logic below.
+
+# This comment (kept from the original) explains why the next three
+# lines exist: so the script behaves the same whether you run it as
+# `./bin/setup`, `bash bin/setup` from the project root, or `bash
+# /some/other/path/storagefinder/bin/setup` from anywhere else on disk.
 # Go to the project root regardless of where this script was called from
+# `SCRIPT_DIR="$( ... )"` is a variable assignment where the value comes
+# from COMMAND SUBSTITUTION: `$( commands )` runs the commands inside the
+# parentheses in a subshell and substitutes their combined output text as
+# the value. Inside: `cd "$(dirname "${BASH_SOURCE[0]}")"` first computes
+# `dirname` of `${BASH_SOURCE[0]}` — `BASH_SOURCE` is a bash-specific
+# array holding the path(s) of the script file(s) currently executing;
+# `${BASH_SOURCE[0]}` is this very file's own path (bin/setup) as it was
+# invoked, and `dirname` strips the filename to leave just the containing
+# directory (e.g. "bin" or "/home/user/project/bin", depending on how it
+# was called). `cd` into that directory, `&&` (meaning "and, only if the
+# previous command succeeded") then run `pwd`, which prints the current
+# directory as a full ABSOLUTE path. The net effect: no matter how this
+# script was invoked, `SCRIPT_DIR` ends up holding the absolute path to
+# the bin/ directory it lives in.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Same command-substitution pattern as above: `cd "$SCRIPT_DIR/.."` moves
+# up one directory from bin/ to the project root, then `&& pwd` prints
+# that as an absolute path, stored in `PROJECT_ROOT`.
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Actually changes the CURRENT shell's working directory to the project
+# root computed above, so every command later in this script (like
+# `bundle install` or `mkdir -p logs`) operates relative to the project
+# root regardless of where the user's terminal was sitting when they ran
+# this script.
 cd "$PROJECT_ROOT"
 
+# Blank line, printed literally via `echo` with no arguments — this just
+# outputs an empty line to the terminal for visual spacing, the same as
+# every bare `echo ""` that appears throughout this script.
 echo ""
+# Prints the top border of a decorative box (Unicode box-drawing
+# characters ═, ╔, ╗) in bold text. `echo -e` interprets the `\033...`
+# codes hidden inside `${BOLD}` and `${NC}`; the visible box characters
+# are typed directly in the string.
 echo -e "${BOLD}╔═══════════════════════════════════════════════════════════╗${NC}"
+# Prints the middle line of the box containing the script's title text,
+# still in bold.
 echo -e "${BOLD}║           StorageFinder — First-time Setup                ║${NC}"
+# Prints the bottom border of the decorative box, closing it out.
 echo -e "${BOLD}╚═══════════════════════════════════════════════════════════╝${NC}"
+# Another blank line for spacing before the numbered setup steps begin.
 echo ""
 
+# This `====` banner comment (plain documentation, ignored by bash) marks
+# the start of "Step 0" in the script's numbered sequence of setup steps.
 # =============================================================================
 # STEP 0: DETECT OPERATING SYSTEM
 # =============================================================================
+# Calls the `header` function defined earlier — prints a blank line then
+# this text in bold, visually separating this step from whatever came
+# before it in the terminal output.
 header "Detecting operating system..."
 
+# Blank line before the variable initialization block.
+
+# These three lines each assign the literal string `false` to a variable.
+# Bash has no true boolean type — scripts commonly use the plain text
+# strings `true`/`false` as stand-ins, later checking them with `if
+# $IS_MAC; then` (which works because `true` and `false` are actually
+# real system commands that exit successfully/unsuccessfully
+# respectively). All three start `false` and get flipped to `true` below
+# once the actual OS is detected.
 IS_MAC=false
 IS_LINUX=false
 IS_WSL=false
 
+# Blank line before the OS-detection conditional.
+
+# `if [[ CONDITION ]]; then` starts a conditional block using bash's
+# extended test syntax `[[ ]]` (preferred in bash-specific scripts over
+# the older, more limited POSIX `[ ]` — `[[ ]]` supports pattern matching
+# like the `*` wildcard used below without needing to quote it
+# specially). `"$OSTYPE"` is a variable bash sets automatically at
+# startup, describing the operating system bash was compiled for/is
+# running on (e.g. "darwin23" on macOS, "linux-gnu" on Linux). `==
+# "darwin"*` is a pattern match (not a strict equality check, because of
+# the trailing unquoted `*` wildcard): "does $OSTYPE START WITH the text
+# darwin?" — matching any macOS version string.
 if [[ "$OSTYPE" == "darwin"* ]]; then
+  # Flips the flag from false to true now that we've confirmed this is macOS.
   IS_MAC=true
+  # Calls the `ok` helper function to print a green checkmark confirmation.
   ok "macOS detected"
+# `elif` ("else if") checks a second condition, only evaluated if the
+# first `if` above was false. Same `[[ ]]` pattern-match syntax: "does
+# $OSTYPE start with linux-gnu?" — true on standard Linux and on WSL
+# (Windows Subsystem for Linux), since WSL also reports itself as
+# linux-gnu at this level; distinguishing WSL from real Linux needs an
+# extra check, done just below.
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  # Flips the flag: we know we're on some flavor of Linux (or WSL).
   IS_LINUX=true
+  # Inline comment (kept from the original) explaining the nested check
+  # about to happen.
   # Check if running inside WSL
+  # A second, nested `if` to distinguish real Linux from WSL (both report
+  # "linux-gnu" above). `grep -qi PATTERN FILE`: `grep` searches for text
+  # matching PATTERN inside FILE; `-q` ("quiet") suppresses grep's normal
+  # output and makes it communicate only via its exit status (0 = found a
+  # match, 1 = no match); `-i` makes the match case-insensitive.
+  # `"microsoft\|wsl"` is a regular expression meaning "the literal text
+  # 'microsoft' OR (`\|` is "or" in basic regex syntax) the literal text
+  # 'wsl'" — WSL's kernel identifies itself with one of these words.
+  # `/proc/version` is a virtual file on Linux systems containing a
+  # description of the running kernel. `2>/dev/null` redirects file
+  # descriptor 2 (standard error — where error messages go) to
+  # `/dev/null`, a special "black hole" device that discards anything
+  # written to it — this silences any error grep might print if
+  # /proc/version is somehow missing/unreadable, without affecting
+  # whether the `if` condition is considered true or false (that's
+  # governed by grep's exit status, unaffected by output redirection).
   if grep -qi "microsoft\|wsl" /proc/version 2>/dev/null; then
+    # Confirmed: this Linux is actually running under WSL. Set the flag.
     IS_WSL=true
+    # Green confirmation message via the `ok` helper.
     ok "WSL (Windows Subsystem for Linux) detected"
+    # Yellow warning via the `warn` helper: WSL has known networking
+    # quirks (mDNS/Bonjour hostnames like storagefinder.local don't
+    # resolve reliably), so this gives the developer a heads-up and an
+    # alternative up front rather than letting them hit a confusing
+    # "site can't be reached" error later.
     warn "storagefinder.local LAN hostname won't work in WSL — use localhost:5555 instead"
+  # `else` — runs only when the WSL check above was false, meaning this
+  # is genuine (non-WSL) Linux.
   else
+    # Green confirmation for plain Linux.
     ok "Linux detected"
+  # `fi` ("if" spelled backwards) closes this inner `if/else` block.
   fi
+# `else` for the OUTER if/elif chain — runs only if $OSTYPE matched
+# neither "darwin*" nor "linux-gnu*", meaning an unsupported/unrecognized
+# operating system (e.g. a raw Windows shell, or a BSD variant).
 else
+  # Calls the `fail` helper: prints a red error message AND calls `exit
+  # 1`, immediately stopping the script — there's no safe way to proceed
+  # with an OS this script doesn't know how to install dependencies for.
   fail "Unsupported OS: $OSTYPE — this script supports macOS and Linux/WSL only"
+# `fi` closes the outer `if/elif/else` chain that began several lines above.
 fi
 
+# Banner comment marking the start of Step 1.
 # =============================================================================
 # STEP 1: INSTALL SYSTEM DEPENDENCIES
 # =============================================================================
+# Prints the bold step header via the `header` helper function.
 header "Step 1: Installing system dependencies..."
 
+# Blank line before the OS-specific installation branches.
+
+# `if $IS_MAC; then` — note there are no `[[ ]]` brackets here, unlike
+# Step 0. Since `$IS_MAC` was set to the literal word `true` or `false`
+# earlier, and `true`/`false` are themselves real, tiny system commands
+# (that do nothing except exit successfully or unsuccessfully), bash can
+# run the WORD stored in the variable directly as a command and use ITS
+# exit status as the condition — "if the command named by $IS_MAC
+# succeeds, then..." This is a common bash idiom for boolean-style
+# variables.
 if $IS_MAC; then
+  # A plain comment (not executed) labeling this branch as the macOS path.
   # --- macOS via Homebrew ---
-  
+
+  # A blank-looking line that actually contains trailing whitespace left
+  # over from the original file's formatting — harmless, produces no
+  # output, just visual spacing before the Homebrew check below.
+
+  # Comment explaining the check on the next line: Homebrew is macOS's
+  # most popular third-party package manager, and it isn't installed by
+  # default.
   # Check if Homebrew is installed
+  # `command -v NAME` is a POSIX-standard way to ask "is there a command
+  # named NAME available to run?" — it prints the path to that command if
+  # found, or nothing (and a non-zero exit status) if not. `&>/dev/null`
+  # redirects BOTH standard output and standard error to the "black hole"
+  # device /dev/null, discarding any output either way — we only care
+  # about the exit status, not what `command -v` prints. `!` negates that
+  # status, so this whole condition reads "if `brew` is NOT found on the
+  # PATH, then..."
   if ! command -v brew &>/dev/null; then
+    # Blue informational message via the `info` helper.
     info "Homebrew not found — installing it now..."
+    # Another informational message warning the developer that macOS will
+    # prompt for their account password (Homebrew's installer needs admin
+    # rights to set up its directories).
     info "This will ask for your password"
+    # Runs Homebrew's official install script. `curl -fsSL URL` downloads
+    # the content at URL and prints it to standard output: `-f` makes
+    # curl fail silently (no HTML error page printed) on server errors,
+    # `-s` is "silent" (no progress meter), `-L` follows HTTP redirects
+    # (needed since GitHub URLs like this one redirect). The whole
+    # `curl ...` command is wrapped in `$( )` — command substitution —
+    # so its output (the actual install script's Ruby/bash source code)
+    # becomes a string. `/bin/bash -c "STRING"` then runs that string as
+    # a new bash script. In short: download Homebrew's installer and run
+    # it immediately, without saving it to a file first.
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # Comment (kept from the original) explaining the two-way check below:
+    # Homebrew installs to a different directory depending on whether the
+    # Mac has an Apple Silicon (M-series) or Intel processor.
     # Add brew to PATH for this session (Apple Silicon vs Intel path)
+    # `[[ -f "PATH" ]]` tests whether a regular file exists at that path.
+    # `/opt/homebrew/bin/brew` is where Homebrew installs on Apple
+    # Silicon Macs.
     if [[ -f "/opt/homebrew/bin/brew" ]]; then
+      # `eval "STRING"` takes a string and executes it as if it had been
+      # typed directly into this shell (more powerful, and more
+      # dangerous, than just running it as a subprocess — it can change
+      # THIS shell's own environment). `$(/opt/homebrew/bin/brew
+      # shellenv)` runs Homebrew's `shellenv` subcommand, which PRINTS a
+      # set of `export` statements that add Homebrew's directories to
+      # PATH and set other Homebrew-related environment variables.
+      # `eval`-ing that output actually applies those exports to the
+      # current script's environment, so the freshly-installed `brew`
+      # command becomes usable immediately, without needing to restart
+      # the terminal.
       eval "$(/opt/homebrew/bin/brew shellenv)"
+    # `elif` — checks the Intel Mac install location instead, only if the
+    # Apple Silicon path above wasn't found.
     elif [[ -f "/usr/local/bin/brew" ]]; then
+      # Same `eval "$(... shellenv)"` pattern as above, just pointed at
+      # the Intel Homebrew binary location.
       eval "$(/usr/local/bin/brew shellenv)"
+    # `fi` closes this inner Apple-Silicon-vs-Intel `if/elif` block. Note
+    # there's no `else` — if brew isn't found at either known path
+    # (unexpected), the script just silently continues without it being
+    # added to PATH.
     fi
+    # Green confirmation that Homebrew is now installed.
     ok "Homebrew installed"
+  # `else` — runs when `command -v brew` DID find brew (it was already installed).
   else
+    # Green confirmation that no installation was needed.
     ok "Homebrew already installed"
+  # `fi` closes the "is Homebrew installed?" if/else block.
   fi
 
+  # Blank line before the actual package installation.
+
+  # Blue informational message announcing the next step.
   info "Installing system packages via Homebrew..."
+  # Comment (kept from the original) explaining why failure here isn't
+  # fatal: "idempotent" means running the same install command again when
+  # packages are already present is safe and has no bad effect — Homebrew
+  # just skips what's already there.
   # brew install is idempotent — safe to run even if already installed
+  # `brew install git curl node sqlite3 pkg-config` installs each of
+  # those five packages (git, curl, Node.js, the SQLite database engine,
+  # and pkg-config, a build helper library-detection tool). `2>/dev/null`
+  # discards any error-stream output (e.g. warnings printed if a package
+  # is already installed). `|| true` is an "or" chain: if the `brew
+  # install` command exits with a failure status for any reason, `||`
+  # causes the following command, `true` (always succeeds), to run
+  # instead — this stops that failure from propagating and triggering
+  # `set -e`'s "stop the whole script" behavior at the top of the file.
+  # In other words: "try to install these packages, but don't let a
+  # partial/odd failure here kill the entire setup script."
   brew install git curl node sqlite3 pkg-config 2>/dev/null || true
+  # Green confirmation message.
   ok "System packages installed"
+  # Comment (kept from the original) explaining why there's no separate
+  # Bonjour/mDNS install step on macOS: it ships with the OS already.
+  # mDNS (multicast DNS) / Bonjour is what makes hostnames like
+  # storagefinder.local resolve on a local network.
   # Note: macOS has Bonjour (dnssd) built in — no separate install needed
+  # Green confirmation — informational only, nothing was actually
+  # installed by this line; it just tells the developer this capability
+  # is already present.
   ok "mDNS/Bonjour already built into macOS"
 
+# `elif` — the Linux/WSL branch, evaluated only if `$IS_MAC` was false.
+# `$IS_LINUX || $IS_WSL` runs the word stored in `$IS_LINUX` as a command
+# (same boolean-via-exit-status idiom as `if $IS_MAC` above); `||` is
+# shell's "or" — if the first command fails (false), try running the
+# second (`$IS_WSL`) and use ITS result instead. So this reads "if this
+# is Linux OR WSL, then..." (WSL always sets both IS_LINUX and IS_WSL to
+# true in Step 0 above, so `$IS_LINUX` alone would actually already cover
+# it, but checking both here makes the intent explicit).
 elif $IS_LINUX || $IS_WSL; then
+  # Plain comment labeling this branch.
   # --- Linux / WSL via apt ---
 
+  # Blank line before the sudo check.
+
+  # Comment explaining the check below: installing system packages
+  # normally needs administrator ("root") privileges, granted via `sudo`.
   # Check if we can use sudo
+  # Same `command -v ... &>/dev/null` existence-check pattern used for
+  # `brew` above, this time checking for the `sudo` command.
   if ! command -v sudo &>/dev/null; then
+    # `sudo` is missing — there's no safe way to install system packages,
+    # so call `fail`, which prints a red message and exits the script.
     fail "sudo is required but not found. Please install sudo or run as root."
+  # `fi` closes the sudo-availability check.
   fi
 
+  # Blank line before running the actual apt commands.
+
+  # Blue informational message.
   info "Updating package lists (this may take a moment)..."
+  # `sudo apt-get update` refreshes apt's local cache of what package
+  # versions are available from its configured repositories — needed
+  # before installing anything, so apt knows the latest available
+  # versions/dependencies. `-qq` ("very quiet") suppresses apt's normal
+  # progress output, printing (almost) nothing unless something goes
+  # wrong.
   sudo apt-get update -qq
 
+  # Blue informational message before the (long) package install command.
   info "Installing system packages..."
-  sudo apt-get install -y \
-    build-essential \
-    pkg-config \
-    libssl-dev \
-    zlib1g-dev \
-    libsqlite3-dev \
-    libavahi-compat-libdnssd-dev \
-    git \
-    curl \
-    ca-certificates \
-    gnupg \
-    2>/dev/null
+  # IMPORTANT SYNTAX NOTE, verified by hand: a `\` at the end of a line is
+  # bash's LINE CONTINUATION — it tells bash "this command isn't finished
+  # yet, keep reading the next line as part of the same command." But that
+  # only works if the very next line is more of the SAME command. A `#`
+  # comment line inserted between two `\`-continued lines breaks the chain:
+  # bash treats each subsequent "continued" line as its own brand new
+  # command instead, which — for a list of package names — means bash
+  # tries to literally RUN each package name as a command and fails. So the
+  # list below is built as a bash ARRAY first (one package per line, safely
+  # commentable, since array items are just separated by whitespace/
+  # newlines, not by `\`), and only THEN is that array handed to
+  # `apt-get install` as a single argument list.
+  #
+  # `packages=( ... )` starts a bash array literal — the parentheses hold
+  # one or more values, and here each one is written on its own line.
+  packages=(
+    # `build-essential` is a meta-package bundling a C/C++ compiler and
+    # related tools — needed because installing Ruby gems often compiles
+    # small native-code extensions.
+    build-essential
+    # `pkg-config` is a helper tool that other software uses to find
+    # where system libraries are installed and how to link against them.
+    pkg-config
+    # `libssl-dev` provides the OpenSSL library's development headers,
+    # needed to compile Ruby/gems that talk HTTPS or handle encryption.
+    libssl-dev
+    # `zlib1g-dev` provides development headers for zlib, a compression
+    # library many gems and Ruby itself depend on.
+    zlib1g-dev
+    # `libsqlite3-dev` provides development headers for SQLite, the
+    # database engine this app uses (see config/database.yml elsewhere in
+    # the app) — needed to compile the `sqlite3` Ruby gem.
+    libsqlite3-dev
+    # `libavahi-compat-libdnssd-dev` provides development headers for
+    # Avahi's Bonjour/mDNS-compatibility library — the Linux equivalent
+    # of the mDNS support macOS has built in (noted above), needed so a
+    # hostname like storagefinder.local can be advertised/resolved on
+    # the local network from Linux.
+    libavahi-compat-libdnssd-dev
+    # `git` — the version control tool, needed to work with this
+    # repository at all.
+    git
+    # `curl` — a command-line HTTP client, used elsewhere in this very
+    # script (e.g. downloading Homebrew above, NodeSource below) and by
+    # various tools.
+    curl
+    # `ca-certificates` — a bundle of trusted root security certificates,
+    # needed so HTTPS connections (like the `curl` downloads in this
+    # script) can verify they're talking to the real server, not an
+    # impersonator.
+    ca-certificates
+    # `gnupg` — GNU Privacy Guard, used to verify cryptographic
+    # signatures on downloaded packages/repositories (e.g. the NodeSource
+    # repository added in Step 2 below is signed, and apt uses gnupg to
+    # check that signature).
+    gnupg
+  )
+  # `)` above closes the array literal. `sudo apt-get install -y \` starts
+  # the real install command; `-y` auto-confirms any "do you want to
+  # continue? [Y/n]" prompt apt would otherwise ask interactively —
+  # necessary since this script runs non-interactively.
+  # `"${packages[@]}"` expands to every item in the array above, each as
+  # its own separate argument (the quotes + `[@]`, as opposed to `[*]`,
+  # matter if any package name ever contained spaces — it doesn't here,
+  # but `[@]` is the safe default habit). `2>/dev/null` discards standard-
+  # error output, hiding apt's routine warnings/progress noise while still
+  # letting `set -e` (declared near the top of this file) catch a real
+  # failure via the command's exit status.
+  sudo apt-get install -y "${packages[@]}" 2>/dev/null
 
+  # Blank line before the confirmation message.
+
+  # Green confirmation that all Linux/WSL system packages installed.
   ok "System packages installed"
+# `fi` closes the outer `if $IS_MAC ... elif $IS_LINUX || $IS_WSL ...`
+# chain. Note there's no final `else` — if somehow neither branch
+# matched (shouldn't happen, since Step 0 already validated the OS and
+# would have called `fail` otherwise), this step simply does nothing.
 fi
 
 # =============================================================================

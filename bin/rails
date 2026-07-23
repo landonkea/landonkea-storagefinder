@@ -1,4 +1,34 @@
 #!/usr/bin/env ruby
+# Must be the literal first line — the shebang telling the OS to run this
+# file with whatever `ruby` is found on the system PATH (fully explained
+# in bin/brakeman; every bin/ script in this app starts the same way).
+# This is the file behind the `bin/rails server`, `bin/rails console`,
+# `bin/rails db:migrate`, etc. commands you run constantly in Rails
+# development — it's the entry point for the `rails` command-line tool,
+# scoped specifically to this app (rather than running a system-wide
+# `rails` gem executable, which wouldn't know which app/config to use).
+
+# `APP_PATH` is a Ruby constant (capitalized names are constants by
+# convention — Ruby will warn if you reassign one). It's set to the
+# absolute file path of config/application.rb. `__dir__` is a special
+# variable equal to the directory this file (bin/rails) lives in;
+# `File.expand_path("../config/application", __dir__)` means "starting
+# from bin/, go up one directory then into config/application, and
+# resolve that into a full absolute path" — regardless of what directory
+# you were in when you ran `bin/rails`. Code deeper inside Rails' command
+# system (loaded below) reads this constant to know where the app's main
+# config file lives.
 APP_PATH = File.expand_path("../config/application", __dir__)
+# `require_relative` loads a file using a path relative to THIS file's
+# own location (not Ruby's gem load path). `"../config/boot"` goes up out
+# of bin/ into the app root, then loads config/boot.rb — the file that
+# sets up Bundler and this app's gem environment. Every bin/ script here
+# does this before anything else.
 require_relative "../config/boot"
+# Loads Rails' own command-dispatch code. Simply requiring this file
+# triggers Rails to read ARGV (the command-line arguments this script was
+# invoked with, e.g. `bin/rails console` gives ARGV = ["console"]),
+# combine that with the APP_PATH constant set above, and run the matching
+# Rails command. There's no explicit "run" call visible here — loading
+# this file IS what starts the command, as a side effect of requiring it.
 require "rails/commands"

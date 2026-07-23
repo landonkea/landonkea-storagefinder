@@ -1,28 +1,98 @@
+# This is a FIXTURE file — a YAML (a plain-text, indentation-based data
+# format) file listing pre-made, FAKE database rows that Rails automatically
+# loads into the test database before every test runs (see the `fixtures
+# :all` line in test/test_helper.rb). This lets tests work with realistic,
+# already-saved Unit records (see app/models/unit.rb) without hand-building
+# and saving their own data.
+#
+# Each top-level key below (like `previous_gilbert_10x10:`) is a LABEL
+# chosen for this file — test code refers to a fixture by this label, e.g.
+# `units(:current_gilbert_10x10)` in test/models/facility_test.rb returns
+# the real, saved database record built from the settings indented
+# underneath it. The indented `key: value` lines under each label become
+# that row's actual column values, matching the "units" table (see
+# db/schema.rb). Note: unlike AlertRule/CrawlLogEntry validations, Unit
+# requires REAL `belongs_to` associations (`facility` and `crawl_run`) — see
+# the `facility:`/`crawl_run_id:` lines below for the two different ways
+# fixture files can express that link.
+
+# Fixture labeled "previous_gilbert_10x10" — a 10x10 unit at the
+# gilbert_public_storage facility, as it appeared during the OLDER
+# ("previous") crawl run. Priced higher ($150) than its "current" version
+# below ($120), simulating a price DROP between crawls — used by tests of
+# price-drop-detection behavior.
 previous_gilbert_10x10:
+  # `facility: gilbert_public_storage` is Rails fixtures' ASSOCIATION
+  # shorthand: instead of looking up and hardcoding a numeric facility_id,
+  # you name the OTHER fixture (by its label, from test/fixtures/
+  # facilities.yml) that this row belongs to, and Rails resolves the
+  # correct id automatically when the fixtures are loaded — satisfying
+  # Unit's `belongs_to :facility` requirement (see app/models/unit.rb).
   facility: gilbert_public_storage
+  # `crawl_run_id: 1` instead uses a plain, explicit numeric foreign key —
+  # this works because test/fixtures/crawl_runs.yml pins the
+  # previous_completed fixture's id to exactly 1 (see the comment there).
+  # Either style (`facility:` by name, or `crawl_run_id:` by raw number)
+  # is valid Rails fixture syntax for satisfying a `belongs_to`; this file
+  # happens to use one style for facility and the other for crawl_run.
   crawl_run_id: 1
+  # Must match Unit's `WIDTHxDEPTH` format validation, e.g.
+  # `/\A\d+x\d+\z/i` (see app/models/unit.rb).
   size: 10x10
+  # width_ft/depth_ft/sqft are normally auto-computed from `size` by the
+  # `before_save :parse_dimensions` callback (see app/models/unit.rb) — but
+  # that callback only runs when a record is actually SAVED through Ruby
+  # code. Fixtures load data directly into the database, bypassing Ruby
+  # callbacks entirely, so these derived values must be spelled out
+  # explicitly here to match what parse_dimensions WOULD have computed from
+  # "10x10" (10 * 10 = 100).
   width_ft: 10
   depth_ft: 10
   sqft: 100
+  # A `decimal` column in the database (see db/schema.rb) for exact money
+  # math — written here as a plain YAML number with two decimal places.
   monthly_price: 150.00
   climate_controlled: true
   available: true
   drive_up: false
   indoor: true
+  # Not in Unit::EXCLUDED_TYPES (see app/models/unit.rb) — a normal,
+  # includable unit type.
   unit_type: standard
   booking_url: https://www.publicstorage.com/book/6079
+  # The timestamp this unit's data was "scraped" — required by Unit's
+  # `presence:` validation on `collected_at` (see app/models/unit.rb).
+  # `<%%= 3.days.ago %>` is ERB (Embedded RuBy): fixture YAML files support
+  # embedded Ruby wrapped in `<%% %>`/`<%%= %>` tags, evaluated once when
+  # fixtures load. `<%%= %>` runs the Ruby code AND inserts its result into
+  # the YAML text at that spot. `3.days.ago` is a Rails/ActiveSupport method
+  # chain (`3.days` builds a Duration of three days, `.ago` subtracts it
+  # from the current time) — matching this fixture's "previous" crawl_run,
+  # which also uses `3.days.ago` for its own timestamps (see
+  # test/fixtures/crawl_runs.yml), so both stay consistent with each other.
   collected_at: <%= 3.days.ago %>
   created_at: <%= 3.days.ago %>
   updated_at: <%= 3.days.ago %>
 
+# A blank line here is just a visual separator between fixture entries; YAML
+# itself doesn't require it.
+
+# Fixture labeled "current_gilbert_10x10" — the SAME unit/facility as
+# previous_gilbert_10x10 above, but as it appeared during the MOST RECENT
+# crawl, at a lower price ($120 vs. $150) — together these two fixtures
+# simulate one real-world price drop for the same physical unit across two
+# crawls.
 current_gilbert_10x10:
   facility: gilbert_public_storage
+  # Pinned to crawl_run id 2 — matching current_completed's pinned id in
+  # test/fixtures/crawl_runs.yml (the "later" of the two completed runs).
   crawl_run_id: 2
   size: 10x10
   width_ft: 10
   depth_ft: 10
   sqft: 100
+  # Lower than previous_gilbert_10x10's 150.00 above — the price drop this
+  # pair of fixtures is designed to represent.
   monthly_price: 120.00
   climate_controlled: true
   available: true
@@ -30,14 +100,26 @@ current_gilbert_10x10:
   indoor: true
   unit_type: standard
   booking_url: https://www.publicstorage.com/book/6079
+  # `1.day.ago` — more recent than previous_gilbert_10x10's `3.days.ago`
+  # above, matching current_completed's own more-recent timestamps in
+  # test/fixtures/crawl_runs.yml.
   collected_at: <%= 1.day.ago %>
   created_at: <%= 1.day.ago %>
   updated_at: <%= 1.day.ago %>
 
+# Fixture labeled "previous_mesa_10x15" — a DIFFERENT unit (10x15, not
+# 10x10) at the OTHER facility (mesa_extra_space, not gilbert_public_
+# storage), from the OLDER crawl run — gives tests a second, distinct
+# facility/size/company combination to filter/exclude against (e.g. size
+# filters, company filters).
 previous_mesa_10x15:
   facility: mesa_extra_space
   crawl_run_id: 1
   size: 10x15
+  # Derived from "10x15": width 10, depth 15, sqft = 10 * 15 = 150 — same
+  # manual pre-computation reasoning as previous_gilbert_10x10 above, since
+  # fixtures bypass the before_save callback that would normally compute
+  # these.
   width_ft: 10
   depth_ft: 15
   sqft: 150
@@ -52,6 +134,10 @@ previous_mesa_10x15:
   created_at: <%= 3.days.ago %>
   updated_at: <%= 3.days.ago %>
 
+# Fixture labeled "current_mesa_10x15" — the same mesa_extra_space 10x15
+# unit as previous_mesa_10x15 above, but from the MOST RECENT crawl, at a
+# notably lower price ($90 vs. $200) — another price-drop pair, at a
+# different facility/size than the gilbert_10x10 pair above.
 current_mesa_10x15:
   facility: mesa_extra_space
   crawl_run_id: 2

@@ -1,47 +1,218 @@
 #!/usr/bin/env ruby
+# ^ This is a "shebang" line. When a file is executable and run directly,
+# the operating system reads this exact line to pick the interpreter for
+# everything below it. `#!` marks it as a shebang, not a plain comment;
+# `/usr/bin/env` searches your PATH for the named program; here that
+# program is `ruby` rather than a shell — so unlike the other, mostly
+# one-line hooks in this directory, this entire file is a Ruby program,
+# not a shell script.
+#
+# --- What is this file? (context for every file in .kamal/hooks/) ---
+# This app is deployed with Kamal (kamal-deploy.org): a tool that builds a
+# Rails app into a Docker container image and ships it to remote servers
+# over SSH, without needing Heroku or Kubernetes. A deploy moves through a
+# fixed sequence of stages, and at specific points in that sequence Kamal
+# runs a "hook" — an executable script in this .kamal/hooks/ directory
+# named after the stage it belongs to — if one exists.
+#
+# This file is the "pre-connect" hook. Kamal runs it once, on your own
+# machine, before it opens SSH connections to every target server in
+# parallel. This particular sample does real work: it "warms" DNS by
+# resolving every target host's address ahead of time, so that when Kamal
+# actually opens all those SSH connections at once, none of them are
+# slowed down waiting on a fresh DNS lookup.
+#
+# The ".sample" suffix means Kamal will NOT run this file as-is. Kamal
+# only runs a hook when a file with the exact stage name exists (here,
+# "pre-connect", with no ".sample") and is executable. To activate it for
+# real, copy it to "pre-connect" (drop ".sample"), edit as desired, and
+# make it executable.
 
+# A plain comment describing the file's purpose — Ruby also uses `#` for
+# comments, exactly like shell; everything from `#` to the end of the line
+# is ignored when the program runs.
 # A sample pre-connect check
 #
+# Blank comment line for visual spacing.
+#
+# Explains in plain English what this script does before diving into
+# code.
 # Warms DNS before connecting to hosts in parallel
 #
+# Blank comment line for visual spacing.
+#
+# Introduces the list of environment variables Kamal makes available to
+# this hook. "(if set)" entries only appear when the corresponding Kamal
+# feature is configured for this deploy.
 # These environment variables are available:
-# KAMAL_RECORDED_AT
-# KAMAL_PERFORMER
-# KAMAL_VERSION
-# KAMAL_HOSTS
-# KAMAL_ROLES (if set)
-# KAMAL_DESTINATION (if set)
-# KAMAL_RUNTIME
+# KAMAL_RECORDED_AT — timestamp string for when this deploy was recorded/started.
+# KAMAL_PERFORMER — the name/identity of whoever (or whatever CI system) triggered the deploy.
+# KAMAL_VERSION — the version identifier (normally a git commit SHA) being deployed.
+# KAMAL_HOSTS — comma-separated list of server addresses/hostnames targeted by this deploy.
+# KAMAL_ROLES (if set) — comma-separated list of Kamal "roles" (e.g. web, worker) involved, only present if roles are configured.
+# KAMAL_DESTINATION (if set) — the named deploy destination/environment (e.g. "production", "staging"), only present if destinations are configured.
+# KAMAL_RUNTIME — how long the deploy took to run, in seconds (not actually used below, since this hook runs before the deploy's runtime is known).
 
+# Blank line — no effect on execution; separates the comment header above
+# from the executable Ruby code below.
+
+# `ENV["KAMAL_HOSTS"]` looks up the KAMAL_HOSTS environment variable —
+# `ENV` is a special Ruby object that behaves like a hash (key/value
+# lookup table) of the process's environment variables, and `["..."]`
+# indexes into it by name. That gives back one string like
+# "1.2.3.4,5.6.7.8". `.split(",")` then breaks that string apart wherever
+# a comma appears, returning an array (an ordered list) of individual
+# host strings, e.g. ["1.2.3.4", "5.6.7.8"]. The result is stored in the
+# local variable `hosts`.
 hosts = ENV["KAMAL_HOSTS"].split(",")
+# Declares a local variable `results` and sets it to `nil` (Ruby's "no
+# value" placeholder) for now — it will be assigned the real list of
+# results a few lines down, once the DNS-warming work below has run. It's
+# declared here so it's still accessible after the `Benchmark.realtime do
+# ... end` block finishes (variables assigned only inside that block
+# wouldn't otherwise be visible outside it if this line didn't exist).
 results = nil
+# Sets a local variable `max` to the integer 3 — this is the maximum
+# number of DNS lookup attempts allowed per host before giving up on it.
 max = 3
 
+# Blank line — no effect on execution; visual spacing.
+
+# `Benchmark` is a Ruby standard-library module for timing code.
+# `Benchmark.realtime do ... end` runs the block of code between `do` and
+# the matching `end`, measures how many real-world (wall-clock) seconds it
+# took, and returns that number — which is assigned here to the local
+# variable `elapsed`. (Note: this relies on Ruby's `benchmark` standard
+# library already being loaded — see the flagged note at the end of this
+# review, since this file never explicitly `require`s it.)
 elapsed = Benchmark.realtime do
+  # `hosts.map do |host| ... end.map(&:value)` runs two `map` calls back
+  # to back. `.map` on an array runs the block once per element and
+  # collects the block's return values into a NEW array (the original
+  # `hosts` array is left unchanged). The inner block variable `host`
+  # holds one hostname string per iteration.
   results = hosts.map do |host|
+    # `Thread.new do ... end` starts a new operating-system-level thread —
+    # a separate, concurrently-running line of execution — and immediately
+    # continues on to the next loop iteration without waiting for this
+    # thread to finish. This is what lets all hosts get DNS-resolved in
+    # parallel instead of one at a time. The block passed to `Thread.new`
+    # is the code that thread will run.
     Thread.new do
+      # A local variable, scoped to this thread, tracking how many DNS
+      # lookup attempts have been made for this particular host so far.
+      # Starts at 1 because the first attempt is about to happen below.
       tries = 1
 
+      # Blank line — no effect on execution; visual spacing.
+
+      # `begin ... rescue ... end` is Ruby's exception-handling construct:
+      # code in the `begin` block runs normally; if it raises an
+      # exception matching the type(s) named after `rescue`, control jumps
+      # to that `rescue` block instead of crashing the whole program.
       begin
+        # Performs the actual DNS lookup for `host`. `Socket` is Ruby's
+        # standard-library networking class; `.getaddrinfo` asks the
+        # operating system to resolve `host` into its underlying network
+        # address(es) — mirroring what a real network connection attempt
+        # would do, which is the whole point of "warming" DNS ahead of
+        # time. The `0` is a placeholder port number (irrelevant here
+        # since we only care about the lookup, not connecting).
+        # `Socket::AF_UNSPEC` means "don't restrict to IPv4 or IPv6,
+        # accept either"; `Socket::SOCK_STREAM` requests TCP-style address
+        # info; the `nil` is an unused protocol argument; and
+        # `Socket::AI_CANONNAME` asks the OS to also resolve the host's
+        # canonical (official) name as part of the result.
         Socket.getaddrinfo(host, 0, Socket::AF_UNSPEC, Socket::SOCK_STREAM, nil, Socket::AI_CANONNAME)
+      # Catches specifically a `SocketError` — the exception type Ruby
+      # raises when a DNS lookup or other socket operation fails (e.g. the
+      # hostname doesn't resolve, or there's a network hiccup).
       rescue SocketError
+        # Checks whether we've used fewer than `max` (3) attempts so far
+        # for this host — i.e. is there still a retry available?
         if tries < max
+          # Prints a message to standard output noting that this
+          # particular host's lookup is being retried. `#{host}` is Ruby's
+          # string interpolation syntax inside a double-quoted string: it
+          # evaluates the `host` variable and inserts its value as text.
           puts "Retrying DNS warmup: #{host}"
+          # Increments the local `tries` counter by 1 before retrying.
           tries += 1
+          # Pauses this thread for a random fraction of a second (`rand`
+          # with no arguments returns a random float between 0 and 1) —
+          # a small randomized delay ("jitter") so multiple failing
+          # threads don't all immediately retry at the exact same instant.
           sleep rand
+          # `retry` jumps back to the start of the enclosing `begin` block
+          # above, re-running the `Socket.getaddrinfo` call — this is how
+          # the loop-like retry behavior happens, without an explicit
+          # loop keyword.
           retry
         else
+          # Reached only once `tries` is no longer less than `max` — i.e.
+          # all retry attempts have been exhausted for this host.
+          # Prints a failure message to standard output for this host.
           puts "DNS warmup failed: #{host}"
+          # This is the LAST expression evaluated in this `else` branch,
+          # so it becomes this branch's implicit return value — but see
+          # the flagged note at the end of this review: it evaluates to
+          # `host` (a string), not `tries` (a number), which is
+          # inconsistent with the successful path below and with how the
+          # result is used afterward.
           host
         end
+      # Closes the `begin`/`rescue` exception-handling block opened above.
       end
 
+      # Blank line — no effect on execution; visual spacing.
+
+      # This is the LAST expression evaluated in the `Thread.new do ...
+      # end` block (when the `begin` block succeeds without hitting the
+      # `else` branch above), so it becomes the thread's return value —
+      # the current attempt count for this host.
       tries
+    # Closes the `Thread.new do ... end` block opened above.
     end
+  # Closes the `hosts.map do |host| ... end` block opened above; `.map`
+  # here collects one Thread object per host into an array.
   end.map(&:value)
+  # `.map(&:value)` runs a second `.map` pass, this time over the array of
+  # Thread objects just created. `&:value` is shorthand for a block that
+  # calls `.value` on each element; `Thread#value` blocks (waits) until
+  # that specific thread finishes running, then returns whatever the
+  # thread's block evaluated to (the `tries` — or occasionally `host` —
+  # value from above). So this line waits for every DNS lookup thread to
+  # finish and collects all their results into the final `results` array.
+# Closes the `Benchmark.realtime do ... end` block opened above.
 end
 
+# Blank line — no effect on execution; visual spacing.
+
+# `results.sum` adds up every element of the `results` array. Since most
+# elements are expected to be the integer `tries` count (see the flagged
+# note above about the `else` branch sometimes returning a string
+# instead), this line assumes all elements are numbers. `hosts.size`
+# returns how many hosts there were in total. Subtracting gives the total
+# number of EXTRA attempts made beyond one-per-host — i.e. the total
+# retry count across all hosts — stored in `retries`.
 retries = results.sum - hosts.size
+# `results.count { |r| r == max }` runs the block once per element of
+# `results`, keeping only elements equal to `max` (3), and returns how
+# many there were. Since a host only reaches `tries == max` by exhausting
+# every retry (the failure path), this counts how many hosts fully failed
+# DNS warmup. Stored in `nopes`.
 nopes = results.count { |r| r == max }
 
+# Blank line — no effect on execution; visual spacing before the final
+# output.
+
+# `puts` prints text followed by a newline. The `%` operator here is
+# Ruby's `String#%` "format" method: the string before `%` contains
+# placeholders (`%d` for an integer, `%.2f` for a floating-point number
+# shown with 2 decimal places), and the array after `%` supplies the
+# values to fill those placeholders in, in order: `hosts.size` (total host
+# count), `elapsed` (seconds taken, from the Benchmark block above),
+# `retries`, and `nopes` (computed just above). This prints a one-line
+# summary like:
+# "Prewarmed 2 DNS lookups in 0.15 sec: 1 retries, 0 failures"
 puts "Prewarmed %d DNS lookups in %.2f sec: %d retries, %d failures" % [ hosts.size, elapsed, retries, nopes ]
