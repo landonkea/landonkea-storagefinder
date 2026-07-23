@@ -8,30 +8,76 @@
     5. Price trend chart
     6. Crawl history
 ============================================================================= %>
+<%# This whole file is rendered by DashboardController#index (see
+    app/controllers/dashboard_controller.rb) — it's the page shown at the
+    site's root URL. That controller action sets a whole batch of instance
+    variables (@latest_crawl, @crawl_running, @running_crawl, @units,
+    @available_companies, etc.) BEFORE this template runs, and everything
+    below reads from those. Being a controller-set instance variable (name
+    starts with @) is exactly what makes a Ruby value visible inside a view
+    template like this one — plain local variables in the controller are
+    NOT visible here. This is the largest, most complex view in the app, so
+    it's broken into clearly labeled numbered sections (see the big banner
+    comments like this one) to make it easier to navigate. %>
 
 <%# =========================================================================
   1. PAGE HEADER + CRAWL CONTROLS
 ========================================================================= %>
+<%# "flex items-start justify-between" lays the title block (left) and the
+    export buttons (right) out horizontally, aligned to the TOP
+    (items-start, since the left side has two lines of text of different
+    heights) with maximum space pushed between them; "mb-6" adds margin
+    below the whole header row. %>
 <div class="flex items-start justify-between mb-6">
   <div>
+    <%# "text-2xl font-bold text-emerald-400" is a large, bold heading in
+        this app's green accent color. %>
     <h1 class="text-2xl font-bold text-emerald-400">Storage Price Dashboard</h1>
+    <%# "text-sm text-gray-400 mt-1" is small, muted subtitle text. %>
     <p class="text-sm text-gray-400 mt-1">
+      <%# `@latest_crawl` is nil until at least one crawl has ever
+          completed — this `<% if % >` decides between showing a summary of
+          the most recent crawl or a "nothing yet" prompt. %>
       <% if @latest_crawl %>
+        <%# Prints the searched city and when that crawl finished.
+            `&.strftime(...)` uses Ruby's "safe navigation operator" (`&.`)
+            — it calls `.strftime` only if `completed_at` is NOT nil,
+            otherwise the whole expression just evaluates to nil (printing
+            nothing) instead of raising a NoMethodError crash. This guards
+            against a crawl that's technically the "latest" but hasn't
+            actually finished setting its completed_at timestamp yet. %>
         Last crawl: <%= @latest_crawl.search_city %> — <%= @latest_crawl.completed_at&.strftime("%b %d at %I:%M %p") %>
+        <%# "&nbsp;·&nbsp;" is two HTML non-breaking-space entities
+            (spaces the browser will never line-wrap on) surrounding a
+            literal middle-dot character, rendering as a visually separated
+            bullet point between the two pieces of summary text. %>
         &nbsp;·&nbsp; <%= @latest_crawl.units_found %> units found
       <% else %>
         No crawl data yet — run a crawl below to get started
       <% end %>
+      <%# Closes the `if @latest_crawl` check above. %>
     </p>
   </div>
 
   <%# Export buttons — only shown when there's data %>
+  <%# Same `@latest_crawl` presence check as above — no point offering CSV/
+      Excel export buttons when there's nothing to export yet. %>
   <% if @latest_crawl %>
+    <%# "flex gap-2" lays the two export links out horizontally with a
+        small gap between them. %>
     <div class="flex gap-2">
+      <%# `link_to "↓ CSV", exports_csv_path, ...` generates a plain `<a
+          href="...">` link. `exports_csv_path` is a Rails URL helper
+          (defined via config/routes.rb) pointing at a controller action
+          that streams back a CSV file download of the current results.
+          "btn-secondary text-sm" is this app's lower-emphasis button
+          style, sized small. %>
       <%= link_to "↓ CSV", exports_csv_path, class: "btn-secondary text-sm" %>
+      <%# Same idea, pointing at an Excel-format export endpoint instead. %>
       <%= link_to "↓ Excel", exports_excel_path, class: "btn-secondary text-sm" %>
     </div>
   <% end %>
+  <%# Closes the `if @latest_crawl` check for the export buttons. %>
 </div>
 
 <%# =========================================================================
@@ -39,22 +85,58 @@
   Shows the search form if no crawl is running.
   Shows a live progress feed if a crawl is running.
 ========================================================================= %>
+<%# "card" is this app's boxed/panel CSS styling; "mb-6" adds margin below
+    it, separating this whole panel from the filter bar/results further
+    down the page. %>
 <div class="card mb-6">
 
   <%# --- CRAWL IS RUNNING — show progress feed --- %>
+  <%# `@crawl_running` is a boolean set by the controller (true if any
+      crawl is currently mid-run); `@running_crawl` is the actual record
+      for that in-progress crawl, or nil if none. `&&` requires BOTH to be
+      true/present before showing the live progress panel — this defends
+      against a rare edge case where `@crawl_running` is true but the
+      specific record failed to load for some reason. %>
   <% if @crawl_running && @running_crawl %>
+    <%# This whole `<div id="crawl-running-panel">` block is what shows
+        instead of the search form while a crawl is actively in progress. %>
     <div id="crawl-running-panel">
+      <%# "flex items-center justify-between mb-4" lays the status
+          indicator (left) and the Cancel button (right) out horizontally,
+          vertically centered, with space pushed between them. %>
       <div class="flex items-center justify-between mb-4">
+        <%# "flex items-center gap-3" lays the pulsing dot, "Crawl in
+            progress..." text, and city/radius text out horizontally,
+            vertically centered, with spacing between each. %>
         <div class="flex items-center gap-3">
           <%# Spinning indicator so user knows something is happening %>
+          <%# "w-3 h-3" sizes this <div> to a tiny 0.75rem square; "rounded-full"
+              makes it a circle; "bg-emerald-400" colors it green;
+              "animate-pulse" is a built-in Tailwind animation that fades
+              the element's opacity in and out repeatedly, giving a
+              "something is actively happening" pulsing effect — pure CSS,
+              no JavaScript involved. %>
           <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+          <%# "font-semibold text-emerald-400" is bold, green status text. %>
           <span class="font-semibold text-emerald-400">Crawl in progress...</span>
           <span class="text-sm text-gray-400">
+            <%# Prints the city/ZIP and radius this in-progress crawl is
+                searching, read from the running crawl's own record. %>
             <%= @running_crawl.search_city %> — <%= @running_crawl.search_radius_miles %> miles
           </span>
         </div>
 
         <%# Cancel button %>
+        <%# `button_to` generates a small standalone `<form>` that submits
+            an HTTP DELETE request when clicked (deleting/canceling must be
+            a real form submission, not a plain link, per web/Rails
+            convention). `crawl_path(@running_crawl)` builds the URL for
+            this specific crawl record (e.g. "/crawls/12"). "btn-danger
+            text-xs" is this app's red/destructive button style, sized
+            small. `data: { confirm: "..." }` is meant to pop a
+            confirmation dialog before canceling — see the flagged note at
+            the end of this pass regarding this attribute versus Turbo's
+            `turbo_confirm`. %>
         <%= button_to "Cancel Crawl",
               crawl_path(@running_crawl),
               method: :delete,
@@ -63,15 +145,40 @@
       </div>
 
       <%# Live log feed — new messages appear here via ActionCable %>
+      <%# This <div> starts out with just a placeholder message; the
+          JavaScript near the bottom of this file replaces its contents
+          with real-time log lines pushed from the server over a WebSocket
+          connection (see the ActionCable section further down). %>
       <div id="crawl-log-feed"
            class="bg-gray-950 rounded border border-gray-800 p-3 h-48 overflow-y-auto font-mono text-xs"
            data-crawl-id="<%= @running_crawl.id %>">
+        <%# "bg-gray-950" near-black background (terminal-style look);
+            "rounded border border-gray-800" bordered box; "p-3" padding;
+            "h-48" fixes this box's height so it doesn't grow unbounded as
+            log lines get added; "overflow-y-auto" adds a vertical
+            scrollbar once content exceeds that fixed height; "font-mono
+            text-xs" small monospaced text, typical for log output.
+            `data-crawl-id="<%= @running_crawl.id % >"` stores this crawl's
+            database id directly on the HTML element as a custom "data-*"
+            attribute — the JavaScript below reads it via
+            `@running_crawl.id` printed straight into the page (see the
+            `<script>` block near the bottom, which uses the SAME id
+            printed a second time as a JS variable). %>
         <div class="text-gray-500">Connecting to live feed...</div>
       </div>
 
       <%# Running stats counters %>
+      <%# "flex gap-6 mt-3 text-sm" lays the three stat groups out
+          horizontally with generous spacing, small text, and margin above
+          separating them from the log feed box. %>
       <div class="flex gap-6 mt-3 text-sm">
         <span class="text-gray-400">
+          <%# The inner `<span id="live-facilities">` starts out holding
+              the count as of when the PAGE was rendered; the JavaScript
+              below updates this element's text live as new counts arrive
+              over the WebSocket, without needing to reload the page.
+              "text-white font-semibold" makes the number itself stand out
+              against the muted "Facilities found:" label around it. %>
           Facilities found: <span id="live-facilities" class="text-white font-semibold">
             <%= @running_crawl.facilities_found %>
           </span>
@@ -83,6 +190,14 @@
         </span>
         <span class="text-gray-400">
           Companies done: <span id="live-companies" class="text-white font-semibold">
+            <%# `@running_crawl.companies_included` is presumably an array
+                column (which company names were selected to be crawled);
+                `&.length` safely gets its size only if it's not nil
+                (guarding against a crawl started before this feature
+                existed, for instance); `|| "?"` falls back to a literal
+                question mark if that length can't be determined at all,
+                so the counter still shows SOMETHING rather than breaking
+                or showing a blank. %>
             <%= @running_crawl.companies_crawled %>/<%= @running_crawl.companies_included&.length || "?" %>
           </span>
         </span>
@@ -91,15 +206,48 @@
 
   <%# --- NO CRAWL RUNNING — show the search form --- %>
   <% else %>
+    <%# Everything from here down (inside this `else` branch) only renders
+        when NO crawl is currently running — this is the normal "start a
+        new search" form. %>
     <div id="crawl-form-panel">
+      <%# "text-sm font-semibold text-gray-300 mb-4 uppercase tracking-wider"
+          is a small, bold, all-caps section heading with letter spacing. %>
       <h2 class="text-sm font-semibold text-gray-300 mb-4 uppercase tracking-wider">Run a New Crawl</h2>
 
+      <%# `form_with url: crawls_path, method: :post, ...` generates a
+          `<form>` submitting a POST request to `crawls_path` (the URL for
+          creating a new crawl run, from config/routes.rb) — unlike the
+          alert rule form elsewhere in this app, this one uses `url:`
+          instead of `model:` because it's not directly editing one
+          ActiveRecord object's attributes, just submitting free-form
+          search parameters. `data: { controller: "crawl-form" }` attaches
+          this app's "crawl-form" Stimulus JS controller (defined in
+          app/javascript/controllers/) to this `<form>` element, powering
+          the "Toggle all" companies button seen further below. `do |f|
+          ... end` is a Ruby block; `f` is the form builder object used to
+          generate the individual fields inside. %>
       <%= form_with url: crawls_path, method: :post, data: { controller: "crawl-form" } do |f| %>
 
         <%# Row 1: City + Radius %>
+        <%# "flex gap-3 mb-4" lays the city field and radius field out
+            horizontally with spacing between them and margin below the
+            row. %>
         <div class="flex gap-3 mb-4">
+          <%# "flex-1" makes this field grow to fill the available space,
+              leaving the fixed-width radius field beside it its own room. %>
           <div class="flex-1">
             <label class="form-label">Search City or ZIP Code</label>
+            <%# `f.text_field :search_city, ...` generates a text `<input>`
+                named "search_city" (read by the controller as
+                `params[:search_city]`, since this form has no `model:` to
+                auto-namespace the field name under). `required: true`
+                adds the HTML `required` attribute, making the browser
+                block form submission until this field has some text in
+                it. `value: @latest_crawl&.search_city` pre-fills the box
+                with whatever city was searched last time (using `&.` safe
+                navigation again, since `@latest_crawl` may be nil if no
+                crawl has ever run) — a convenience so the user doesn't
+                have to retype the same city every time. %>
             <%= f.text_field :search_city,
                   placeholder: "e.g. Gilbert, AZ  or  85296",
                   class:       "form-input",
@@ -107,8 +255,21 @@
                   value:       @latest_crawl&.search_city %>
           </div>
 
+          <%# "w-36" fixes this field's width to a small, constant size
+              (unlike "flex-1" on the city field above), appropriate for a
+              short number input. %>
           <div class="w-36">
             <label class="form-label">Radius (miles)</label>
+            <%# `f.number_field :radius_miles, ...` generates a numeric
+                `<input type="number">`. `value:` uses `||` ("or") rather
+                than `&.` here: `@latest_crawl&.search_radius_miles ||
+                100` reads the previous crawl's radius if there IS a
+                previous crawl AND it has a radius set, otherwise falls
+                back to the literal default `100`. `min: 1, max: 500`
+                add HTML attributes constraining the browser's built-in
+                numeric input UI (e.g. its up/down arrows) to that range —
+                though a user could still type an out-of-range number
+                directly unless the server also validates it. %>
             <%= f.number_field :radius_miles,
                   value: (@latest_crawl&.search_radius_miles || 100),
                   min:   1,
@@ -118,38 +279,104 @@
         </div>
 
         <%# Row 2: Company checkboxes %>
+        <%# "mb-4" adds margin below this whole row, separating it from
+            the size/filter row underneath. %>
         <div class="mb-4">
           <label class="form-label">Companies to crawl</label>
+          <%# "flex flex-wrap gap-2 mt-1" lays the toggle button and every
+              company checkbox out horizontally, wrapping onto additional
+              lines as needed, with small gaps and a little top margin
+              below the label. %>
           <div class="flex flex-wrap gap-2 mt-1">
             <%# "Select all" / "Deselect all" toggle %>
+            <%# A plain HTML `<button type="button">` (NOT `type="submit"`,
+                so clicking it does NOT submit the form) used purely to
+                trigger JavaScript. `data-action="click->crawl-form#toggleAllCompanies"`
+                is Stimulus's action-wiring syntax: "on a 'click' DOM event,
+                call the `toggleAllCompanies` method on the 'crawl-form'
+                controller" (the same Stimulus controller attached to the
+                surrounding `<form>` above) — presumably that JS method
+                checks/unchecks every company checkbox below at once. %>
             <button type="button"
                     class="text-xs text-emerald-400 hover:text-emerald-300 underline mr-2"
                     data-action="click->crawl-form#toggleAllCompanies">
               Toggle all
             </button>
 
+            <%# `@available_companies` is an array of company name strings
+                set by the controller (e.g. from a registry of known
+                storage companies this app knows how to crawl).
+                `.each do |company| ... end` loops over that array, running
+                this block once per name with `company` bound to the
+                current one, generating one checkbox per company. %>
             <% @available_companies.each do |company| %>
+              <%# Wrapping the checkbox and its text in one `<label>` makes
+                  the whole pill clickable, not just the tiny checkbox
+                  square — plain HTML/browser behavior. "flex items-center
+                  gap-1.5 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded
+                  text-xs cursor-pointer transition-colors" styles it as a
+                  small rounded "pill" button that darkens/lightens
+                  slightly on hover (transition-colors makes that color
+                  change animate smoothly instead of snapping instantly). %>
               <label class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-xs cursor-pointer transition-colors">
+                <%# This is a PLAIN HTML checkbox, not a Rails form-builder
+                    helper like `f.check_box` — that's fine since this form
+                    has no single backing model object per checkbox anyway.
+                    `name="companies[]"` — the trailing `[]` means "this
+                    value is part of an array of values sharing this name";
+                    every CHECKED box among all these company checkboxes
+                    gets submitted together as one `companies` array param
+                    (e.g. companies: ["Public Storage", "U-Haul"]),
+                    unchecked ones simply aren't included at all.
+                    `value="<%= company % >"` sets which company name this
+                    particular checkbox represents. The bare word `checked`
+                    (no value, just its presence) is a plain HTML boolean
+                    attribute that starts every company pre-selected by
+                    default. "accent-emerald-500" recolors the checkbox's
+                    own check mark/fill to this app's green accent. %>
                 <input type="checkbox"
                        name="companies[]"
                        value="<%= company %>"
                        checked
                        class="accent-emerald-500">
+                <%# Prints the company's name as this checkbox's visible
+                    label text. %>
                 <%= company %>
               </label>
             <% end %>
+            <%# Closes the `@available_companies.each do |company|` loop
+                opened above. %>
           </div>
         </div>
 
         <%# Row 3: Size + filter options %>
+        <%# "flex flex-wrap gap-6 mb-4" lays the "Unit Sizes" group and the
+            "Filters" group side by side, wrapping onto a new line if the
+            screen is too narrow, with generous spacing and margin below. %>
         <div class="flex flex-wrap gap-6 mb-4">
 
           <%# Unit size checkboxes %>
           <div>
             <label class="form-label">Unit Sizes</label>
+            <%# Same "flex flex-wrap gap-2 mt-1" layout pattern as the
+                company checkboxes above. %>
             <div class="flex flex-wrap gap-2 mt-1">
+              <%# `Unit::DEFAULT_SIZES` is a constant defined on the Unit
+                  model (the `::` syntax accesses a constant nested inside
+                  the `Unit` class/module) — presumably an array of size
+                  strings like "5x5", "10x10", etc. that this app crawls
+                  for by default. `.each do |size| ... end` loops over that
+                  array the same way the companies loop above does. %>
               <% Unit::DEFAULT_SIZES.each do |size| %>
+                <%# Same "pill" checkbox pattern as the company checkboxes,
+                    but without the hover-color-change classes this time —
+                    just "bg-gray-800 px-2 py-1 rounded text-xs cursor-pointer". %>
                 <label class="flex items-center gap-1.5 bg-gray-800 px-2 py-1 rounded text-xs cursor-pointer">
+                  <%# Same `name="sizes[]"` array-submission pattern as the
+                      companies checkboxes — all checked sizes get
+                      submitted together as one `sizes` array param.
+                      Pre-checked by default via the bare `checked`
+                      attribute. %>
                   <input type="checkbox"
                          name="sizes[]"
                          value="<%= size %>"
@@ -158,6 +385,7 @@
                   <%= size %>
                 </label>
               <% end %>
+              <%# Closes the `Unit::DEFAULT_SIZES.each do |size|` loop. %>
             </div>
           </div>
 
@@ -165,7 +393,24 @@
           <div>
             <label class="form-label">Filters</label>
             <div class="mt-1">
+              <%# "flex items-center gap-2 text-sm cursor-pointer" lays this
+                  single checkbox and its label text horizontally,
+                  vertically centered, with a small gap, small text size,
+                  and a pointer cursor on hover signaling it's clickable. %>
               <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <%# A single plain checkbox (no `[]` array syntax this time
+                    — this is exactly one on/off toggle, not a list of
+                    options) submitted under the name "climate_only", read
+                    by the controller as `params[:climate_only]`.
+                    Pre-checked by default (`checked`) so climate-controlled
+                    filtering is on unless the user explicitly unchecks it.
+                    Note the checkbox's `value="true"` is only submitted at
+                    all if the box stays checked — an UNCHECKED checkbox
+                    sends nothing for this field, which is why the
+                    controller's filter logic (see
+                    app/controllers/dashboard_controller.rb) checks `!=
+                    "false"` rather than `== "true"`, treating "missing" the
+                    same as "still checked/default." %>
                 <input type="checkbox"
                        name="climate_only"
                        value="true"
@@ -178,160 +423,392 @@
         </div>
 
         <%# Submit button %>
+        <%# A plain HTML `<button type="submit">` (not a Rails helper) —
+            clicking it submits this entire `form_with` form as a POST
+            request to `crawls_path`, kicking off a new crawl. The 🔍
+            magnifying-glass emoji is just decorative static text. %>
         <button type="submit" class="btn-primary">
           🔍 Run Crawl
         </button>
 
+        <%# "text-xs text-gray-500 ml-3" is small, dim helper text with a
+            left margin separating it from the button beside it — purely
+            informational, not interactive. %>
         <span class="text-xs text-gray-500 ml-3">
           Results appear live below as each company is crawled
         </span>
 
+      <%# Closes the `form_with url: crawls_path, ... do |f|` block opened
+          above — this is where Rails emits the closing `</form>` tag. %>
       <% end %>
     </div>
+  <%# Closes the `if @crawl_running && @running_crawl / else` branch opened
+      near the top of this section — everything above this line but below
+      that `if` belongs to one branch or the other. %>
   <% end %>
 </div>
 
 <%# =========================================================================
   3. FILTER BAR (for the results table — separate from crawl options)
 ========================================================================= %>
+<%# Only shown once there's an actual completed crawl AND it produced at
+    least one matching unit — no point offering to filter/sort an empty or
+    nonexistent table. `@units` is the ActiveRecord relation (essentially a
+    not-yet-fully-loaded list of database rows) built by the controller's
+    `build_results_query` method; `.any?` triggers the actual database
+    query and is true if it returns at least one row. %>
 <% if @latest_crawl && @units.any? %>
+  <%# "card mb-4" is this app's boxed styling with margin below it. %>
   <div class="card mb-4">
+    <%# "flex flex-wrap items-center gap-4 text-sm" lays the filter label,
+        sort dropdown, and result count out horizontally (wrapping if
+        needed), vertically centered, with spacing, small text. %>
     <div class="flex flex-wrap items-center gap-4 text-sm">
+      <%# "text-gray-400 font-semibold" is muted, bold label text. %>
       <span class="text-gray-400 font-semibold">Filter results:</span>
 
       <%# Sort selector %>
+      <%# "flex items-center gap-2" lays the "Sort by:" label and the
+          dropdown horizontally, vertically centered, with a small gap. %>
       <div class="flex items-center gap-2">
         <label class="text-gray-400">Sort by:</label>
+        <%# This is a PLAIN HTML `<select>` (not a Rails form helper),
+            since it's not part of any form submission — it drives sorting
+            entirely via JavaScript instead. `id="sort-select"` names it
+            for the JS below to reference if needed. "form-select-sm" is
+            this app's custom small-select-box CSS styling.
+            `onchange="updateSort(this.value)"` is a plain inline HTML
+            event-handler attribute (old-school, not Stimulus this time):
+            whenever the user picks a different `<option>`, the browser
+            calls the global JavaScript function `updateSort`, passing it
+            `this.value` (the newly selected option's `value` attribute).
+            `updateSort` is defined in app/javascript/application.js — it
+            reloads the page with new `sort`/`dir` URL query parameters,
+            which the controller reads back out to reorder `@units`. %>
         <select id="sort-select" class="form-select-sm"
                 onchange="updateSort(this.value)">
+          <%# Each `<option>` combines a `value` (what gets passed to
+              `updateSort`, split on "|" into a column name and direction
+              inside that JS function) with visible label text. The
+              `selected` HTML attribute marks whichever option matches the
+              CURRENTLY active sort, so reloading the page after sorting
+              shows the dropdown reflecting the sort that's actually
+              applied. Each `<%= "selected" if ... % >` is a Ruby
+              expression: `"selected" if condition` evaluates to the string
+              "selected" when the condition is true, or to `nil` (which
+              ERB prints as nothing at all) when false — so the `selected`
+              attribute only appears in the HTML on the one matching
+              option. `@sort_by` and `@sort_dir` are set by the controller
+              from the `sort`/`dir` URL query params (defaulting to
+              "monthly_price"/"asc" if absent). %>
           <option value="monthly_price|asc"  <%= "selected" if @sort_by == "monthly_price" && @sort_dir == "asc" %>>Price ↑</option>
           <option value="monthly_price|desc" <%= "selected" if @sort_by == "monthly_price" && @sort_dir == "desc" %>>Price ↓</option>
+          <%# These two options don't check `@sort_dir` at all — only
+              `@sort_by` — since "Largest first" and "Nearest first" each
+              imply just one direction is meaningful for that sort, unlike
+              price which makes sense sorted either way. %>
           <option value="sqft|desc"          <%= "selected" if @sort_by == "sqft" %>>Largest first</option>
           <option value="facilities.distance_miles|asc" <%= "selected" if @sort_by == "facilities.distance_miles" %>>Nearest first</option>
         </select>
       </div>
 
       <%# Result count %>
+      <%# "ml-auto" (inside "text-gray-500 ml-auto") is a flexbox trick:
+          setting the LEFT margin to "auto" inside a flex row pushes this
+          element (and everything after it, though nothing else follows
+          here) as far right as possible, separating it visually from the
+          filter controls on the left even though they're all one flex
+          row. %>
       <span class="text-gray-500 ml-auto">
+        <%# `id="result-count"` names this specific number for JavaScript
+            to potentially update without a full page reload (e.g. if
+            filters are applied client-side); its initial value comes from
+            `@units.count`, a database COUNT query run fresh on every full
+            page load. %>
         <span id="result-count"><%= @units.count %></span> units shown
       </span>
     </div>
   </div>
 <% end %>
+<%# Closes the `if @latest_crawl && @units.any?` check opened above. %>
 
 <%# =========================================================================
   4. RESULTS TABLE
 ========================================================================= %>
+<%# "card mb-6" boxed styling with margin below; `id="results-container"`
+    names this whole block, presumably so JavaScript elsewhere could target
+    it (e.g. to swap its contents after an AJAX filter change) even though
+    no such script appears directly in this file. %>
 <div class="card mb-6" id="results-container">
+  <%# `@latest_crawl.nil?` is true only if NO crawl has EVER completed —
+      the very first-ever visit to this dashboard, before any search has
+      been run. This is the outermost of a three-way branch (nil crawl / no
+      matches / has results) handled below with `if / elsif / else`. %>
   <% if @latest_crawl.nil? %>
     <%# No data yet %>
+    <%# "text-center py-16 text-gray-500" centers this whole empty-state
+        message with generous vertical padding, in muted gray text. %>
     <div class="text-center py-16 text-gray-500">
+      <%# "text-5xl mb-4" makes the emoji very large, with margin below it. %>
       <div class="text-5xl mb-4">🏪</div>
       <p class="text-lg font-semibold text-gray-400">No data yet</p>
       <p class="text-sm mt-2">Enter a city above and click "Run Crawl" to get started</p>
     </div>
 
+  <%# `elsif` ("else if") only gets checked/evaluated if the FIRST `if`
+      above was false — i.e. a crawl DOES exist, but its results, after
+      whatever filters are currently applied, came back empty. %>
   <% elsif @units.empty? %>
     <%# Data exists but no matches with current filters %>
+    <%# Same centered-message pattern as the "no data yet" case above, but
+        with less vertical padding (py-12 vs py-16) and different wording,
+        since this case is a filter mismatch rather than a totally blank
+        slate. %>
     <div class="text-center py-12 text-gray-500">
       <p class="text-lg font-semibold text-gray-400">No units match your current filters</p>
       <p class="text-sm mt-2">Try adjusting the size or company filters</p>
     </div>
 
+  <%# Final fallback branch: a crawl exists AND it has at least one
+      matching unit to display — this is the "normal," most common case. %>
   <% else %>
     <%# THE RESULTS TABLE %>
+    <%# "overflow-x-auto" adds a horizontal scrollbar around the table if
+        it's too wide for the screen (this table has many columns), rather
+        than letting it squash unreadably or break the page layout. %>
     <div class="overflow-x-auto">
+      <%# "w-full text-sm" stretches the table to fill its container with
+          small text; `id="results-table"` names it for any JS that might
+          target it. %>
       <table class="w-full text-sm" id="results-table">
         <thead>
+          <%# "border-b border-gray-800 text-gray-400 text-xs uppercase
+              tracking-wider" gives the header row a bottom border and
+              small, muted, all-caps, letter-spaced text. %>
           <tr class="border-b border-gray-800 text-gray-400 text-xs uppercase tracking-wider">
+            <%# "text-left pb-3 pr-4" left-aligns each header cell's text
+                with padding below (separating it from the border) and to
+                the right (separating it from the next column's text). %>
             <th class="text-left pb-3 pr-4">Company</th>
             <th class="text-left pb-3 pr-4">Location</th>
             <th class="text-left pb-3 pr-4">Distance</th>
             <th class="text-left pb-3 pr-4">Size</th>
+            <%# "text-right" instead of "text-left" for the two price
+                columns — right-aligning numbers/currency is a common
+                convention making it easier to visually compare a column of
+                amounts. %>
             <th class="text-right pb-3 pr-4">Monthly</th>
             <th class="text-right pb-3 pr-4">Web Special</th>
             <th class="text-left pb-3 pr-4">Features</th>
+            <%# Last column has no "pr-4" (right padding) since there's no
+                further column after it to separate from. %>
             <th class="text-left pb-3">Links</th>
           </tr>
         </thead>
         <tbody id="results-tbody">
+          <%# `@units.includes(:facility)` re-runs the units query, but this
+              time with `.includes(:facility)` added — an ActiveRecord
+              "eager loading" instruction telling Rails to fetch every
+              unit's associated Facility record in ONE extra bulk query up
+              front, instead of running a separate database query per unit
+              inside the loop below (which would otherwise happen the first
+              time `unit.facility` gets called on each pass — a classic
+              performance pitfall known as "N+1 queries"). `.each do |unit|
+              ... end` then loops over each resulting unit record. %>
           <% @units.includes(:facility).each do |unit| %>
+            <%# `f = unit.facility` is a plain Ruby local variable
+                assignment (NOT an instance variable — no `@` — so it only
+                exists for the duration of this loop iteration) that saves
+                typing `unit.facility` repeatedly for the rest of this row;
+                it's reused many times below to print the facility's
+                company name, address, phone, map link, etc. Note this `f`
+                is COMPLETELY UNRELATED to the `f` used as a form-builder
+                variable in the crawl form earlier in this same file — this
+                one's just a local variable, and Ruby scoping means each
+                `do...end` block/loop can reuse short variable names like
+                this safely without colliding. %>
             <% f = unit.facility %>
+            <%# "border-b border-gray-800/50 hover:bg-gray-800/30
+                transition-colors" gives each row a faint bottom border, a
+                subtle hover highlight, and a smooth color transition when
+                that highlight fades in/out. %>
             <tr class="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
 
               <%# Company %>
               <td class="py-3 pr-4">
+                <%# "font-semibold text-white text-xs" makes the company
+                    name (e.g. "Public Storage") stand out boldly. %>
                 <div class="font-semibold text-white text-xs"><%= f.company %></div>
+                <%# "text-gray-500 text-xs mt-0.5 truncate max-w-[140px]"
+                    shows the specific facility's own name in smaller,
+                    dimmer text below the company name; "truncate" cuts off
+                    overflowing text with an ellipsis ("…") rather than
+                    wrapping or overflowing the cell, capped at a maximum
+                    width of 140 pixels via the square-bracket
+                    "arbitrary value" syntax Tailwind supports for
+                    one-off sizes not covered by its named scale. %>
                 <div class="text-gray-500 text-xs mt-0.5 truncate max-w-[140px]"><%= f.name %></div>
               </td>
 
               <%# Location / Address %>
               <td class="py-3 pr-4">
                 <div class="text-gray-200 text-xs"><%= f.address %></div>
+                <%# Prints city, state, and zip on one line, separated by
+                    the literal static text ", " and a space between state
+                    and zip. %>
                 <div class="text-gray-500 text-xs"><%= f.city %>, <%= f.state %> <%= f.zip %></div>
+                <%# `.present?` guards against showing an empty phone line
+                    for facilities where no phone number was ever scraped. %>
                 <% if f.phone.present? %>
+                  <%# `formatted_phone` is presumably a Facility model
+                      method that formats the raw phone digits into a
+                      readable form like "(555) 123-4567". %>
                   <div class="text-gray-600 text-xs"><%= f.formatted_phone %></div>
                 <% end %>
+                <%# Closes the `if f.phone.present?` check above. %>
               </td>
 
               <%# Distance %>
+              <%# "whitespace-nowrap" prevents this cell's text from
+                  wrapping onto a second line even if the column gets
+                  narrow, keeping distance labels like "12.3 mi" on one
+                  line. %>
               <td class="py-3 pr-4 text-gray-300 text-xs whitespace-nowrap">
+                <%# `distance_label` is presumably a Facility model method
+                    formatting the raw distance into readable text. %>
                 <%= f.distance_label %>
               </td>
 
               <%# Unit Size %>
               <td class="py-3 pr-4">
                 <div class="font-semibold text-white"><%= unit.size %></div>
+                <%# `sqft_label` is presumably a Unit model method
+                    formatting the raw square-footage number into readable
+                    text (e.g. "100 sq ft"). %>
                 <div class="text-gray-500 text-xs"><%= unit.sqft_label %></div>
               </td>
 
               <%# Monthly Price — color coded %>
               <td class="py-3 pr-4 text-right">
+                <%# `unit.monthly_price` may be nil if a scraper couldn't
+                    find a price for this unit — Ruby treats nil as "falsy"
+                    in an `if`, so this branch only runs when a real price
+                    value is present. %>
                 <% if unit.monthly_price %>
+                  <%# `unit.price_color_class` is presumably a Unit model
+                      method returning a different Tailwind text-color
+                      class name depending on how the price compares to
+                      some threshold (see the color-key legend further
+                      below in this file, which explains green/yellow/red
+                      price bands). "font-bold text-base" makes the number
+                      itself large and bold regardless of which color
+                      applies. %>
                   <span class="font-bold text-base <%= unit.price_color_class %>">
+                    <%# `formatted_price` is presumably a Unit model method
+                        that formats the raw decimal price as currency text
+                        (e.g. "$89.99"). %>
                     <%= unit.formatted_price %>
                   </span>
+                  <%# "text-gray-600 text-xs" small, dim "/ mo" suffix
+                      clarifying this is a monthly, not one-time, price. %>
                   <div class="text-gray-600 text-xs">/ mo</div>
                 <% else %>
+                  <%# Fallback shown when no monthly price was found at all. %>
                   <span class="text-gray-600 text-xs">Not listed</span>
                 <% end %>
+                <%# Closes the `if unit.monthly_price` check above. %>
               </td>
 
               <%# Web Special %>
               <td class="py-3 pr-4 text-right">
+                <%# `has_web_special?` is presumably a Unit model method
+                    (Rails-style predicate naming, ending in `?`) that's
+                    true when a promotional price was found for this unit. %>
                 <% if unit.has_web_special? %>
+                  <%# "font-semibold text-emerald-400" highlights the
+                      special price in green, distinct from the regular
+                      price's color-coded styling above. %>
                   <span class="font-semibold text-emerald-400"><%= unit.formatted_web_special %></span>
+                  <%# `.present?` guards against showing an empty note line
+                      when no special-offer text was scraped alongside the
+                      special price itself. %>
                   <% if unit.web_special_note.present? %>
+                    <%# "truncate max-w-[100px]" cuts off an overly long
+                        promo note with an ellipsis at 100 pixels wide,
+                        same technique as the facility name above. %>
                     <div class="text-emerald-600 text-xs truncate max-w-[100px]"><%= unit.web_special_note %></div>
                   <% end %>
+                  <%# Closes the `if unit.web_special_note.present?` check. %>
                 <% else %>
+                  <%# "—" is a literal em-dash character shown when there's
+                      no web special at all, as a clean "nothing here" marker. %>
                   <span class="text-gray-700 text-xs">—</span>
                 <% end %>
+                <%# Closes the `if unit.has_web_special?` check above. %>
               </td>
 
               <%# Features badges %>
               <td class="py-3 pr-4">
+                <%# "flex flex-wrap gap-1" lays the feature badges out
+                    horizontally, wrapping if needed, with a small gap. %>
                 <div class="flex flex-wrap gap-1">
+                  <%# `climate_controlled?` is the auto-generated predicate
+                      method for the boolean `climate_controlled` column.
+                      "badge-blue" is this app's pill-badge style; the ❄️
+                      emoji is decorative static text reinforcing the
+                      "climate controlled" meaning visually. %>
                   <% if unit.climate_controlled? %>
                     <span class="badge-blue">❄️ Climate</span>
                   <% end %>
+                  <%# Closes the `if unit.climate_controlled?` check. %>
+                  <%# `available?` is the auto-generated predicate for the
+                      boolean `available` column — this badge always shows
+                      SOME availability status (unlike the climate badge,
+                      which only shows when true), just styled differently
+                      (green vs red) depending on which state it's in. %>
                   <% if unit.available? %>
                     <span class="badge-green">Available</span>
                   <% else %>
                     <span class="badge-red">Unavailable</span>
                   <% end %>
+                  <%# Closes the `if unit.available?` check above. %>
                 </div>
               </td>
 
               <%# Links %>
               <td class="py-3">
+                <%# "flex flex-col gap-1" stacks the Book/Map links
+                    VERTICALLY (flex-col, unlike most other flex rows in
+                    this file which are horizontal by default) with a small
+                    gap between them, since this cell is narrow and tall
+                    rather than wide. %>
                 <div class="flex flex-col gap-1">
+                  <%# `.present?` guards against showing a "Book" link when
+                      no booking URL was scraped for this unit. %>
                   <% if unit.booking_url.present? %>
+                    <%# `target: "_blank"` makes this link open in a new
+                        browser tab/window instead of navigating away from
+                        the dashboard. `rel: "noopener noreferrer"` is a
+                        security/privacy best practice paired with
+                        `target: "_blank"`: "noopener" prevents the newly
+                        opened page from being able to control/manipulate
+                        this original tab via JavaScript (a known
+                        `window.opener` attack vector), and "noreferrer"
+                        additionally stops the browser from sending this
+                        page's URL as the "referrer" to the destination
+                        site. %>
                     <%= link_to "Book →", unit.booking_url,
                           target: "_blank",
                           rel:    "noopener noreferrer",
                           class:  "text-emerald-400 hover:text-emerald-300 text-xs" %>
                   <% end %>
+                  <%# Closes the `if unit.booking_url.present?` check. This
+                      "Map →" link, by contrast, is NOT wrapped in a
+                      presence check — `f.maps_url` is presumably a
+                      Facility model method that always returns a valid
+                      Google-Maps-style URL built from the address, even if
+                      no explicit maps link was ever scraped, so it's safe
+                      to always show. %>
                   <%= link_to "Map →", f.maps_url,
                         target: "_blank",
                         rel:    "noopener noreferrer",
@@ -340,29 +817,68 @@
               </td>
 
             </tr>
+          <%# Closes the `@units.includes(:facility).each do |unit|` loop
+              opened above — everything between it and here repeats once
+              per matching unit. %>
           <% end %>
         </tbody>
       </table>
     </div>
 
     <%# Color key legend %>
+    <%# "flex gap-4 mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500"
+        lays the legend items out horizontally with spacing, a top border
+        separating it from the table above, top padding/margin, small dim
+        text. %>
     <div class="flex gap-4 mt-4 pt-4 border-t border-gray-800 text-xs text-gray-500">
       <span>Price color key:</span>
+      <%# "price-green"/"price-yellow"/"price-red" are this app's custom
+          CSS classes (matching whatever `unit.price_color_class` can
+          return above) — each "●" is a literal filled-circle character
+          used as a color swatch next to its price-range label. %>
       <span class="price-green">● Under $100</span>
       <span class="price-yellow">● $100–$149</span>
       <span class="price-red">● $150+</span>
     </div>
   <% end %>
+  <%# Closes the `if @latest_crawl.nil? / elsif @units.empty? / else`
+      three-way branch opened near the top of this section. %>
 </div>
 
 <%# =========================================================================
   5. PRICE TREND CHART
 ========================================================================= %>
+<%# `@price_history` is a Hash (a key → value lookup structure) built by
+    the controller's `build_price_history` method, mapping week-start dates
+    to average prices for that week. `.any?` is true if it has at least one
+    entry — no point drawing an empty chart otherwise. %>
 <% if @price_history.any? %>
   <div class="card mb-6">
     <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+      <%# `Setting.get("history_keep_months", default: 6)` reads a
+          configurable app setting (presumably stored in the database,
+          editable on this app's Settings page) for how many months of
+          history to keep/show, falling back to 6 if that setting was
+          never explicitly configured. %>
       Average Price Trend (last <%= Setting.get("history_keep_months", default: 6) %> months)
     </h2>
+    <%# `line_chart` is a view helper provided by the "chartkick" gem (a
+        third-party library, imported in app/javascript/application.js)
+        that turns a Ruby Hash/Array of data into a fully interactive
+        JavaScript line chart — this single Ruby method call generates all
+        the HTML/JS needed to render it, no manual chart-drawing code
+        required in this file. `@price_history` is the data to plot.
+        `prefix: "$"` and `thousands: ","` format the chart's price labels
+        as currency (e.g. "$1,234"). `colors: ["#34d399"]` sets the line's
+        color (this hex code matches this app's "emerald" green accent).
+        `library: { ... }` passes options straight through to the
+        underlying Chart.js JavaScript library chartkick builds on top of:
+        `backgroundColor: "transparent"` keeps the chart's own background
+        see-through (so this app's dark page background shows through
+        instead of a default white/light box), `borderColor: "#34d399"`
+        again sets the line color at the Chart.js level, and `pointRadius:
+        3` sets how large the dot markers are at each data point along the
+        line. %>
     <%= line_chart @price_history,
           prefix:     "$",
           thousands:  ",",
@@ -374,53 +890,128 @@
           } %>
   </div>
 <% end %>
+<%# Closes the `if @price_history.any?` check above. %>
 
 <%# =========================================================================
   6. CRAWL HISTORY
 ========================================================================= %>
+<%# `render "crawl_history"` includes the PARTIAL defined in
+    app/views/dashboard/_crawl_history.html.erb at this point in the page
+    (the leading underscore in that filename is what marks it as a
+    partial; Rails infers it automatically from this shorter call). Unlike
+    the alert rules partial elsewhere in this app, no explicit local
+    variables are passed here (no `locals_name: value` after the partial's
+    name) — that partial instead reads `@crawl_history` directly as an
+    instance variable, which works because partials rendered without an
+    explicit receiver like this still have access to the SAME instance
+    variables the calling view (this file) has, since they're set by the
+    very same controller action. %>
 <%= render "crawl_history" %>
 
 <%# =========================================================================
   JAVASCRIPT — ActionCable live progress feed
 ========================================================================= %>
+<%# This entire `<script>` block is only included in the page's HTML at all
+    when a crawl is currently running — there's no point loading/running
+    this WebSocket-connecting code on a normal page view with no live crawl
+    to watch. Re-uses the exact same `if @crawl_running && @running_crawl`
+    condition as the progress-panel section near the top of this file. %>
 <% if @crawl_running && @running_crawl %>
 <script>
 // Connect to the ActionCable channel for live crawl progress
 // This runs in the browser and receives messages pushed from the server
+// (this comment, and the ones below in this <script> block, use "//"
+// JavaScript comment syntax rather than ERB's <%# %> syntax, since this
+// is a block of literal JavaScript source code, not Ruby — everything
+// inside this <script> tag is sent to the browser as-is aside from the
+// couple of small <%= %> ERB interpolations noted below).
 
+// Runs this function once the browser has finished parsing the page's
+// HTML (but not necessarily images/stylesheets yet) — waiting for this
+// event before touching elements like #crawl-log-feed guarantees they
+// already exist in the page by the time this code tries to find them.
 document.addEventListener("DOMContentLoaded", function() {
+  <%# This is the ONE place in this <script> block where Ruby actually
+      runs: `<%= @running_crawl.id % >` prints this crawl's numeric database
+      id directly into the generated JavaScript source as a literal
+      number (e.g. "var crawlRunId = 12;"), letting the client-side script
+      know which specific crawl to subscribe to. %>
   var crawlRunId = <%= @running_crawl.id %>;
+  // Looks up the log-feed <div> defined earlier in this file by its "id"
+  // attribute, so this script can add new lines to it as they arrive.
   var logFeed    = document.getElementById("crawl-log-feed");
 
+  // If, somehow, that element isn't on the page, stop here rather than
+  // crashing on every subsequent line that assumes `logFeed` exists.
   if (!logFeed) return;
 
   // Clear the "Connecting..." placeholder
+  // Empties out the "Connecting to live feed..." placeholder text/element
+  // that was rendered server-side, making room for real log lines.
   logFeed.innerHTML = "";
 
   // Create an ActionCable subscription
   // This opens a WebSocket connection that the server can push messages to
+  // `App.cable` is the ActionCable "consumer" object set up globally in
+  // app/javascript/consumer.js (imported by application.js) — it manages
+  // the underlying WebSocket connection to the Rails server's /cable
+  // endpoint. `.subscriptions.create({...}, {...})` subscribes to one
+  // specific "channel" (a server-side ActionCable class that decides which
+  // messages this particular browser tab should receive) and registers
+  // callback functions for events on that subscription.
   var subscription = App.cable.subscriptions.create(
+    // First argument: which channel to subscribe to, and identifying
+    // parameters — "CrawlProgressChannel" must match a channel class
+    // defined on the Rails server side; "crawl_run_id: crawlRunId" tells
+    // the server which specific crawl's updates this subscription cares
+    // about (so multiple users watching different crawls each only get
+    // their own crawl's messages).
     { channel: "CrawlProgressChannel", crawl_run_id: crawlRunId },
     {
       received: function(data) {
         // Called every time the server broadcasts a message to this channel
+        // `data` is whatever JSON payload the server sent — this function
+        // branches on its "type" field to decide what kind of update it
+        // is and how to handle it.
 
         if (data.type === "log") {
           // Add a new log line to the feed
           var line      = document.createElement("div");
+          // Builds this line's CSS class based on its severity level:
+          // errors are red, warnings are yellow, anything else (e.g. plain
+          // info messages) falls back to neutral gray — a chained
+          // JavaScript ternary (`cond ? a : cond2 ? b : c`), the same
+          // "if/else if/else" pattern seen as a Ruby ternary elsewhere in
+          // this app's ERB files.
           line.className = "py-0.5 " + (data.level === "error" ? "text-red-400" :
                                          data.level === "warning" ? "text-yellow-400" :
                                          "text-gray-300");
+          // Builds this line's visible text from the message's timestamp,
+          // company, and message fields, formatted similarly to the
+          // server-rendered log lines in app/views/crawls/show.html.erb.
           line.textContent = "[" + data.timestamp + "] [" + data.company + "] " + data.message;
+          // Adds this new line as the last child of the log feed container,
+          // appearing at the bottom of the visible log.
           logFeed.appendChild(line);
 
           // Auto-scroll to the bottom so the latest message is always visible
+          // Setting `scrollTop` to the container's full `scrollHeight`
+          // scrolls it all the way down, keeping the newest line in view
+          // even as more accumulate above it.
           logFeed.scrollTop = logFeed.scrollHeight;
 
         } else if (data.type === "status") {
           // Update the live counters
+          // Declares one reusable variable, then reassigns it for each of
+          // the two counters updated below rather than declaring a new
+          // `var` each time.
           var el;
           el = document.getElementById("live-facilities");
+          // Only updates the on-page counter if BOTH the element was found
+          // AND the server actually sent a facilities count in this
+          // message (some "status" messages might only update one counter
+          // at a time) — `!== undefined` guards against overwriting the
+          // counter with nothing when this particular field wasn't sent.
           if (el && data.facilities !== undefined) el.textContent = data.facilities;
 
           el = document.getElementById("live-units");
@@ -429,13 +1020,25 @@ document.addEventListener("DOMContentLoaded", function() {
         } else if (data.type === "finished") {
           // Crawl is done — reload the page to show results
           // Small delay so the user can see the "finished" log message
+          // `setTimeout(fn, 2000)` schedules `fn` to run once, 2000
+          // milliseconds (2 seconds) from now, rather than immediately —
+          // giving the user a moment to read the final log line before the
+          // page reloads out from under them.
           setTimeout(function() {
+            // Reloads the current page — since the crawl has now finished,
+            // this fresh page load will hit the "else" (no crawl running)
+            // branches throughout this file instead, showing the finished
+            // results table, chart, etc.
             window.location.reload();
           }, 2000);
         }
+        // Closes the `if (data.type === "log") / else if ... / else if
+        // ...` branch chain above.
       },
 
       connected: function() {
+        // Called automatically by ActionCable once the WebSocket
+        // connection to the server successfully opens.
         var line = document.createElement("div");
         line.className = "text-emerald-600";
         line.textContent = "Connected to live feed — watching for updates...";
@@ -443,13 +1046,26 @@ document.addEventListener("DOMContentLoaded", function() {
       },
 
       disconnected: function() {
+        // Called automatically by ActionCable if the WebSocket connection
+        // drops (e.g. server restart, network hiccup) — lets the user know
+        // the live feed may be stale without silently leaving them staring
+        // at a feed that's stopped updating with no explanation.
         var line = document.createElement("div");
         line.className = "text-yellow-600";
         line.textContent = "Disconnected from live feed — reload page if crawl seems stuck";
         logFeed.appendChild(line);
       }
+      // Closes the object literal `{ received: ..., connected: ...,
+      // disconnected: ... }` passed as the second argument to
+      // `subscriptions.create`.
     }
+    // Closes the argument list of the `App.cable.subscriptions.create(...)`
+    // call started above.
   );
 });
+// Closes the `document.addEventListener("DOMContentLoaded", function() {
+// ... })` call opened near the top of this script block.
 </script>
+<%# Closes the `if @crawl_running && @running_crawl` check that determines
+    whether this entire <script> block is included in the page at all. %>
 <% end %>

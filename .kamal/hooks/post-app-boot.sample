@@ -1,3 +1,45 @@
 #!/usr/bin/env sh
+# ^ This is a "shebang" line. When a file is executable and run directly,
+# the operating system reads this exact line to pick the interpreter for
+# everything below it. `#!` marks it as a shebang, not a plain comment;
+# `/usr/bin/env` searches your PATH for the named program; `sh` is the
+# POSIX shell (a basic, universally-available command interpreter). So
+# this line says "run the rest of this file as a shell script."
+#
+# --- What is this file? (context for every file in .kamal/hooks/) ---
+# This app is deployed with Kamal (kamal-deploy.org): a tool that builds a
+# Rails app into a Docker container image and ships it to remote servers
+# over SSH, without needing Heroku or Kubernetes. A deploy moves through a
+# fixed sequence of stages (build the image, connect to hosts, set up
+# Docker, boot the new app container, reboot the traffic proxy, and so
+# on). At specific points in that sequence, Kamal runs a "hook" — an
+# executable script in this .kamal/hooks/ directory named after the stage
+# it belongs to — if one exists.
+#
+# This file is the "post-app-boot" hook. Kamal runs it once per target
+# server immediately after the newly-deployed app container has started
+# (booted) on that server.
+#
+# The ".sample" suffix means Kamal will NOT run this file as-is. Kamal
+# only runs a hook when a file with the exact stage name exists (here,
+# "post-app-boot", with no ".sample") and is executable. This file is
+# just a template/example. To activate it for real, copy it to
+# "post-app-boot" (drop ".sample"), edit as desired, and make it
+# executable.
 
+# Blank line — no effect on execution; just visual separation between the
+# comments above and the script logic below.
+
+# `echo` prints the given text to standard output, which Kamal captures
+# into its deploy log. The text is inside double quotes, so shell
+# variables written within it get "interpolated" — replaced with their
+# current values — instead of being printed as literal characters.
+#
+# `$KAMAL_VERSION` reads the KAMAL_VERSION environment variable, which
+# Kamal sets before running this hook to the version identifier (normally
+# a git commit SHA) of the app build that was just deployed.
+# `$KAMAL_HOSTS` reads KAMAL_HOSTS, the comma-separated list of server
+# addresses/hostnames targeted by this deploy. Put together, this line
+# would print something like:
+# "Booted app version abc1234 on 1.2.3.4,5.6.7.8..."
 echo "Booted app version $KAMAL_VERSION on $KAMAL_HOSTS..."

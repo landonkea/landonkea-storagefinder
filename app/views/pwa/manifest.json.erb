@@ -1,22 +1,135 @@
+<%# =============================================================================
+  WEB APP MANIFEST
+  =============================================================================
+  A "Progressive Web App" (PWA) is a normal website that opts into a handful
+  of extra browser features that make it behave more like a native phone/
+  desktop app — things like an install icon, its own app-window (no browser
+  address bar), a home-screen icon, and (elsewhere, via a "service worker")
+  offline support and push notifications. This file, the "web app manifest,"
+  is a small JSON document that tells the browser HOW to treat this app if a
+  user chooses to "install" it: what to call it, what icon to show, what
+  color scheme to use, and what URL to open.
+
+  The file is named "manifest.json.erb" rather than plain "manifest.json"
+  because it lives under app/views/ and is rendered by a Rails controller
+  (Rails' built-in Rails::PwaController) rather than served as a static
+  file — the ".erb" extension means Rails runs it through its ERB template
+  engine before sending the response, which would allow embedding dynamic
+  Ruby values (e.g. an app name pulled from configuration) using an output
+  tag (`<%=` ... `% >` — written with a space before the final `>` here so
+  it doesn't prematurely close THIS comment; see the note further down).
+  As it stands today, this particular file contains no such Ruby tags at
+  all — it is 100% static JSON text, just being routed through the
+  templating engine unnecessarily. That's not a bug, just worth knowing.
+
+  NOTE ON THIS COMMENT ITSELF: an ERB comment is opened with `<%#` and
+  runs until the FIRST `%` immediately followed by `>` it finds — so
+  anywhere in this file that needs to show that exact two-character
+  closing sequence as literal example text (rather than as a real,
+  working tag) writes it with a space in the middle, as `% >`, so it
+  doesn't end the comment early.
+
+  FLAG (see end-of-task report): config/routes.rb does not declare a route
+  for `rails/pwa#manifest` (the controller Rails ships specifically to
+  render this file), and app/views/layouts/application.html.erb has no
+  `<link rel="manifest" ...>` tag pointing at it either — note that tag's
+  closing `>` alone is safe (it's a single character, not the two-char
+  `% >` sequence ERB looks for). That combination means this file is not
+  currently wired up to be served or referenced by any page — a browser
+  has no way to discover it. Not fixed here — comments-only pass. %>
+<%# `{` opens the manifest's single top-level JSON object — everything
+  else in this file is a key/value pair inside it, closed by the matching
+  `}` at the very end of the file. JSON (JavaScript Object Notation) is a
+  plain-text data format: `{ }` for an object (like a Ruby Hash), `[ ]`
+  for an array (ordered list), `"..."` for strings, and keys are always
+  quoted strings followed by a colon and their value. %>
 {
+  <%# The "name" key is the app's full display name — shown, for example,
+    on an "Install app?" prompt some browsers show, or in the phone's app
+    switcher once installed. A trailing comma after the value means "there
+    is another key/value pair coming next" — required by JSON syntax
+    between entries, but forbidden after the very last one in an object. %>
   "name": "Storagefinder",
+  <%# "icons" is a JSON array (square brackets `[ ]`) — a list of icon
+    image options the browser can choose between depending on where/how
+    large it needs to display this app's icon (home screen, app switcher,
+    splash screen, etc.). Each entry in the list is its own JSON object
+    describing one icon file. %>
   "icons": [
+    <%# `{` opens the first icon object in the "icons" array above. %>
     {
+      <%# "src" is the URL path (relative to this site's root) where the
+        actual icon image file can be downloaded from — /icon.png refers to
+        public/icon.png, one of the files explicitly excluded from this
+        comments pass (it's a binary image, not readable/commentable text). %>
       "src": "/icon.png",
+      <%# "type" tells the browser this file's MIME (media) type without
+        it having to guess from the file extension or download it first —
+        "image/png" means it's a PNG-format image. %>
       "type": "image/png",
+      <%# "sizes" states the icon's pixel dimensions as "WIDTHxHEIGHT" —
+        512x512 is a common "largest" size PWA manifests provide, letting
+        the browser downscale it as needed for smaller display contexts
+        rather than needing a separate smaller image file. No trailing
+        comma after this line, because "sizes" is the LAST key in THIS
+        icon object (the second icon object below adds a fourth key,
+        "purpose," after its own "sizes" — but this first icon object
+        doesn't have one). %>
       "sizes": "512x512"
+    <%# `}` closes this first icon object. A trailing comma follows because
+      a second icon object comes next in the "icons" array. %>
     },
+    <%# `{` opens the second icon object — same image file as the first,
+      but declared with an additional "purpose" so the browser knows it can
+      be used differently (see below). %>
     {
       "src": "/icon.png",
       "type": "image/png",
       "sizes": "512x512",
+      <%# "purpose": "maskable" is a PWA-specific hint: a "maskable" icon is
+        one designed with extra padding/safe-margin so that if the OS crops
+        it into a circle, rounded square, or other shape (common on Android
+        home screens), nothing important gets cut off. Browsers/OSes that
+        support this will prefer this icon entry over the plain one above
+        when they need to apply such a shape mask. No trailing comma — this
+        is the last key in this icon object. %>
       "purpose": "maskable"
+    <%# `}` closes this second icon object. No trailing comma — this is the
+      last item in the "icons" array. %>
     }
+  <%# `]` closes the "icons" array opened above. A trailing comma follows
+    because more top-level keys ("start_url" etc.) come next. %>
   ],
+  <%# "start_url" is the URL the installed app should open to when a user
+    launches it from their home screen/app icon — "/" means the site root. %>
   "start_url": "/",
+  <%# "display" controls how much browser UI (address bar, tabs, etc.) shows
+    when the app is launched as an installed PWA. "standalone" means show
+    it in its own app-like window with none of the browser's normal chrome
+    (no visible address bar), which is what makes an installed PWA feel
+    similar to a native app rather than "a website in a browser tab." %>
   "display": "standalone",
+  <%# "scope" defines which URLs are considered "inside" this app once
+    installed — navigating to a URL under "/" (i.e. any page on this site)
+    stays within the installed app's window; navigating elsewhere would
+    typically break out into a normal browser tab instead. %>
   "scope": "/",
+  <%# "description" is a short human-readable summary of what the app does,
+    which browsers/app stores may show alongside the install prompt or
+    listing. %>
   "description": "Storagefinder.",
+  <%# "theme_color" suggests a color browsers/operating systems can use to
+    tint their own UI chrome around this app (e.g. the mobile status bar
+    color, or a browser tab's color) to visually match the app's branding.
+    "red" here is a plain CSS/HTML color-keyword name rather than a hex
+    code like "#FF0000" — both are valid ways to specify a color. %>
   "theme_color": "red",
+  <%# "background_color" is the color shown briefly behind the app's UI
+    while it's first loading (its "splash screen" background), before any
+    actual page content has rendered — kept consistent with theme_color
+    here so the loading flash doesn't visually clash with the app itself.
+    No trailing comma — this is the manifest's last top-level key. %>
   "background_color": "red"
+<%# `}` closes the single top-level JSON object opened at the very start of
+  this file. %>
 }

@@ -1,6 +1,44 @@
 #!/usr/bin/env ruby
+# The line above must be the literal first line of the file — it's a
+# "shebang" that tells the OS to run this file using whatever `ruby`
+# program is found on the system PATH (see bin/brakeman for a fuller
+# explanation of this pattern, which repeats across every bin/ script).
+
+# `require_relative` loads another Ruby file using a path relative to
+# THIS file's own location on disk (as opposed to `require`, which
+# searches Ruby's load path/installed gems). `"../config/boot"` goes up
+# one directory from bin/ to the app root, then into config/boot.rb.
+# That file sets up Bundler and loads the app's gem environment — it's
+# the same boot step every bin/ script in this Rails app relies on before
+# doing anything else.
 require_relative "../config/boot"
+# Loads the bundler-audit gem's command-line interface code. bundler-audit
+# is a security tool that checks this app's Gemfile.lock for gems with
+# known published vulnerabilities (CVEs) or that have been yanked from
+# RubyGems. `Bundler::Audit::CLI` (used below) is defined inside this file.
 require "bundler/audit/cli"
 
+# Blank line separating "load code" from "decide how to run it."
+
+# `ARGV` is the array of command-line arguments this script was invoked
+# with (e.g. `bin/bundler-audit check` gives ARGV = ["check"]).
+# `.concat(other_array)` appends every element of `other_array` onto the
+# end of ARGV, modifying it in place. `%w[ a b c ]` is Ruby's "word array"
+# literal shorthand — it's exactly the same as `["a", "b", "c"]` but
+# without needing quotes/commas around each word. So this line appends
+# the two arguments "--config" and "config/bundler-audit.yml" onto ARGV.
+# It only does so `if` one of two conditions holds: `ARGV.empty?` (the
+# user ran `bin/bundler-audit` with no arguments at all) `||` (Ruby's
+# "or") `ARGV.include?("check")` (the user's arguments already contain
+# the word "check", e.g. they ran `bin/bundler-audit check`). In both
+# cases, this forces the tool to use this project's specific config file
+# (which presumably lists ignored/allowed advisories) rather than
+# bundler-audit's built-in defaults.
 ARGV.concat %w[ --config config/bundler-audit.yml ] if ARGV.empty? || ARGV.include?("check")
+# `Bundler::Audit::CLI` is the class loaded by the `require` above.
+# `.start` is a Thor convention (Thor is the command-line framework
+# bundler-audit is built on) — it reads ARGV itself, figures out which
+# subcommand was requested (here, forced to include "check" via the line
+# above if none was given), and runs it. This is the line that actually
+# performs the vulnerability scan and prints results.
 Bundler::Audit::CLI.start

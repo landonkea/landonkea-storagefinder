@@ -1,40 +1,163 @@
+# This file (config/database.yml) tells Active Record (Rails' database
+# layer — see config/application.rb for what Active Record is) which
+# database engine to use and how to connect to it, per environment. Rails
+# reads this file automatically at boot.
+#
+# YAML primer: lines starting with "#" are comments, ignored by whatever
+# parses this file (same idea as Ruby's "#" comments). Plain "key: value"
+# pairs work like entries in a Ruby Hash; indentation (spaces, not tabs)
+# shows what's nested under what. This file also contains ERB tags —
+# "<%%= ... %>" — which Rails evaluates as embedded Ruby BEFORE parsing the
+# result as YAML (see config/cache.yml for a fuller explanation of that
+# two-step process), letting a value here be computed dynamically (e.g. from
+# an environment variable) instead of being fixed, static text.
+
+# A comment (left by Rails' generator) explaining which database this file
+# is set up for.
 # SQLite. Versions 3.8.0 and up are supported.
 #   gem install sqlite3
 #
 #   Ensure the SQLite 3 gem is defined in your Gemfile
 #   gem "sqlite3"
 #
+# "default:" is a top-level YAML key. "&default" right after the colon is a
+# YAML ANCHOR — it labels this whole block so its contents can be reused
+# elsewhere in this file via "<<: *default" (a "merge key," used in every
+# environment section below) without retyping these same three settings
+# every time.
 default: &default
+  # "adapter: sqlite3" tells Active Record which database ENGINE/driver to
+  # use for every connection based on this default block — SQLite, a
+  # lightweight, file-based SQL database that needs no separate database
+  # server process (unlike e.g. Postgres or MySQL), which is why this app
+  # (a single-machine, single-user LAN tool — see config/deploy.yml) uses it.
   adapter: sqlite3
+  # "max_connections:" caps how many simultaneous connections Active
+  # Record's internal connection pool will open to the database.
+  # "<%%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>" is an ERB tag containing
+  # Ruby: "ENV.fetch("RAILS_MAX_THREADS") { 5 }" reads the RAILS_MAX_THREADS
+  # environment variable if it's set; the "{ 5 }" is a BLOCK passed as
+  # `.fetch`'s fallback — rather than a plain second argument (like
+  # `.fetch("X", 5)` used elsewhere in this app, e.g. config/environments/
+  # production.rb's RAILS_LOG_LEVEL), a block-form fallback is only
+  # evaluated (i.e. the literal `5` is only computed) if the environment
+  # variable is actually missing, which matters when computing a fallback
+  # is expensive — here it's just a plain number either way, so the two
+  # forms behave identically in practice. ERB substitutes whatever this Ruby
+  # expression evaluates to as literal text into the YAML.
   max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  # "timeout: 5000" sets how long (in milliseconds — 5000ms = 5 seconds) a
+  # database operation will wait to acquire a lock on the SQLite file before
+  # giving up and raising a "database busy" error; SQLite allows only one
+  # writer at a time, so this matters when multiple requests/jobs try to
+  # write concurrently.
   timeout: 5000
 
+# Blank line — ignored by YAML, purely visual spacing between the shared
+# "default" anchor block above and the per-environment sections below.
+
+# "development:" is a top-level YAML key matching the RAILS_ENV value Rails
+# defaults to when nothing else is set — see config/environments/
+# development.rb for the fuller explanation of Rails' environment system.
 development:
+  # "<<: *default" is YAML's merge-key syntax: it copies in every key/value
+  # pair from the block anchored above as "&default" (adapter,
+  # max_connections, timeout), so they don't need to be repeated here.
   <<: *default
+  # Overrides/adds the "database" setting specifically for development —
+  # the file path (relative to this Rails app's root directory) where the
+  # actual SQLite database file lives for this one environment.
   database: storage/development.sqlite3
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# A comment (left by Rails' generator) warning about test-database behavior:
+# it explains that running the test suite (via "rake"/"bin/rails test")
+# will WIPE and regenerate the "test" database defined below, copying its
+# structure from whatever the "development" database's current schema is —
+# so nothing important should ever be stored only in the test database.
 # Warning: The database defined as "test" will be erased and
 # re-generated from your development database when you run "rake".
 # Do not set this db to the same as development or production.
 test:
+  # Same merge-key mechanism as development above, reusing the shared
+  # adapter/max_connections/timeout settings.
   <<: *default
+  # A separate SQLite file dedicated to the test database, kept apart from
+  # both development's and production's own files — per the warning
+  # comment above, this file gets wiped and rebuilt routinely.
   database: storage/test.sqlite3
 
+# Blank line — ignored by YAML, purely visual spacing.
+
+# A comment (this app's own, not Rails' generic default) explaining where
+# the production database file physically lives once deployed, and pointing
+# to config/deploy.yml — the Kamal deploy configuration (see that file's own
+# top-of-file explanation of what Kamal is) — which mounts a persistent
+# Docker volume onto that exact storage/ path, so the SQLite files inside it
+# survive container restarts/redeploys instead of being wiped each time a
+# fresh container starts.
 # Store production database in the storage/ directory, which by default
 # is mounted as a persistent Docker volume in config/deploy.yml.
 production:
+  # Unlike development/test above (which map a single database directly
+  # under the environment key), production defines FOUR separate named
+  # database connections, each nested one level deeper — this is Rails'
+  # "multi-database" support, letting different subsystems of the app use
+  # entirely separate SQLite files/connections instead of sharing one.
+  # "primary:" is the main connection — used by this app's own actual
+  # models (Unit, Company, etc.) — nothing following its colon directly, so
+  # its settings come from the further-indented block below it.
   primary:
+    # Reuses the shared adapter/max_connections/timeout settings from the
+    # "default" anchor defined at the top of this file.
     <<: *default
+    # The SQLite file used for this app's own primary application data in
+    # production.
     database: storage/production.sqlite3
+  # "cache:" is a second, separate named connection — used by the caching
+  # subsystem (see config/cache.yml's production section, which references
+  # this exact connection by its "cache" key) — kept in its own file so
+  # heavy cache read/write traffic doesn't compete for the same SQLite file
+  # lock as the app's primary data.
   cache:
+    # Same shared default settings merged in again.
     <<: *default
+    # A dedicated SQLite file just for cache data.
     database: storage/production_cache.sqlite3
+    # "migrations_paths:" overrides WHERE Rails looks for this specific
+    # connection's own migration files (schema-change scripts) — "db/
+    # cache_migrate" instead of the default "db/migrate" used by "primary"
+    # above — since this connection has its own independent schema/table
+    # structure, unrelated to the main app's tables.
     migrations_paths: db/cache_migrate
+  # "queue:" is a third named connection — used by the background-job
+  # queue subsystem's own data (job records, etc.), kept in its own file
+  # for the same reasons as "cache" above. NOTE: this app's actual active
+  # Active Job adapter setting (see config/application.rb's BACKGROUND JOBS
+  # section) is `:async`, an in-process adapter that does NOT persist
+  # anything to a database at all — see this pass's final "flagged issues"
+  # note about this connection appearing to be unused by the app's current
+  # configuration.
   queue:
+    # Same shared default settings merged in again.
     <<: *default
+    # A dedicated SQLite file for job-queue data.
     database: storage/production_queue.sqlite3
+    # This connection's own separate migrations directory, just like
+    # "cache" above but for whatever job-queue-related tables would live
+    # here.
     migrations_paths: db/queue_migrate
+  # "cable:" is the fourth named connection — used by Action Cable's
+  # database-backed Solid Cable adapter (see config/cable.yml's production
+  # section, which references this exact connection via its own
+  # "connects_to: database: writing: cable" setting) to store and relay
+  # WebSocket broadcast messages between server processes.
   cable:
+    # Same shared default settings merged in again.
     <<: *default
+    # A dedicated SQLite file for Action Cable/Solid Cable message data.
     database: storage/production_cable.sqlite3
+    # This connection's own separate migrations directory, for whatever
+    # Solid Cable's own required tables need.
     migrations_paths: db/cable_migrate

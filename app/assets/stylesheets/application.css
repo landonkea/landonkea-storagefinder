@@ -2,4 +2,16 @@
  * This file is intentionally empty. StorageFinder's stylesheet lives at
  * app/assets/tailwind/application.css and is compiled by tailwindcss-rails
  * into app/assets/builds/tailwind.css (linked in the layout as "tailwind").
+ *
+ * `/* ... *\/` (without the backslash — this whole block is itself one CSS
+ * comment) is CSS's only comment syntax: everything between `/*` and `*\/`
+ * is ignored by the browser and any CSS build tools. CSS has no `//`
+ * single-line comment form the way JavaScript does.
+ *
+ * Why does this near-empty file exist at all? Rails' asset pipeline
+ * (Sprockets/Propshaft) conventionally looks for a stylesheet named
+ * "application.css" in app/assets/stylesheets — some tooling or manifest
+ * references may expect a file at this path even though, in this app, the
+ * real styling work happens in the separate Tailwind-specific file
+ * mentioned above instead of here.
  */

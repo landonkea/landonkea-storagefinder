@@ -1,5 +1,37 @@
+# This file (config/bundler-audit.yml) configures the "bundler-audit" gem,
+# a security scanner. It is run via `bin/bundler-audit` and checks every
+# gem listed in this app's Gemfile against a public database of known
+# vulnerabilities (CVEs — "Common Vulnerabilities and Exposures", the
+# standard ID scheme used across the security industry, e.g.
+# "CVE-2023-12345"). This file only controls the SCANNER's behavior — it
+# has no effect on how the Rails app itself runs.
+#
+# A quick YAML primer, since this is a very small file: lines starting
+# with "#" are comments, ignored entirely by whatever parses this file —
+# same idea as "#" comments in Ruby. YAML also uses plain KEY: VALUE pairs
+# (like a Ruby Hash), and indentation (spaces, not tabs) to show what's
+# nested under what — there are no curly braces or "end" keywords the way
+# Ruby has.
+#
 # Audit all gems listed in the Gemfile for known security problems by running bin/bundler-audit.
 # CVEs that are not relevant to the application can be enumerated on the ignore list below.
 
+# A blank line, like this one, is ignored by YAML — it's here purely to
+# visually separate the introductory comments above from the actual
+# configuration below.
+
+# "ignore:" is a top-level YAML key. Because nothing follows the colon on
+# this line, its value is defined by the indented block underneath — in
+# this case, a LIST of CVE IDs that bundler-audit should NOT report even
+# if it finds them affecting one of this app's gems (e.g. because the
+# vulnerable code path is never actually used by this app).
 ignore:
+  # A line beginning with "- " (dash, then a space), indented under a key,
+  # defines one item of a YAML list/array — the YAML equivalent of an
+  # entry in a Ruby Array. Here there is exactly one item.
+  #
+  # "CVE-THAT-DOES-NOT-APPLY" is NOT a real CVE identifier (real ones look
+  # like "CVE-2023-12345" — the year, then a sequence number). It reads as
+  # a placeholder/example value rather than an actual vulnerability being
+  # suppressed, meaning no CVE is currently being ignored in practice.
   - CVE-THAT-DOES-NOT-APPLY

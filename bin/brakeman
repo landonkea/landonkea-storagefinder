@@ -1,7 +1,53 @@
 #!/usr/bin/env ruby
+# The line above MUST be the very first line of the file (byte-for-byte) —
+# it's called a "shebang" and only works as the file's first two
+# characters (`#!`). It tells the operating system which program should
+# interpret the rest of the file when you run it directly (e.g.
+# `./bin/brakeman`). `/usr/bin/env ruby` means "find whatever `ruby` is
+# first on the system's PATH and use that to run this file" — this is
+# more portable than hard-coding a path like `/usr/bin/ruby`, since Ruby
+# may be installed in different places on different machines (e.g. via a
+# version manager like rbenv or mise). Without this line, the shell
+# wouldn't know this text file is meant to be run as a Ruby program.
+# `require` loads a Ruby library (a "gem" or standard library file) so its
+# code becomes available to use below. "rubygems" is Ruby's built-in
+# package manager library — loading it here ensures the `Gem` module
+# (used a few lines down) is available even on Ruby setups where it isn't
+# auto-loaded.
 require "rubygems"
+# Loads Bundler's setup code. Bundler is the tool that manages this app's
+# gem dependencies (listed in the Gemfile/Gemfile.lock). Requiring
+# "bundler/setup" makes Ruby's `require` calls only see the exact gem
+# versions locked in Gemfile.lock, rather than whatever gem versions
+# happen to be installed system-wide — this avoids "works on my machine"
+# version mismatches.
 require "bundler/setup"
 
+# Blank line — just visual separation between the "load the environment"
+# section above and the "configure and run the tool" section below.
+
+# `ARGV` is a built-in Ruby array holding the command-line arguments this
+# script was called with (e.g. running `bin/brakeman -q` gives ARGV =
+# ["-q"]). `.unshift(x)` adds `x` to the FRONT of that array. So this line
+# forces the `--ensure-latest` flag onto every invocation of Brakeman,
+# regardless of what the user typed — Brakeman is a security scanner for
+# Rails apps, and this flag makes it check it's running the newest release
+# before scanning, so security checks don't silently go stale.
 ARGV.unshift("--ensure-latest")
 
+# Blank line for visual separation before the final "hand off control" step.
+
+# This is the core pattern used by every Bundler-generated bin/ wrapper
+# script in this app (see also bin/rubocop, bin/thrust, bin/kamal).
+# `Gem.bin_path("brakeman", "brakeman")` asks RubyGems: "find the
+# executable file named 'brakeman' that belongs to the installed gem also
+# named 'brakeman', and give me its full file path." `load` then reads
+# that file and runs it, as if its code were pasted right here. Why not
+# just run the `brakeman` command directly from the terminal? Because that
+# would use whatever `brakeman` happens to be first on the system PATH —
+# possibly a different version than the one locked in this app's
+# Gemfile.lock. Going through `bundler/setup` (required above) plus
+# `Gem.bin_path` guarantees this script always runs the EXACT gem version
+# this project depends on, even if other versions are installed elsewhere
+# on the machine.
 load Gem.bin_path("brakeman", "brakeman")

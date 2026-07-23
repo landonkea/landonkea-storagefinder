@@ -1,51 +1,196 @@
 #!/usr/bin/env sh
+# ^ This is a "shebang" line. When a file is executable and run directly,
+# the operating system reads this exact line to pick the interpreter for
+# everything below it. `#!` marks it as a shebang, not a plain comment;
+# `/usr/bin/env` searches your PATH for the named program; `sh` is the
+# POSIX shell (a basic, universally-available command interpreter). So
+# this line says "run the rest of this file as a shell script."
+#
+# --- What is this file? (context for every file in .kamal/hooks/) ---
+# This app is deployed with Kamal (kamal-deploy.org): a tool that builds a
+# Rails app into a Docker container image and ships it to remote servers
+# over SSH, without needing Heroku or Kubernetes. A deploy moves through a
+# fixed sequence of stages, and at specific points in that sequence Kamal
+# runs a "hook" — an executable script in this .kamal/hooks/ directory
+# named after the stage it belongs to — if one exists.
+#
+# This file is the "pre-build" hook. Kamal runs it once, on your own
+# machine (not a remote server), before it starts building the Docker
+# image for the app. Unlike the other, trivial one-line sample hooks in
+# this directory, this one contains real safety-check logic: it's a
+# common pattern to abort a deploy here if your local git checkout isn't
+# in a safe, known state to build and ship.
+#
+# The ".sample" suffix means Kamal will NOT run this file as-is. Kamal
+# only runs a hook when a file with the exact stage name exists (here,
+# "pre-build", with no ".sample") and is executable. To activate it for
+# real, copy it to "pre-build" (drop ".sample"), edit as desired, and make
+# it executable.
 
+# A plain comment describing the file's purpose — has no effect when run.
 # A sample pre-build hook
 #
+# Blank comment line for visual spacing.
+#
+# This comment introduces the list of checks the script performs below.
 # Checks:
 # 1. We have a clean checkout
 # 2. A remote is configured
 # 3. The branch has been pushed to the remote
 # 4. The version we are deploying matches the remote
 #
+# Blank comment line for visual spacing.
+#
+# This comment introduces the environment-variable list below. Kamal
+# passes these in as environment variables (values a running process can
+# read via `$NAME`) before invoking this hook; ones marked "(if set)" are
+# only present when the corresponding Kamal feature is configured.
 # These environment variables are available:
-# KAMAL_RECORDED_AT
-# KAMAL_PERFORMER
-# KAMAL_VERSION
-# KAMAL_HOSTS
-# KAMAL_ROLES (if set)
-# KAMAL_DESTINATION (if set)
+# KAMAL_RECORDED_AT — timestamp string for when this deploy was recorded/started.
+# KAMAL_PERFORMER — the name/identity of whoever (or whatever CI system) triggered the deploy.
+# KAMAL_VERSION — the version identifier (normally a git commit SHA) being deployed.
+# KAMAL_HOSTS — comma-separated list of server addresses/hostnames targeted by this deploy.
+# KAMAL_ROLES (if set) — comma-separated list of Kamal "roles" (e.g. web, worker) involved, only present if roles are configured.
+# KAMAL_DESTINATION (if set) — the named deploy destination/environment (e.g. "production", "staging"), only present if destinations are configured.
 
+# Blank line — no effect on execution; separates the comment header above
+# from the executable code that starts below.
+
+# `if [ ... ]; then ... fi` is shell's conditional syntax: `[ ... ]` is
+# actually a command (an alias for the `test` command) that evaluates the
+# condition inside it and exits successfully (true) or unsuccessfully
+# (false); `if` runs the block between `then` and `fi` only when that
+# command succeeds.
+#
+# `$(git status --porcelain)` is command substitution: it runs
+# `git status --porcelain` (which lists any uncommitted changes — new,
+# modified, or deleted files — in a stable, script-friendly format, and
+# prints NOTHING if the working directory is perfectly clean) and
+# substitutes whatever that command printed in its place.
+#
+# `-n STRING` is a test-command flag meaning "true if STRING is non-empty
+# (has at least one character)". So this whole condition reads: "if `git
+# status --porcelain` printed anything at all (i.e. there are uncommitted
+# changes), then..." — in other words, this detects a "dirty" git
+# checkout.
 if [ -n "$(git status --porcelain)" ]; then
+  # `echo "..." >&2` prints the message to standard ERROR (file
+  # descriptor 2) instead of standard output — the conventional place to
+  # send error/diagnostic messages so they can be told apart from normal
+  # program output, e.g. by shell redirection.
   echo "Git checkout is not clean, aborting..." >&2
+  # Re-runs `git status --porcelain` (not reusing the earlier captured
+  # value) and sends its actual listing of changed files to standard
+  # error too, so whoever's watching the deploy log can see exactly what
+  # is uncommitted.
   git status --porcelain >&2
+  # `exit 1` immediately stops this script and reports a non-zero (1)
+  # exit status to whatever invoked it. By shell convention, exit code 0
+  # means success and any non-zero code means failure — Kamal treats a
+  # non-zero exit from a hook as "abort the deploy."
   exit 1
+# `fi` closes the `if` block opened above (it's `if` spelled backwards,
+# following shell's block-closing-keyword convention alongside `done` for
+# loops and `esac` for `case`).
 fi
 
+# Blank line — no effect on execution; visual spacing before the next
+# check.
+
+# `git remote` (with no arguments) lists the short names of every git
+# "remote" configured for this repository (e.g. "origin") — one per line.
+# Wrapping it in `$(...)` captures that output as text and assigns it to
+# the shell variable `first_remote`. Despite the name, if multiple remotes
+# exist this actually captures ALL of their names (newline-separated), not
+# just the first — the variable name is a bit misleading; see the flagged
+# note at the end of this file's overall review.
 first_remote=$(git remote)
 
+# Blank line — no effect on execution; visual spacing.
+
+# `-z STRING` is the opposite of `-n`: true if STRING is empty (zero
+# length). So this checks "is $first_remote empty?" — i.e. "does this repo
+# have no git remote configured at all?"
 if [ -z "$first_remote" ]; then
+  # Prints an explanatory error to standard error, same pattern as above.
   echo "No git remote set, aborting..." >&2
+  # Stops the script here with a failure exit code, aborting the deploy —
+  # there's no remote to compare the local branch against.
   exit 1
+# Closes the `if` block opened two lines above this comment.
 fi
 
+# Blank line — no effect on execution; visual spacing before the next
+# check.
+
+# `git branch --show-current` prints the name of whichever branch is
+# currently checked out (e.g. "main"), or nothing if you're in a
+# "detached HEAD" state (checked out at a specific commit rather than a
+# named branch). `$(...)` captures that output into `current_branch`.
 current_branch=$(git branch --show-current)
 
+# Blank line — no effect on execution; visual spacing.
+
+# Checks whether `current_branch` came back empty, meaning there's no
+# branch name to work with (detached HEAD).
 if [ -z "$current_branch" ]; then
+  # Explains the failure via standard error.
   echo "Not on a git branch, aborting..." >&2
+  # Aborts the deploy with a failure exit code.
   exit 1
+# Closes the `if` block opened two lines above this comment.
 fi
 
+# Blank line — no effect on execution; visual spacing before the next
+# check.
+
+# `git ls-remote $first_remote --tags $current_branch` asks the remote
+# repository (over the network) to list refs matching `$current_branch`
+# under its `--tags` namespace, printing lines of "<sha><TAB><ref name>".
+# `cut -f1` then keeps only the first tab-separated field from that output
+# — the commit SHA — discarding the ref name. The whole pipeline's output
+# is captured via `$(...)` into `remote_head`. NOTE: using `--tags` here
+# looks for a *tag* named after the current branch, not the branch itself
+# — see the flagged note at the end of this review, since that seems
+# inconsistent with the surrounding comments/intent.
 remote_head=$(git ls-remote $first_remote --tags $current_branch | cut -f1)
 
+# Blank line — no effect on execution; visual spacing.
+
+# Checks whether the lookup above came back empty — meaning nothing
+# matching was found on the remote.
 if [ -z "$remote_head" ]; then
+  # Explains the failure via standard error.
   echo "Branch not pushed to remote, aborting..." >&2
+  # Aborts the deploy with a failure exit code.
   exit 1
+# Closes the `if` block opened two lines above this comment.
 fi
 
+# Blank line — no effect on execution; visual spacing before the final
+# check.
+
+# `!=` is shell's "not equal" string comparison operator inside `[ ... ]`.
+# `$KAMAL_VERSION` is the version Kamal is about to build/deploy (normally
+# the local HEAD commit SHA, set by Kamal itself as an environment
+# variable before running this hook); `$remote_head` is the SHA found on
+# the remote just above. This checks "do these two SHAs NOT match?" —
+# i.e. is the version about to be deployed different from what's actually
+# on the remote?
 if [ "$KAMAL_VERSION" != "$remote_head" ]; then
+  # Prints an error including both mismatched values, via standard error,
+  # so it's clear exactly what didn't match.
   echo "Version ($KAMAL_VERSION) does not match remote HEAD ($remote_head), aborting..." >&2
+  # Aborts the deploy with a failure exit code.
   exit 1
+# Closes the `if` block opened two lines above this comment.
 fi
 
+# Blank line — no effect on execution; visual spacing before the script's
+# final line.
+
+# If execution reaches this point, every check above passed without
+# calling `exit 1`, so the script explicitly exits with status 0 (shell's
+# convention for "success"), telling Kamal it's safe to proceed with the
+# build.
 exit 0

@@ -1,9 +1,57 @@
+# WHAT IS THIS FILE?
+# .gitattributes lets you tell git to treat specific files or paths
+# differently than git's defaults — for example, marking generated code so
+# GitHub doesn't count it in language statistics, marking vendored
+# (third-party, not-written-by-us) code the same way, or telling git to use
+# a custom "diff driver" (a smarter way of showing what changed) for files
+# whose normal text diff would be unreadable, like encrypted files. Git
+# reads this file automatically; you don't run it or include it anywhere.
+
+# `#` starts a comment in a .gitattributes file, same as in git's other
+# config-style files — ignored by git, here for human readers.
+# This line points to git's own documentation for the full attributes
+# syntax, in case you need something beyond what's demonstrated below.
 # See https://git-scm.com/docs/gitattributes for more about git attribute files.
 
+# Blank line — purely visual separation between sections.
+
 # Mark the database schema as having been generated.
+# `db/schema.rb` is the path being tagged (relative to the project root, no
+# leading slash needed here since gitattributes matches paths, not just
+# root-anchored ones the way .gitignore patterns sometimes are).
+# `linguist-generated` is a GitHub-specific attribute recognized by
+# GitHub Linguist (the tool that powers the "language breakdown" bar you
+# see on a repo's GitHub page, and that decides which files show up by
+# default in pull request diffs). Marking schema.rb as generated tells
+# GitHub "a machine wrote this file (via `rails db:schema:dump`), don't
+# count it toward the app's Ruby percentage, and collapse it by default in
+# PR diffs since a human didn't hand-author these changes."
 db/schema.rb linguist-generated
 
+# Blank separator line.
+
 # Mark any vendored files as having been vendored.
+# `vendor/*` matches everything directly inside the vendor/ directory (the
+# `*` wildcard stands in for any file or folder name at that level).
+# `linguist-vendored` is another GitHub Linguist attribute meaning "this is
+# third-party code we didn't write, just copied in" — like linguist-
+# generated, it excludes these files from the repo's language statistics
+# and de-emphasizes them in diffs, since changes here aren't this team's
+# original work.
 vendor/* linguist-vendored
+# `config/credentials/*.yml.enc` matches any encrypted per-environment
+# credentials file (Rails' pattern for secrets scoped to one environment,
+# e.g. config/credentials/production.yml.enc). `diff=rails_credentials`
+# assigns a custom "diff driver" named rails_credentials to these files —
+# normally `git diff` shows line-by-line text changes, but that's useless
+# (and would leak nothing meaningful) for encrypted ciphertext, so this
+# tells git to instead invoke a special diff tool that can decrypt-and-diff
+# the readable contents. (The actual rails_credentials diff driver itself
+# is registered separately, typically in Rails' generated .git/config or
+# global git config — this line only assigns the driver's name to these
+# paths, it doesn't define what the driver does.)
 config/credentials/*.yml.enc diff=rails_credentials
+# `config/credentials.yml.enc` is the single main (non-per-environment)
+# encrypted credentials file Rails generates by default — same
+# rails_credentials diff driver applied, for the same reason.
 config/credentials.yml.enc diff=rails_credentials

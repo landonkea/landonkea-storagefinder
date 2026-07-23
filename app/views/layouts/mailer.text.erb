@@ -1,1 +1,38 @@
+<%# =============================================================================
+  MAILER LAYOUT (PLAIN TEXT)
+  =============================================================================
+  This is the plain-text counterpart to app/views/layouts/mailer.html.erb —
+  ActionMailer can send each email as TWO versions bundled together (a
+  "multipart" email): a rich HTML version for email clients that render
+  HTML, and this plain-text version as a fallback for clients/situations
+  that can't or won't show HTML (accessibility tools, very old or
+  minimal mail readers, or a user's own "always show plain text"
+  preference). Rails picks this file automatically because its name
+  ("mailer.text.erb") matches `layout "mailer"` declared in
+  app/mailers/application_mailer.rb, with the ".text" part of the filename
+  telling Rails "use this one for the text/plain part of the email," the
+  same way ".html" in the other file marked it for the text/html part.
+
+  NOTE ON THIS COMMENT ITSELF: an ERB comment like this one is opened with
+  `<%#` and runs until the FIRST `%` immediately followed by `>` it finds
+  — so anywhere below that needs to show that exact two-character closing
+  sequence as literal example text (rather than as a real, working tag)
+  writes it with a space in the middle, as `% >`, specifically so it does
+  NOT prematurely end whichever comment it's written inside.
+
+  FLAG (see end-of-task report): as noted in mailer.html.erb, the app's
+  actual email-sending code (AlertDeliveryService) builds and sends mail
+  directly with the `mail` gem rather than going through ActionMailer's
+  template/layout system, so this layout is not currently exercised by any
+  email this app actually sends. Not fixed here — comments-only pass. %>
+
+<%# Just like the HTML layout, the output tag below (opened with `<%=` and
+  closed with `% >`, containing just `yield`) is the one meaningful line in
+  this file: it runs whatever plain-text mailer view is being wrapped for
+  one specific email (e.g. a price-alert email's own .text.erb template),
+  and because it uses the `<%=` form (rather than plain `<%`), it inserts
+  that rendered text output directly here. Unlike the HTML layout, there's
+  no surrounding html/body/etc. markup to wrap it in — a plain-text email
+  is just... text, so this layout file is nothing more than this single
+  line. %>
 <%= yield %>

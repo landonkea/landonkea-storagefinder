@@ -2,127 +2,544 @@
   SETTINGS PAGE
   Tabbed interface: Crawl | Email | Discord | SMS | Schedule | Display
 ============================================================================= %>
+<%# The banner comment above is the file's original top-of-file
+  documentation — kept as-is. This is the view template rendered by
+  SettingsController#index (see app/controllers/settings_controller.rb),
+  reachable at GET /settings. It builds one page with SIX tabs — Crawl,
+  Schedule, Email, Discord, SMS, Display — where only one tab's content is
+  visible at a time, purely through CSS/JavaScript (no separate page load
+  per tab). "ERB" (Embedded RuBy) is Rails' templating language used
+  throughout this file: a plain `<%` ... `% >` tag runs Ruby but outputs
+  nothing to the page (used for logic like loops/conditionals), `<%=` ...
+  `% >` runs Ruby AND inserts its result into the HTML as text, and `<%#`
+  ... `% >` (this comment itself) is stripped out entirely before the page
+  reaches a browser.
 
+  NOTE ON THIS COMMENT ITSELF, AND EVERY OTHER `<%#` ... `% >` COMMENT IN THIS
+  FILE: an ERB comment is opened with `<%#` and runs until the FIRST `%`
+  immediately followed by `>` it finds anywhere after that — so any place
+  below that needs to show that exact two-character closing sequence as
+  descriptive example text (rather than as a real, working tag) writes it
+  with a space in the middle, as `% >`, specifically so it doesn't
+  prematurely end whichever comment it's written inside. This is exactly
+  as fiddly as it sounds — it's the reason you'll see `% >` with a space
+  throughout this file's comments instead of the tighter `% >` you'd
+  normally expect. %>
+
+<%# The tag below opens a plain HTML container; "mb-6" etc. are Tailwind
+  CSS utility classes — short class names that each apply one specific CSS
+  style (e.g. "mb-6" = margin-bottom, "text-2xl" = a large font size) —
+  this file uses Tailwind throughout instead of a separate .css file with
+  hand-named classes. %>
 <div class="mb-6">
+  <%# The page's big visible heading. "text-emerald-400" colors the text a
+    shade of green from Tailwind's built-in color palette. %>
   <h1 class="text-2xl font-bold text-emerald-400">Settings</h1>
+  <%# A smaller gray subtitle line right under the heading, describing
+    what this page is for. %>
   <p class="text-sm text-gray-400 mt-1">Configure alerts, crawl options, and data retention</p>
+<%# The closing div tag below ends the "mb-6" container opened above. %>
 </div>
 
+<%# ERB comment (original, kept as-is) marking the start of the tab-button
+  row below. %>
 <%# Tab navigation %>
+<%# The div opened below holds the row of clickable tab buttons — "flex"
+  lays its children out side-by-side horizontally, "border-b" draws a
+  bottom divider line under the whole row, and its id gives this element a
+  unique name so it could be targeted by CSS/JavaScript elsewhere (not
+  used elsewhere in this file, but available). %>
 <div class="flex gap-1 border-b border-gray-800 mb-6" id="settings-tabs">
+  <%# The array literal on the line below — six two-item arrays, each
+    pairing an internal category key (e.g. "crawl") with a human-readable
+    tab label including an emoji (e.g. "crawl-magnifying-glass emoji
+    Crawl") — is a Ruby Array of Arrays. `.each_with_index do |(cat,
+    label), i| ... end` loops over every pair: `(cat, label)`
+    "destructures" each two-item array straight into two separate block
+    variables in one step, and `i` is the zero-based position of this pair
+    in the list (0 for "crawl", 1 for "schedule", and so on) — used below
+    to mark exactly the FIRST tab as initially active. %>
   <% [["crawl", "🔍 Crawl"], ["schedule", "⏱ Schedule"], ["email", "📧 Email"], ["discord", "💬 Discord"], ["sms", "📱 SMS"], ["display", "📊 Display"]].each_with_index do |(cat, label), i| %>
+    <%# The button tag below renders one clickable tab button per
+      iteration of the loop above — everything inside this tag is
+      regenerated once for each of the six category/label pairs. %>
     <button
+      <%# The `onclick="showTab('...')"` attribute below wires up a plain
+        HTML/JavaScript click handler (not a Rails/Ruby mechanism) — when
+        clicked, it calls the `showTab` JavaScript function defined in the
+        script block near the bottom of this file, passing this tab's
+        category string (e.g. "crawl") as an argument. The embedded output
+        tag inserts that Ruby string value into the onclick attribute's
+        JavaScript text at render time. %>
       onclick="showTab('<%= cat %>')"
+      <%# Gives each button a unique HTML id built from its category (e.g.
+        "tab-crawl") — used both by this same JavaScript function to find/
+        highlight the correct button, and to keep ids unique across the
+        six buttons this loop generates. %>
       id="tab-<%= cat %>"
+      <%# The class attribute below combines fixed Tailwind classes with a
+        RUBY TERNARY inserted via an output tag: `i == 0` is true only for
+        the very first pair in the loop (the "crawl" tab), so only that
+        first button starts with the green "active" styling (emerald
+        border/text colors); every other button starts with the neutral
+        "inactive" gray styling instead. This is what makes the Crawl tab
+        appear selected when the page first loads. %>
       class="px-4 py-2 text-sm border-b-2 transition-colors <%= i == 0 ? "border-emerald-500 text-emerald-400" : "border-transparent text-gray-400 hover:text-gray-200" %>">
+      <%# The output tag below prints this iteration's human-readable
+        label (e.g. "🔍 Crawl") as the button's visible text. %>
       <%= label %>
+    <%# The closing button tag below ends the tag opened above — one full
+      button has now been rendered for this loop iteration. %>
     </button>
+  <%# The `<% end % >` below closes the `.each_with_index do |(cat, label),
+    i| ... end` loop opened above — Ruby re-runs everything between there
+    and here once per category/label pair, six times total. %>
   <% end %>
+<%# The closing div tag below ends the tab-button row opened above. %>
 </div>
 
+<%# The line below starts a Rails form-builder block: `form_with` is a
+  Rails helper that renders an HTML form tag (plus a hidden CSRF-
+  protection token field automatically), `url: settings_path` points it
+  at the named route for PATCH/PUT "/settings" (see config/routes.rb's
+  `resource :settings do` block), and `method: :patch` sets which HTTP
+  verb the form should submit as. `do |f| ... end` is a block whose
+  parameter `f` is a "form builder" object — used below (e.g.
+  `f.hidden_field`) to render form fields that automatically get
+  correctly-named `name="..."` attributes matching what
+  SettingsController#update expects to receive. Because this uses the
+  `<%=` output-tag form (not plain `<%`), the block's own return value
+  (the fully rendered form's HTML) gets inserted into the page — this is
+  Rails' standard pattern for "block helpers" that wrap other content. %>
 <%= form_with url: settings_path, method: :patch do |f| %>
+  <%# HTML forms can only truly submit GET or POST natively; Rails fakes
+    PATCH (and PUT/DELETE) by actually submitting as POST, plus this
+    hidden field carrying the REAL intended method — Rails' router reads
+    this hidden field server-side and treats the request as a PATCH.
+    `f.hidden_field :_method, value: "patch"` renders that hidden input,
+    named "_method" as Rails' routing layer expects. %>
   <%= f.hidden_field :_method, value: "patch" %>
 
+  <%# Blank line in the original file, separating the form-setup fields
+    above from the main per-category loop below — visual spacing only. %>
+
+  <%# A second loop, structurally identical to the tab-buttons loop above,
+    but pairing each category key with its full section HEADING text
+    instead of a short tab label (e.g. "crawl" pairs with "Crawl Options"
+    here, vs. "🔍 Crawl" above) — these two arrays are kept separate/
+    duplicated in the source rather than shared, so the two texts can
+    differ. Same `.each_with_index do |(cat, heading), i| ... end`
+    mechanics as explained above: `cat`/`heading` destructured from each
+    pair, `i` is this pair's position (0-based), used again below to decide
+    which single panel starts visible. %>
   <% [["crawl", "Crawl Options"], ["schedule", "Scheduled Crawls"], ["email", "Email Alerts"], ["discord", "Discord Alerts"], ["sms", "SMS Alerts (Requires Twilio)"], ["display", "Display & History"]].each_with_index do |(cat, heading), i| %>
+    <%# The div opened below is ONE tab's whole content panel — its id
+      (e.g. "tab-panel-crawl") is what the `showTab` JavaScript function
+      (bottom of this file) shows/hides by name. Its class ternary again
+      singles out the first loop iteration (i == 0, the "crawl" panel): it
+      gets an EMPTY extra class (fully visible), while every other panel
+      gets Tailwind's "hidden" class (CSS display: none) so only one panel
+      is visible when the page first loads, matching the one active tab
+      button above. %>
     <div id="tab-panel-<%= cat %>" class="<%= i == 0 ? "" : "hidden" %>">
+      <%# The div opened below wraps this panel's content in a styled
+        "card" box — "card" here is presumably a custom CSS class defined
+        elsewhere in the app's stylesheet (not a Tailwind built-in),
+        giving it a consistent bordered/padded look across panels. %>
       <div class="card">
+        <%# Prints this category's section heading (e.g. "Crawl Options")
+          as styled, uppercase small-caps-ish text via Tailwind classes
+          ("uppercase", "tracking-wider" = letter-spacing). %>
         <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-5"><%= heading %></h2>
 
+        <%# Blank line in the original file, separating the heading above
+          from the per-setting-field loop below — visual spacing only. %>
+
+        <%# The line below loops over every individual Setting record
+          belonging to THIS category. `@settings_by_category` is the hash
+          built in SettingsController#index via
+          `Setting.all.group_by(&:category)` — looking it up by `[cat]`
+          returns an array of Setting objects for that category, or `nil`
+          if this category currently has zero settings in the database;
+          `|| []` falls back to an empty array in that case so `.each`
+          always has something safe to iterate over (an empty array
+          simply loops zero times) rather than crashing by calling `.each`
+          on `nil`. %>
         <% (@settings_by_category[cat] || []).each do |setting| %>
+          <%# The div opened below is the wrapper for ONE setting's field
+            — margin-bottom spacing between successive fields. %>
           <div class="mb-4">
+            <%# The label tag below renders this field's visible label
+              text; its `for="..."` attribute links it to the actual input
+              by matching that input's `id` (built the same way,
+              "settings_" + the setting's database key) — clicking the
+              label text then focuses/activates the associated input,
+              standard HTML form accessibility behavior. %>
             <label class="form-label" for="settings_<%= setting.key %>">
+              <%# The output tag below prints this setting's human-
+                friendly `label` column if one was set in the database,
+                otherwise falls back to showing the raw internal `key`
+                string (e.g. "smtp_host") instead — so a setting always
+                shows SOME text even if nobody filled in a friendlier
+                label for it yet. %>
               <%= setting.label || setting.key %>
+            <%# The closing label tag below ends the tag opened above. %>
             </label>
 
+            <%# Blank line in the original file, separating the label above
+              from the type-specific input rendering below. %>
+
+            <%# The line below starts a Ruby `case` statement — Ruby's
+              multi-way branching construct (like a cleaner chain of
+              if/elsif) — branching on the CURRENT setting's `input_type`
+              database column, to decide which kind of HTML input to
+              render for it. Note this `case`/`when`/`else`/`end` sequence
+              is written flush against the left margin rather than
+              indented like the surrounding ERB tags — that's a stylistic
+              inconsistency in the original file (not a functional
+              problem; ERB doesn't care about indentation), left as-is per
+              the comments-only instructions for this pass. %>
 <% case setting.input_type %>
+<%# This `when "boolean"` line is this case statement's first branch,
+  taken when input_type is exactly the string "boolean" — rendered as a
+  checkbox rather than a text box. %>
 <% when "boolean" %>
+              <%# The label tag opened below wraps the checkbox AND its
+                own little "Enabled" text in one clickable label —
+                "cursor-pointer" visually hints the whole row (not just
+                the tiny checkbox square) is clickable. %>
               <label class="flex items-center gap-2 mt-1 cursor-pointer">
+                <%# The input tag opened below renders the actual checkbox
+                  control. %>
                 <input type="checkbox"
+                       <%# Matches the `for="settings_..."` on the outer
+                         label above, so clicking that outer label also
+                         toggles this specific checkbox. %>
                        id="settings_<%= setting.key %>"
+                       <%# The `name="settings[...]"` attribute below is
+                         what determines the PARAMETER NAME Rails receives
+                         when the form is submitted — the "settings[...]"
+                         bracket syntax is how HTML forms express a nested
+                         hash of values, matching how
+                         SettingsController#update reads
+                         `params.require(:settings)`. %>
                        name="settings[<%= setting.key %>]"
+                       <%# When a checkbox IS checked, browsers submit this
+                         literal "true" text as its value (browsers never
+                         submit the actual boolean true/false — checkbox
+                         values are always whatever string is written here). %>
                        value="true"
+                       <%# The output tag below conditionally inserts the
+                         literal HTML attribute `checked` (which pre-ticks
+                         the checkbox) only when this setting's CURRENTLY
+                         STORED value is the string "true" — otherwise the
+                         trailing `if` with no matching value evaluates to
+                         Ruby's `nil`, and an output tag containing `nil`
+                         renders as nothing at all, leaving the checkbox
+                         unticked. %>
                        <%= "checked" if setting.value == "true" %>
+                       <%# Tailwind classes styling the checkbox's own
+                         accent color (green, matching the app's theme) and
+                         fixed pixel size. %>
                        class="accent-emerald-500 w-4 h-4">
+                <%# The small static text shown next to the checkbox itself
+                  — always literally says "Enabled" regardless of setting. %>
                 <span class="text-sm text-gray-300">Enabled</span>
+              <%# The closing label tag below ends the clickable wrapper
+                opened above. %>
               </label>
+              <%# Original inline ERB comment, kept — explains the next
+                line's purpose. %>
               <%# Hidden field so unchecking still submits "false" %>
+              <%# Unchecked checkboxes submit NOTHING at all for their
+                `name`, so without this extra field, an unchecked box would
+                simply be missing from the submitted params rather than
+                explicitly saying "false" — SettingsController#update
+                relies on exactly this field (matched by its
+                "_unchecked"-suffixed name) to detect and correctly save
+                "false" for boxes the user just unchecked. This is a
+                second, SEPARATE input — always present, always hidden,
+                always carrying the literal text "false" — not connected to
+                the checkbox's own checked/unchecked state by HTML alone;
+                the controller-side logic (not this template) is what ties
+                the two together. %>
               <input type="hidden" name="settings[<%= setting.key %>]_unchecked" value="false">
 
+              <%# Blank line in the original file, separating the boolean
+                branch above from the password branch below. %>
+
+<%# This `when "password"` line is the second case branch, taken when
+  input_type is exactly "password" — rendered as a masked password box. %>
 <% when "password" %>
+              <%# The input tag opened below has `type="password"` —
+                browsers render this input type with dots/asterisks
+                instead of visible text, to shoulder-surf-proof things
+                like an SMTP password on screen. %>
               <input type="password"
                      id="settings_<%= setting.key %>"
                      name="settings[<%= setting.key %>]"
+                     <%# The placeholder attribute below uses a Ruby
+                       ternary deciding this field's placeholder (greyed-
+                       out hint text shown only when the box is empty): if
+                       a value IS already saved, show a hint explaining
+                       that leaving it blank keeps the current secret
+                       unchanged (this field is intentionally never pre-
+                       filled with the actual secret — see setting.value
+                       below); if nothing is saved yet, show no
+                       placeholder at all (empty string). This matches
+                       SettingsController#update's own logic, which skips
+                       saving password fields submitted as blank. %>
                      placeholder="<%= setting.value.present? ? "(unchanged — leave blank to keep current value)" : "" %>"
+                     <%# `autocomplete="off"` asks the browser not to
+                       offer/apply its own saved-password autofill
+                       suggestions for this particular field — appropriate
+                       here since this is an ADMIN CONFIG field (e.g. an
+                       SMTP password), not a login form the browser should
+                       be managing credentials for. %>
                      autocomplete="off"
                      class="form-input">
 
+              <%# Blank line, separating the password branch above from the
+                number branch below. %>
+
+<%# This `when "number"` line is the third case branch, taken when
+  input_type is exactly "number" — rendered as a browser-native numeric
+  input. %>
 <% when "number" %>
+              <%# The input tag opened below has `type="number"`, getting
+                browser-native numeric behavior (up/down spinner controls,
+                numeric-only mobile keyboards, etc.) rather than a plain
+                text box. %>
               <input type="number"
                      id="settings_<%= setting.key %>"
                      name="settings[<%= setting.key %>]"
+                     <%# Unlike the password field above, THIS field IS
+                       pre-filled with its actual currently-stored value —
+                       numeric settings (e.g. a crawl radius) aren't secret,
+                       so showing the current value is fine/expected. %>
                      value="<%= setting.value %>"
+                     <%# "w-32" gives this field a smaller, fixed width
+                       (compared to the plain "form-input" text fields
+                       below) since numbers are typically shorter than
+                       free-text values. %>
                      class="form-input w-32">
 
+              <%# Blank line, separating the number branch above from the
+                fallback branch below. %>
+
+<%# This `else` line is the fallback branch, taken for ANY input_type not
+  explicitly matched above (e.g. "text", "select", or simply nil) —
+  rendered as a plain single-line text box. %>
 <% else %>
+              <%# The input tag opened below (`type="text"`) is the
+                generic catch-all field; also pre-filled with the setting's
+                current value, same as the number field above, since these
+                aren't treated as secret either. %>
               <input type="text"
                      id="settings_<%= setting.key %>"
                      name="settings[<%= setting.key %>]"
                      value="<%= setting.value %>"
                      class="form-input">
+<%# The `<% end % >` below closes the `case setting.input_type` statement
+  opened above — exactly one of the branches above ran for this particular
+  setting, based on its input_type. %>
 <% end %>
+          <%# The closing div tag below ends the "mb-4" wrapper for this
+            one setting field, opened near the top of this loop iteration. %>
           </div>
+        <%# The `<% end % >` below closes the
+          `(@settings_by_category[cat] || []).each do |setting| ... end`
+          loop — every setting belonging to this category has now had its
+          field rendered. %>
         <% end %>
 
+        <%# Original inline ERB comment, kept — describes the purpose of
+          the two conditional "test" buttons below. %>
         <%# Test buttons for email and discord %>
+        <%# The `if cat == "email"` line below — this whole block ONLY
+          renders while the loop variable `cat` (from the outer per-
+          category loop, far above) equals the string "email" — i.e. only
+          inside the Email panel, not any of the other five. %>
         <% if cat == "email" %>
+          <%# Thin bordered strip at the bottom of the Email panel, holding
+            the test-send button, visually separated from the settings
+            fields above it by a top border ("border-t") and extra padding. %>
           <div class="mt-4 pt-4 border-t border-gray-800">
+            <%# The button tag opened below has `type="button"` — as
+              opposed to the default `type="submit"` — which means
+              clicking this does NOT submit the surrounding form — it's
+              meant to trigger a separate, standalone JavaScript action
+              instead (see `testSetting` below), independent of saving the
+              settings form. %>
             <button type="button"
                     class="btn-secondary"
+                    <%# The onclick attribute below calls a JavaScript
+                      function named `testSetting` (defined in the script
+                      block below) with four arguments: (1) a Rails route
+                      helper (see config/routes.rb's `post "test_email"`
+                      route) inserted here as the URL string
+                      "/settings/test_email" for the JS to POST to; (2)
+                      `this` — a reference to the button element ITSELF,
+                      passed so the JS function can, e.g., show a loading
+                      state on this specific button while the request is in
+                      flight; (3) and (4) — the success/failure message
+                      strings to display once the request completes. %>
                     onclick="testSetting('<%= test_email_settings_path %>', this, 'Email sent!', 'Email test failed')">
               Send Test Email
+            <%# The closing button tag below ends the test-email button
+              opened above. %>
             </button>
+          <%# The closing div tag below ends the bordered strip opened
+            above. %>
           </div>
+        <%# The `<% end % >` below closes the `if cat == "email"` block
+          opened above. %>
         <% end %>
 
+        <%# The `if cat == "discord"` line below is the same pattern as the
+          email block above, but only rendering inside the Discord panel. %>
         <% if cat == "discord" %>
           <div class="mt-4 pt-4 border-t border-gray-800">
+            <%# Same `testSetting(...)` JavaScript call pattern as the
+              email button above, but pointed at `test_discord_settings_path`
+              (see config/routes.rb's `post "test_discord"` route) and with
+              Discord-specific success/failure message text. %>
             <button type="button"
                     class="btn-secondary"
                     onclick="testSetting('<%= test_discord_settings_path %>', this, 'Discord message sent!', 'Discord test failed')">
               Send Test Message
+            <%# The closing button tag below ends the test-Discord button
+              opened above. %>
             </button>
+          <%# The closing div tag below ends the bordered strip opened
+            above. %>
           </div>
+        <%# The `<% end % >` below closes the `if cat == "discord"` block
+          opened above. %>
         <% end %>
 
+        <%# The `if cat == "sms"` line below only renders inside the SMS
+          panel; unlike the email/discord blocks above, this one is a
+          plain informational warning banner, not a button — SMS testing
+          isn't offered because SMS delivery itself isn't wired up (see
+          app/services/alerting/alert_delivery_service.rb's `deliver_sms`
+          method, which is a stub pending a paid Twilio account). %>
         <% if cat == "sms" %>
+          <%# A static yellow-tinted warning box (Tailwind's
+            "bg-yellow-900/20" = a translucent dark-yellow background, the
+            "/20" being a Tailwind opacity modifier) explaining the SMS
+            prerequisite directly to the user. %>
           <div class="mt-4 p-3 bg-yellow-900/20 border border-yellow-800/40 rounded text-xs text-yellow-300">
             ⚠ SMS requires a paid Twilio account. See the README for setup instructions.
+          <%# The closing div tag below ends the warning box opened above. %>
           </div>
+        <%# The `<% end % >` below closes the `if cat == "sms"` block
+          opened above. %>
         <% end %>
+      <%# The closing div tag below ends the "card" wrapper opened near the
+        top of this category's panel. %>
       </div>
+    <%# The closing div tag below ends the tab-panel wrapper opened at the
+      very start of this loop iteration. %>
     </div>
+  <%# The `<% end % >` below closes the outer `.each_with_index do |(cat,
+    heading), i| ... end` loop — every one of the six category panels has
+    now been fully rendered. %>
   <% end %>
 
+  <%# The div opened below is the final row holding the actual form submit
+    button — sits below/outside all six tab panels, so it's always visible
+    regardless of which tab is currently showing. %>
   <div class="mt-4">
+    <%# The button tag below is a REAL submit button this time
+      (`type="submit"`, the default, is explicit here) — clicking it
+      submits the whole form opened near the top of this file, sending
+      every visible field's current value (across ALL six tabs at once,
+      not just the currently-shown one — the hidden panels' fields still
+      exist in the DOM and still get submitted) to
+      SettingsController#update. %>
     <button type="submit" class="btn-primary">Save Settings</button>
+    <%# Small reassuring helper text next to the button, explaining that
+      settings apply immediately rather than needing e.g. a server
+      restart. %>
     <span class="text-xs text-gray-500 ml-3">Changes take effect immediately</span>
+  <%# The closing div tag below ends the "mt-4" row opened above. %>
   </div>
+<%# The `<% end % >` below closes the `form_with url: settings_path,
+  method: :patch do |f|` block opened near the top of this file —
+  everything from there to here is the actual submitted form content. %>
 <% end %>
 
+<%# The script tag opened below holds a block of plain, ordinary
+  JavaScript (no ERB/Ruby inside it) that runs in the user's browser once
+  the page loads — this is what makes clicking a tab button actually
+  switch which panel is visible, entirely on the client side without a
+  page reload. %>
 <script>
+<%# The lines below are plain JavaScript; comments in this block use JS's
+  own `//` single-line comment syntax (not ERB's `<%#` ... `% >`), since
+  they're inside a script tag's JS content, not directly in ERB/HTML. %>
+// `function showTab(name) { ... }` defines a JavaScript function named
+// showTab, taking one parameter `name` (the category string, e.g.
+// "crawl", passed in from each button's `onclick="showTab('...')"`
+// attribute set up earlier in this file). Every tab button calls this
+// same function; only the argument passed in differs.
 function showTab(name) {
   // Hide all panels
+  // `document.querySelectorAll('[id^="tab-panel-"]')` finds every element
+  // on the page whose `id` attribute STARTS WITH the text "tab-panel-" (the
+  // `^=` is a CSS attribute-selector operator meaning "starts with") — i.e.
+  // all six panel divs rendered earlier in this file, regardless of
+  // category. `.forEach(el => el.classList.add("hidden"))` then runs a
+  // small arrow function on EACH of those matched elements, adding
+  // Tailwind's "hidden" class (CSS display: none) to it — so this one
+  // line hides every panel, unconditionally, as the first step.
   document.querySelectorAll('[id^="tab-panel-"]').forEach(el => el.classList.add("hidden"));
   // Deactivate all tabs
+  // Same `querySelectorAll` pattern, but matching every tab BUTTON instead
+  // (ids starting with "tab-" — note this pattern is broader than
+  // "tab-panel-" above and would ALSO match the panel divs, but since this
+  // runs `.remove`/`.add` on styling classes that only exist on the button
+  // elements' current state, it has no visible effect on the panels
+  // themselves; still, matching more elements than strictly intended is
+  // worth knowing about, see the end-of-task flag notes). `.forEach(el =>
+  // { ... })` runs a multi-line arrow function on each matched element.
   document.querySelectorAll('[id^="tab-"]').forEach(el => {
+    // Removes the two "active/selected" Tailwind classes (green border +
+    // green text) from this element, if it currently has them.
     el.classList.remove("border-emerald-500", "text-emerald-400");
+    // Adds back the two "inactive" Tailwind classes (transparent border +
+    // gray text) — together with the line above, this resets every tab
+    // button to its default, unselected appearance.
     el.classList.add("border-transparent", "text-gray-400");
+  // The closing brace/parenthesis below ends the arrow function passed to
+  // `.forEach(...)`, and then the `.forEach(...)` call itself.
   });
   // Show selected panel
+  // `document.getElementById("tab-panel-" + name)` finds the ONE specific
+  // panel element whose id exactly matches this tab (e.g. "tab-panel-
+  // crawl" if `name` is "crawl") — `+` here is JavaScript string
+  // concatenation, joining the fixed prefix "tab-panel-" with whatever
+  // category name was passed into this function. `.classList.remove
+  // ("hidden")` then removes the "hidden" class from just that one panel,
+  // making it visible again (undoing the blanket hide-all-panels step
+  // above, but only for this one).
   document.getElementById("tab-panel-" + name).classList.remove("hidden");
   // Activate selected tab
+  // `document.getElementById("tab-" + name)` finds the ONE tab BUTTON
+  // matching this category (e.g. "tab-crawl"), storing it in a local
+  // `const` (a variable that can't be reassigned afterward) named `tab`.
   const tab = document.getElementById("tab-" + name);
+  // Re-applies the green "active/selected" classes to just this one
+  // button — undoing the blanket deactivation step above, but only for
+  // the tab that was actually clicked.
   tab.classList.add("border-emerald-500", "text-emerald-400");
+  // Removes the gray "inactive" classes from this same button, completing
+  // its visual switch to the "selected" appearance.
   tab.classList.remove("border-transparent", "text-gray-400");
+// The closing brace below ends the `function showTab(name) { ... }`
+// definition opened above.
 }
+<%# The closing script tag below ends the tag opened above — this is the
+  last line of the file. %>
 </script>

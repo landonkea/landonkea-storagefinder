@@ -1,8 +1,63 @@
 #!/bin/bash -e
+# Must be the literal first line of the file — a "shebang" telling the OS
+# which program interprets this script. Unlike other bin/ scripts in this
+# app that use `/usr/bin/env`, this one hard-codes `/bin/bash` directly —
+# reasonable here because this script only runs inside the app's Docker
+# container, where the exact location of bash is controlled and known
+# (built by this project's Dockerfile), unlike a developer's own machine.
+# The `-e` after the interpreter path is a flag passed to bash itself: it
+# means "if any command in this script exits with a failure status, stop
+# running the script immediately" (this is the shell equivalent of
+# fail-fast error handling) — without it, a failed database migration
+# below could be silently ignored and the script would continue on to
+# start the server against a broken database. This script is the
+# "entrypoint" for the app's Docker container — Docker runs it as the
+# very first process when a container starts.
 
+# Blank line separating the shebang from the script body.
+
+# This comment (kept from the original) explains the `if` block below: it
+# only prepares the database when this container is about to run the
+# actual Rails web server, not for other commands (like running a rake
+# task or opening a console) that might be run in the same container image.
 # If running the rails server then create or migrate existing database
+# `if [ COND1 ] && [ COND2 ]; then ... fi` runs the block only when BOTH
+# bracketed conditions are true. `[ ... ]` is shell's test command for
+# comparisons. `"${@: -2:1}"` and `"${@: -1:1}"` use bash's array-slicing
+# syntax on `$@` (all the arguments this script itself was launched
+# with, treated here as an indexed list): `${@: -2:1}` means "starting
+# 2 positions from the end, take 1 element" — i.e. the SECOND-TO-LAST
+# argument — and `${@: -1:1}` means "starting 1 position from the end,
+# take 1 element" — i.e. the LAST argument. `==` compares the two sides
+# for equality. So together this reads: "if the second-to-last argument
+# equals the literal text './bin/rails' AND the last argument equals
+# 'server' — i.e. this container was started with a command ending in
+# `./bin/rails server` — then run the block below." Docker containers are
+# typically started with a full command line (e.g. the container's CMD),
+# which becomes this script's `$@`.
 if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+  # `./bin/rails db:prepare` is a Rails built-in task that creates the
+  # database if it doesn't exist yet, runs any pending migrations, and
+  # loads the schema if the database is brand new — it's the safe
+  # "make sure the database is ready" command, usable both on a fresh
+  # container and on one restarting with an existing database.
   ./bin/rails db:prepare
+# `fi` closes the `if` block opened above.
 fi
 
+# Blank line separating the conditional database setup from the final
+# command hand-off.
+
+# `exec` replaces this script's own process with the command that
+# follows, rather than running it as a child process — meaning
+# `docker-entrypoint` doesn't stick around as a wrapper once the real
+# command starts. This matters a lot in Docker: the entrypoint process
+# needs to become process ID 1 in the container's process tree so that
+# signals like SIGTERM (sent when Docker stops the container) reach the
+# actual server/command directly instead of being absorbed by an
+# unnecessary shell wrapper. `"${@}"` expands to every argument this
+# script was launched with, each individually quoted — this is exactly
+# the same "all arguments, safely" list examined above, but here it's
+# actually EXECUTED as a command (e.g. `./bin/rails server`, or whatever
+# else Docker was told to run in this container).
 exec "${@}"

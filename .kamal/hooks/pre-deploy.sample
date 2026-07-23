@@ -1,4 +1,24 @@
 #!/usr/bin/env ruby
+# The line above is a "shebang" — on Unix-like systems (Linux/macOS), if a
+# script's very first line starts with `#!` followed by a program path, the
+# OS uses that program to run the rest of the file when it's executed
+# directly (e.g. `./pre-deploy.sample`). `/usr/bin/env ruby` means "find
+# whichever `ruby` is first on the PATH and run this file with it," rather
+# than hardcoding one exact path to a Ruby install (which could differ
+# between machines).
+
+# WHAT IS THIS FILE?
+# Kamal is a deployment tool (see the `kamal` gem in the Gemfile and
+# config/deploy.yml) that ships a Rails app as a Docker container to one or
+# more servers with a single command (`bin/kamal deploy`). Kamal supports
+# "hooks": scripts it will automatically run at specific points in the
+# deploy process, if a file with the right name exists. This file lives at
+# .kamal/hooks/pre-deploy.sample — the `.sample` suffix means Kamal will
+# NOT run it as-is; it's a template/example. To actually activate it, you'd
+# copy/rename it to `.kamal/hooks/pre-deploy` (dropping `.sample`) and make
+# it executable. Once active, Kamal runs it BEFORE starting a deploy, and
+# aborts the whole deploy if this script exits with a non-zero status code
+# (Unix convention: exit code 0 means success, anything else means failure).
 
 # A sample pre-deploy hook
 #
@@ -15,108 +35,470 @@
 # KAMAL_SUBCOMMAND
 # KAMAL_ROLES (if set)
 # KAMAL_DESTINATION (if set)
+# The comment block above (pre-existing) is this script's own
+# documentation: a plain-English summary of what it does, followed by a
+# reference list of environment variables Kamal automatically sets before
+# running any hook script — these let a hook know details about the deploy
+# in progress (who triggered it, which servers, which Kamal subcommand,
+# etc.) without needing to be passed as command-line arguments.
 
+# Blank line — pure visual separation between the doc comment above and the
+# executable code below.
+
+# `if <condition>` starts a conditional statement — the code inside only
+# runs when the condition evaluates to true (Ruby, unlike some languages,
+# treats everything except `nil` and `false` as true, including `0` and
+# empty strings). `ENV["KAMAL_COMMAND"]` reads the KAMAL_COMMAND environment
+# variable mentioned in the doc comment above — `ENV` is Ruby's built-in
+# hash-like object exposing the process's environment variables, and `[]`
+# looks one up by name (returning nil if it's not set). `==` tests for
+# equality, so this first half checks "is the deploy command actually a
+# rollback?" (during a rollback, checking GitHub build status for a NEW
+# build makes no sense, since nothing new is being built). `||` is
+# Ruby's "or" operator: the whole condition is true if EITHER side is true.
+# The second half, `ENV["KAMAL_DESTINATION"] != "production"`, uses `!=`
+# ("not equal") to check "is this deploy going somewhere other than the
+# production destination?" Combined: skip this whole check unless we are
+# deploying (not rolling back) specifically to production.
 # Only check the build status for production deployments
 if ENV["KAMAL_COMMAND"] == "rollback" || ENV["KAMAL_DESTINATION"] != "production"
+  # `exit 0` immediately terminates this script with status code 0
+  # (success) — Kamal sees success and proceeds with the deploy, having
+  # skipped the GitHub-status check entirely, per the condition above.
   exit 0
+# `end` closes the `if` block opened above.
 end
 
+# Blank line — pure visual separation.
+
+# `require "bundler/inline"` loads a special Bundler feature that lets a
+# single, standalone Ruby SCRIPT (as opposed to a whole Rails app with its
+# own Gemfile) declare and install its own gem dependencies inline, right
+# here in the file, instead of relying on the app's main Gemfile. This
+# matters because Kamal hook scripts run standalone, outside the context of
+# the Rails app's normal `bundle exec` process.
 require "bundler/inline"
 
+# Blank line — pure visual separation.
+
+# Comment (pre-existing) explaining the `true` argument passed to
+# `gemfile` just below.
 # true = install gems so this is fast on repeat invocations
+# `gemfile(true, quiet: true) do ... end` calls the method that
+# `bundler/inline` added (required above). The first argument, `true`,
+# tells it to actually run `bundle install` for the gems listed inside the
+# block if they aren't already installed (per the comment above, this means
+# repeat runs skip re-installing and start fast). `quiet: true` is a
+# keyword argument — Ruby's way of passing a named option instead of a
+# positional one — that suppresses Bundler's normal installation chatter.
+# `do ... end` again marks a block: the code between `do` and the matching
+# `end` (well below) is the inline "Gemfile" being declared for this
+# script alone.
 gemfile(true, quiet: true) do
+  # `source "https://rubygems.org"` — same meaning as in the app's main
+  # Gemfile: download these gems from the public RubyGems registry.
   source "https://rubygems.org"
 
+  # Blank line — pure visual separation inside the block.
+
+  # `gem "octokit"` declares a dependency on Octokit, the official Ruby
+  # client library for GitHub's API — used below to query build/check
+  # status for this repository's commits.
   gem "octokit"
+  # `gem "faraday-retry"` declares a dependency on a Faraday middleware
+  # (Octokit itself is built on Faraday, the HTTP client) that automatically
+  # retries failed HTTP requests — makes the GitHub API calls below more
+  # resilient to transient network hiccups.
   gem "faraday-retry"
+# `end` closes the `gemfile(...) do` block opened above — everything
+# between here and the matching `do` was this script's private, inline
+# gem list, unrelated to the app's own Gemfile.
 end
 
+# Blank line — pure visual separation.
+
+# `MAX_ATTEMPTS = 72` defines a Ruby CONSTANT — by convention, any Ruby
+# identifier starting with an uppercase letter is treated as a constant
+# (Ruby will warn, but not fully prevent, reassigning it later). This one
+# sets the maximum number of times the polling loop below will check
+# GitHub's build status before giving up.
 MAX_ATTEMPTS = 72
+# `ATTEMPTS_GAP = 10` defines another constant: the number of seconds to
+# sleep between each status check. Combined with MAX_ATTEMPTS above,
+# 72 attempts * 10 seconds = 720 seconds total — matching the "up to 720
+# seconds" figure mentioned in this script's own doc comment near the top.
 ATTEMPTS_GAP = 10
 
+# Blank line — pure visual separation.
+
+# `def exit_with_error(message)` defines a method named `exit_with_error`
+# that takes one argument, `message`. `def` starts any Ruby method
+# definition; the matching `end` below closes it.
 def exit_with_error(message)
+  # `$stderr` is Ruby's global variable for the "standard error" output
+  # stream (as opposed to `$stdout`, standard output) — writing here, by
+  # Unix convention, is how a program reports error text separately from
+  # its normal output, so callers/logs can distinguish the two. `.puts`
+  # writes the given text followed by a newline.
   $stderr.puts message
+  # `exit 1` terminates the whole script immediately with status code 1 —
+  # any non-zero exit code signals failure, which (per this file's own
+  # intro comment) tells Kamal to abort the deploy rather than proceed.
   exit 1
+# `end` closes the `def exit_with_error` method definition opened above.
 end
 
+# Blank line — pure visual separation.
+
+# `class GithubStatusChecks` starts defining a new Ruby class — a blueprint
+# for creating objects that bundle related data and behavior together. The
+# matching `end` far below closes this class definition. Everything
+# between here and that `end` is either an instance method (defines
+# behavior every object of this class can do) or attribute/instance-
+# variable setup (defines what data each object stores).
 class GithubStatusChecks
+  # `attr_reader` is a built-in Ruby class method that auto-generates
+  # simple "getter" methods — one per symbol listed — so that, for example,
+  # `some_instance.remote_url` returns the value of that object's
+  # `@remote_url` instance variable, without having to hand-write that
+  # trivial method yourself. It does NOT generate a way to set these values
+  # from outside the object (no "setter") — they can only be set from
+  # inside the class's own methods, below.
   attr_reader :remote_url, :git_sha, :github_client, :combined_status
 
+  # Blank line — pure visual separation inside the class body.
+
+  # `def initialize` defines Ruby's special constructor method — it runs
+  # automatically exactly once, whenever someone calls
+  # `GithubStatusChecks.new` (as happens further down this file), and is
+  # where a new object's starting state gets set up.
   def initialize
+    # `@remote_url = ...` assigns to an INSTANCE variable (the leading `@`
+    # is what makes it one) — instance variables are how a Ruby object
+    # stores its own private data, readable from other methods in this same
+    # object without being passed around as arguments. Here it's set by
+    # calling the private helper method `github_repo_from_remote_url`
+    # (defined further down this class) and storing its return value.
     @remote_url = github_repo_from_remote_url
+    # `` `git rev-parse HEAD` `` — backticks in Ruby run their contents as a
+    # literal SHELL command (like calling out to the terminal) and return
+    # whatever that command printed to standard output, as a Ruby String.
+    # `git rev-parse HEAD` prints the full commit hash (SHA) that the
+    # repository's HEAD currently points to — i.e. the commit about to be
+    # deployed. `.strip` removes the trailing newline the shell command's
+    # output would otherwise include, leaving just the raw hash characters.
     @git_sha = `git rev-parse HEAD`.strip
+    # `Octokit::Client.new(...)` creates a new API client object from the
+    # `octokit` gem required via the inline Gemfile above. The `::` is
+    # Ruby's namespace-separator syntax — `Client` here is a class nested
+    # inside the `Octokit` module/namespace. `access_token:` is a keyword
+    # argument supplying the GitHub authentication token, read from the
+    # GITHUB_TOKEN environment variable (not documented among this script's
+    # own listed Kamal-provided env vars near the top of the file — it must
+    # be supplied separately, e.g. exported before running Kamal).
     @github_client = Octokit::Client.new(access_token: ENV["GITHUB_TOKEN"])
+    # `refresh!` calls the instance method defined just below, which
+    # actually fetches the current build status from GitHub — called here
+    # so that by the time `.new` finishes, `@combined_status` already holds
+    # real data, not nil. The trailing `!` in Ruby method names is just a
+    # naming convention (not special syntax) signaling "this method has a
+    # notable/mutating side effect" — here, it changes this object's state.
     refresh!
+  # `end` closes the `def initialize` method opened above.
   end
 
+  # Blank line — pure visual separation.
+
+  # `def refresh!` defines a method (with the "has side effects" naming
+  # convention mentioned above) that re-fetches this commit's build status.
   def refresh!
+    # `github_client.combined_status(remote_url, git_sha)` calls Octokit's
+    # API method for GitHub's "combined status" endpoint — it asks GitHub
+    # for the overall status of every check/CI run attached to the given
+    # commit (`git_sha`) in the given repository (`remote_url`), bundled
+    # together as one summary. Note `github_client`, `remote_url`, and
+    # `git_sha` here call the `attr_reader`-generated getter methods from
+    # above (NOT the `@`-prefixed instance variables directly) — inside a
+    # method, calling a bare method name with no receiver implicitly calls
+    # it on `self` (this same object). The result is stored into the
+    # `@combined_status` instance variable, overwriting whatever was there.
     @combined_status = github_client.combined_status(remote_url, git_sha)
+  # `end` closes the `def refresh!` method opened above.
   end
 
+  # Blank line — pure visual separation.
+
+  # `def state` defines a small method returning just the overall status
+  # string (e.g. "success", "pending", "failure") out of the larger
+  # combined_status data structure.
   def state
+    # `combined_status[:state]` — `combined_status` calls the getter for
+    # the instance variable set by `refresh!` above; it holds a Hash-like
+    # object returned by Octokit, and `[:state]` looks up the value stored
+    # under the `:state` key. `:state` here is a Ruby SYMBOL — symbols
+    # (written with a leading colon) are lightweight, immutable, named
+    # values commonly used as hash keys/identifiers, distinct from Strings.
+    # This line is the method's last (and only) expression, so its value is
+    # what `state` returns — Ruby methods return their last-evaluated
+    # expression automatically, no explicit `return` keyword required.
     combined_status[:state]
+  # `end` closes the `def state` method opened above.
   end
 
+  # Blank line — pure visual separation.
+
+  # `def first_status_url` defines a method that finds a link to more
+  # detail about one specific check, so error/progress messages elsewhere
+  # in this script can point a human at something clickable.
   def first_status_url
+    # `combined_status[:statuses]` looks up the `:statuses` key, expected
+    # to hold an Array of individual check results. `.find { ... }` is
+    # Ruby's Enumerable method that scans the array and returns the FIRST
+    # element for which the block (the code between `{` and `}`) returns
+    # true — here, `status[:state] == state` compares each individual
+    # status's own state to the OVERALL combined state (`state`, calling
+    # the method defined just above) — i.e. "find one individual check
+    # whose state matches the combined summary state." `{ |status| ... }`
+    # is block syntax with an argument: `status` is the name given to each
+    # array element as `.find` iterates through them one at a time.
     first_status = combined_status[:statuses].find { |status| status[:state] == state }
+    # `first_status && first_status[:target_url]` uses `&&` ("and") in a
+    # common Ruby idiom for "safely" reading a value that might not exist:
+    # if `first_status` turned out to be `nil` (no match was found by
+    # `.find` above), `nil` is "falsy," so the whole expression short-
+    # circuits and evaluates to `nil` WITHOUT ever attempting
+    # `first_status[:target_url]` (which would otherwise raise an error on
+    # nil). If `first_status` IS present/truthy, the expression evaluates
+    # to whatever `first_status[:target_url]` is — the URL, on GitHub,
+    # where a human could view more detail about that specific check. This
+    # is the method's return value (last expression, no explicit `return`).
     first_status && first_status[:target_url]
+  # `end` closes the `def first_status_url` method opened above.
   end
 
+  # Blank line — pure visual separation.
+
+  # `def complete_count` defines a method counting how many individual
+  # checks have finished (regardless of pass/fail), out of the total.
   def complete_count
+    # `.count { |status| ... }` is another Enumerable method: it counts how
+    # many elements in the array make the block return true. Here, that's
+    # every status whose state is NOT `"pending"` (`!=` is "not equal") —
+    # i.e. every check that has finished one way or another (succeeded,
+    # failed, or errored), as opposed to still running.
     combined_status[:statuses].count { |status| status[:state] != "pending"}
+  # `end` closes the `def complete_count` method opened above.
   end
 
+  # Blank line — pure visual separation.
+
+  # `def total_count` defines a method returning the TOTAL number of
+  # individual checks attached to this commit, finished or not.
   def total_count
+    # `.count` with no block simply counts every element in the array —
+    # the total number of individual status checks GitHub reports.
     combined_status[:statuses].count
+  # `end` closes the `def total_count` method opened above.
   end
 
+  # Blank line — pure visual separation.
+
+  # `def current_status` defines a method producing a human-readable
+  # progress line, used by the polling loop further down this file to
+  # print what's happening while it waits.
   def current_status
+    # `if total_count > 0` — calls the method defined just above; only
+    # true once GitHub has actually registered at least one check for this
+    # commit (right after pushing, there may be a brief window with zero).
     if total_count > 0
+      # String interpolation: `"...#{expression}..."` embeds the result of
+      # evaluating Ruby code (here, method calls) directly into a string,
+      # converted to text automatically. This builds a message like
+      # "Completed 3/5 checks, see https://... ...". This is the `if`
+      # branch's (and therefore the method's) return value when true.
       "Completed #{complete_count}/#{total_count} checks, see #{first_status_url} ..."
     else
+      # If there are zero total checks yet, return this simpler fallback
+      # message instead — the `else` branch's value when the condition
+      # above is false.
       "Build not started..."
+    # `end` closes the `if/else` block opened above.
     end
+  # `end` closes the `def current_status` method opened above.
   end
 
+  # Blank line — pure visual separation.
+
+  # `private` is a Ruby keyword (technically a method call with no
+  # arguments) that changes the default visibility of every method DEFINED
+  # AFTER this point in the class body: they become callable only from
+  # inside this class's own other methods, not from outside code holding a
+  # reference to an instance. It's how a class marks certain methods as
+  # internal implementation details rather than part of its public API.
   private
+    # `def github_repo_from_remote_url` defines a private helper method
+    # (indented further here as a style convention some codebases use to
+    # visually set private methods apart, though Ruby itself doesn't
+    # require the extra indentation) that figures out "owner/repo" from
+    # this local git checkout's configured remote URL, in whichever format
+    # (HTTPS or SSH) that remote happens to be set up as.
     def github_repo_from_remote_url
+      # `` `git config --get remote.origin.url` `` runs a shell command
+      # (backticks again — see the note on `git rev-parse HEAD` above) that
+      # prints this repo's "origin" remote URL, e.g.
+      # "https://github.com/owner/repo.git". `.strip` removes the trailing
+      # newline. `.delete_suffix(".git")` removes a literal trailing
+      # ".git" from the end of the string, if present (GitHub URLs
+      # sometimes include it, sometimes don't, depending on how the remote
+      # was originally added).
       url = `git config --get remote.origin.url`.strip.delete_suffix(".git")
+      # `if url.start_with?("https://github.com/")` checks whether the
+      # remote uses GitHub's HTTPS URL format.
       if url.start_with?("https://github.com/")
+        # `.delete_prefix(...)` removes that literal leading text, leaving
+        # just "owner/repo" — the value Octokit's API calls expect.
         url.delete_prefix("https://github.com/")
+      # `elsif` ("else if") checks a second, alternate condition only if
+      # the first `if` above was false — here, GitHub's SSH URL format.
       elsif url.start_with?("git@github.com:")
+        # Same idea as above, but stripping the SSH-style prefix instead,
+        # again leaving just "owner/repo".
         url.delete_prefix("git@github.com:")
       else
+        # Neither prefix matched (unexpected remote host/format) — fall
+        # back to returning the URL completely unmodified, rather than
+        # crashing; downstream API calls would then simply fail with
+        # whatever error GitHub's API gives for a malformed repo string.
         url
+      # `end` closes the `if/elsif/else` block opened above.
       end
+    # `end` closes the `def github_repo_from_remote_url` method opened
+    # above.
     end
+# `end` closes the `class GithubStatusChecks` definition opened near the
+# top of this section.
 end
 
 
+# Two blank lines above (pre-existing spacing) — pure visual separation
+# between the class definition and the script's main execution logic below.
+
+# `$stdout.sync = true` sets Ruby's global standard-output stream to
+# "synchronous" (unbuffered) mode — normally Ruby buffers output in memory
+# and flushes it out in chunks for efficiency, which can make a
+# long-running script's `puts` calls appear to print in delayed bursts
+# rather than immediately. Setting `sync = true` forces every `puts` below
+# to appear right away — important for a polling loop like this one, where
+# a human (or Kamal's own log capture) wants to see progress messages in
+# real time as they happen, not buffered until the process exits.
 $stdout.sync = true
 
+# Blank line — pure visual separation.
+
+# `begin ... rescue ... end` is Ruby's exception-handling construct: code
+# inside the `begin` block runs normally, but if it raises an error
+# matching the `rescue` clause below, execution jumps to that rescue
+# block instead of crashing the whole script with an unhandled exception.
 begin
+  # `puts "Checking build status..."` prints a starting message so anyone
+  # watching Kamal's deploy output knows this hook has begun working.
   puts "Checking build status..."
 
+  # Blank line — pure visual separation.
+
+  # `attempts = 0` — a local variable (no `@` or leading capital, so it's
+  # plain local scope, not an instance variable or constant) counting how
+  # many times the polling loop below has checked GitHub so far.
   attempts = 0
+  # `checks = GithubStatusChecks.new` creates one instance of the class
+  # defined above — `.new` triggers that class's `initialize` method,
+  # which immediately fetches the current combined status from GitHub, so
+  # `checks` is ready to query right away.
   checks = GithubStatusChecks.new
 
+  # Blank line — pure visual separation.
+
+  # `loop do ... end` runs the block between `do` and `end` repeatedly,
+  # forever, UNTIL something inside explicitly stops it (here, via `exit`
+  # calls that end the whole script — there's no `break` in this loop,
+  # every path out is a full script exit).
   loop do
+    # `case checks.state` starts a `case` statement — Ruby's multi-way
+    # branch construct, similar to switch statements in other languages.
+    # It evaluates `checks.state` (calling the `state` method on our
+    # GithubStatusChecks instance) ONCE, then compares that value against
+    # each `when` clause below in order, running the first one that
+    # matches.
     case checks.state
+    # `when "success"` matches if the state is exactly the string
+    # "success".
     when "success"
+      # Print a success message including the URL to the specific check
+      # (via `first_status_url`, defined on the class above) for reference.
       puts "Checks passed, see #{checks.first_status_url}"
+      # `exit 0` — success exit code; Kamal proceeds with the deploy.
       exit 0
+    # `when "failure"` matches if the state is exactly "failure".
     when "failure"
+      # Calls the `exit_with_error` method defined near the top of this
+      # file, which prints the message to stderr and exits with status 1
+      # (failure) — aborting the Kamal deploy.
       exit_with_error "Checks failed, see #{checks.first_status_url}"
+    # `when "pending"` matches if the state is exactly "pending" — checks
+    # are still running.
     when "pending"
+      # `attempts += 1` is shorthand for `attempts = attempts + 1` —
+      # increments the retry counter by one each time through the loop
+      # while still pending.
       attempts += 1
+    # `case` statements with no matching `when` and no `else` simply do
+    # nothing for that iteration — this implicitly handles any other
+    # GitHub state value (e.g. "error") by falling through without action,
+    # relying on the next lines below to decide whether to keep looping.
+    # `end` closes the `case` statement opened above.
     end
 
+    # Blank line — pure visual separation.
+
+    # This line uses Ruby's "statement modifier" `if` — instead of a
+    # multi-line `if...end` block, appending `if <condition>` after a
+    # single statement means "run this statement ONLY if the condition is
+    # true," all on one line. Here: once `attempts` has reached
+    # MAX_ATTEMPTS (the constant defined near the top), give up — printing
+    # the total elapsed-time budget (MAX_ATTEMPTS * ATTEMPTS_GAP seconds,
+    # matching this file's own doc comment about "up to 720 seconds") and
+    # exiting with failure via `exit_with_error`.
     exit_with_error "Checks are still pending, gave up after #{MAX_ATTEMPTS * ATTEMPTS_GAP} seconds" if attempts == MAX_ATTEMPTS
 
+    # Blank line — pure visual separation.
+
+    # Prints the current progress line (built by the `current_status`
+    # method on the class above) so a human watching the deploy can see
+    # how many checks have completed so far.
     puts checks.current_status
+    # `sleep(ATTEMPTS_GAP)` pauses this script's execution for
+    # ATTEMPTS_GAP seconds (the constant defined near the top, 10) before
+    # looping again — avoids hammering GitHub's API with requests every
+    # fraction of a second.
     sleep(ATTEMPTS_GAP)
+    # `checks.refresh!` calls the `refresh!` method on the class above
+    # again, re-fetching the latest combined status from GitHub before the
+    # `loop` repeats and re-evaluates `checks.state` at the top.
     checks.refresh!
+  # `end` closes the `loop do` block opened above — control jumps back up
+  # to the top of the loop after this point, repeating indefinitely (until
+  # one of the `exit` calls inside terminates the whole script).
   end
+# `rescue Octokit::NotFound` catches one SPECIFIC kind of error — the
+# exception class Octokit's gem raises when GitHub's API responds with a
+# 404 (e.g. commit/repo not found, or bad credentials with insufficient
+# access) — and only that kind; any other unexpected error type would still
+# crash the script normally, uncaught.
 rescue Octokit::NotFound
+  # If that specific error occurs anywhere inside the `begin` block above,
+  # report a clear message and exit with failure, rather than letting a
+  # raw, less-helpful stack trace be the only output.
   exit_with_error "Build status could not be found"
+# `end` closes the `begin...rescue` block opened above — this is the very
+# last line of the file.
 end
