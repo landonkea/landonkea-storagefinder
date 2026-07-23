@@ -375,7 +375,7 @@ class SettingsController < ApplicationController
                    "Check your webhook URL in Discord channel settings."
         }
       end
-      # `end` closes the `if response.success? ... else ... end` block above.
+    # `end` closes the `if response.success? ... else ... end` block above.
 
     # Three specific `rescue` clauses, checked top-to-bottom — Ruby tries
     # each `rescue ExceptionClass` in order and runs the first one whose

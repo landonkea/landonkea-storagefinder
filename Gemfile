@@ -43,6 +43,15 @@ gem "rails", "~> 8.1"
 # browser (fingerprinted filenames for cache-busting, etc.), replacing the
 # older Sprockets pipeline used by pre-Rails-8 apps.
 gem "propshaft"
+# `gem "tailwindcss-rails"` integrates the Tailwind CSS utility framework
+# (see app/assets/tailwind/application.css) into Rails' asset pipeline. It
+# provides the `bin/rails tailwindcss:build`/`tailwindcss:watch` Rake tasks
+# that Procfile.dev's "css:" process runs, by downloading and wrapping a
+# platform-specific standalone `tailwindcss` command-line tool (no Node.js/
+# npm required) that reads app/assets/tailwind/application.css and writes
+# the compiled output to app/assets/builds/tailwind.css, which Propshaft
+# then serves to the browser.
+gem "tailwindcss-rails"
 # `gem "sqlite3", ">= 2.1"` adds the Ruby bindings for SQLite, the
 # file-based (no separate server process needed) database this app uses to
 # store its data — see config/database.yml for how Rails is told to use it.
@@ -207,7 +216,7 @@ group :development, :test do
   # all. `require: false` since RuboCop loads its own config separately,
   # not via a plain top-level `require`.
   gem "rubocop-rails-omakase", require: false
-# `end` closes the `group :development, :test do` block opened above.
+  # `end` closes the `group :development, :test do` block opened above.
 end
 
 # Blank line — pure visual separation between group blocks.
@@ -223,7 +232,7 @@ group :test do
   # Minitest 6 dropped Mock/Object#stub from core — this is the same code,
   # published separately, so stubbing Faraday/network calls in tests works.
   gem "minitest-mock"
-# `end` closes the `group :test do` block opened above.
+  # `end` closes the `group :test do` block opened above.
 end
 
 # Blank line — pure visual separation.
@@ -236,5 +245,5 @@ group :development do
   # unhandled exception occurs locally, you get a live REPL at the point of
   # failure right in the error page, instead of only a stack trace.
   gem "web-console"
-# `end` closes the `group :development do` block opened above.
+  # `end` closes the `group :development do` block opened above.
 end
