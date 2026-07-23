@@ -201,7 +201,7 @@ class CrawlsController < ApplicationController
         }, status: :created
       }
     end
-    # `end` closes the final `respond_to do |format| ... end` block above.
+  # `end` closes the final `respond_to do |format| ... end` block above.
 
   # `rescue ActiveRecord::RecordInvalid => e` catches the specific error
   # `CrawlRun.create!` raises if validation fails (see comment above), and
@@ -311,7 +311,7 @@ class CrawlsController < ApplicationController
       # telling the dashboard whether it should stop polling.
       finished:     crawl_run.finished?
     }
-    # `}` closes the `render json: { ... }` hash argument.
+  # `}` closes the `render json: { ... }` hash argument.
 
   # Catches the case where `params[:id]` doesn't match any CrawlRun — since
   # this is a polled JSON endpoint, the response here is JSON (not a

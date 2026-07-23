@@ -241,6 +241,6 @@ wb = xlsx_package.workbook
     ws.column_info[15].width = 35   # Booking URL
     ws.column_info[16].width = 16   # Date
   end
-  # `end` closes the `wb.add_worksheet(...) do |ws| ... end` block that
-  # started the "Storage Prices" worksheet — everything above, from the
-  # header row through the column widths, happens inside this block.
+# `end` closes the `wb.add_worksheet(...) do |ws| ... end` block that
+# started the "Storage Prices" worksheet — everything above, from the
+# header row through the column widths, happens inside this block.

@@ -342,6 +342,21 @@ jobs:
 
       # Blank line — visual separation.
 
+      # `- name: Build Tailwind CSS` compiles app/assets/tailwind/
+      # application.css into app/assets/builds/tailwind.css using the
+      # `tailwindcss-rails` gem's Rake task (installed above via `bundle
+      # install`). This build output is listed in .gitignore — it's
+      # regenerated from source, not committed — so unlike a real developer
+      # machine (where `bin/dev` keeps it up to date via `tailwindcss:watch`
+      # in the background), a fresh CI checkout has NO compiled CSS file at
+      # all until this step creates one. Without it, every view that uses
+      # `stylesheet_link_tag "tailwind"` raises "asset not found" the moment
+      # a test tries to render it.
+      - name: Build Tailwind CSS
+        run: bin/rails tailwindcss:build
+
+      # Blank line — visual separation.
+
       # `- name: Prepare the test database` starts a step that creates and
       # migrates a fresh database specifically for running tests against.
       - name: Prepare the test database

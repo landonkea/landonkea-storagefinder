@@ -72,10 +72,10 @@ class AlertCheckerJob < ApplicationJob
                            # `.order(id: :desc)` sorts the matching rows by
                            # id, descending (highest/most recent id first).
                            .first
-                           # `.first` runs the query and returns just the
-                           # first result — i.e., the most recent completed
-                           # run before this one — or `nil` if there isn't
-                           # one (e.g. this is the very first crawl ever).
+    # `.first` runs the query and returns just the
+    # first result — i.e., the most recent completed
+    # run before this one — or `nil` if there isn't
+    # one (e.g. this is the very first crawl ever).
 
     Rails.logger.info(
       "[AlertCheckerJob] Checking #{active_rules.count} alert rules. " \
