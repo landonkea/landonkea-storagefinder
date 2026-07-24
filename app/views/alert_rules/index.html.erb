@@ -193,15 +193,15 @@
                     action. The `class:` here styles the generated `<button>`
                     to look like a plain text link rather than a boxy button
                     (bg-transparent border-0 cursor-pointer p-0 strip away
-                    default button chrome). `data: { confirm: "..." }` is
-                    meant to pop up a browser "Are you sure?" dialog before
-                    the delete actually submits — see the flagged note at
-                    the end of this pass, since this app appears to use
-                    Turbo (not classic Rails UJS), which listens for a
-                    DIFFERENT attribute name for this behavior. %>
+                    default button chrome). `data: { turbo_confirm: "..." }`
+                    pops up a browser "Are you sure?" dialog before the
+                    delete actually submits — it must be `turbo_confirm`
+                    (not plain `confirm`) since this app's forms are
+                    intercepted by Turbo, which only recognizes its own
+                    `turbo_confirm` data attribute. %>
                 <%= button_to "Delete", alert_rule_path(rule), method: :delete,
                       class: "text-red-400 hover:text-red-300 text-xs bg-transparent border-0 cursor-pointer p-0",
-                      data: { confirm: "Delete '#{rule.name}'?" } %>
+                      data: { turbo_confirm: "Delete '#{rule.name}'?" } %>
               </div>
             </td>
           </tr>

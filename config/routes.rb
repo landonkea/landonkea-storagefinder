@@ -39,6 +39,20 @@ Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
   # ---------------------------------------------------------------------------
+  # PWA — dynamically-rendered files a browser looks for to treat this app as
+  # an installable "Progressive Web App" (add-to-home-screen icon, etc.).
+  # Rails::PwaController (built into Rails, like Rails::HealthController
+  # above) renders app/views/pwa/manifest.json.erb and
+  # app/views/pwa/service-worker.js — those two view files already existed in
+  # this app, but with no routes pointing at them a browser had no way to
+  # ever request either one. `as: :pwa_manifest` names the manifest route so
+  # the layout below can link to it via `pwa_manifest_path` instead of a
+  # hardcoded string.
+  # ---------------------------------------------------------------------------
+  get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
+  get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+
+  # ---------------------------------------------------------------------------
   # ROOT — the main page when you visit storagefinder.local
   # ---------------------------------------------------------------------------
   # `root` is a special routing method: it defines what happens for a GET
