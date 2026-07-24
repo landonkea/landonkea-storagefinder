@@ -47,6 +47,12 @@
       here, between the `<title>` and `</title>` tags. %>
   <title><%= current_page_title %></title>
 
+  <%# PWA manifest — tells a browser this app can be installed
+      ("add to home screen"), and where to find its icon/name/colors.
+      `pwa_manifest_path` is the named route added in config/routes.rb,
+      pointing at app/views/pwa/manifest.json.erb. %>
+  <link rel="manifest" href="<%= pwa_manifest_path %>">
+
   <%# Tailwind CSS — utility classes for styling %>
   <%# `stylesheet_link_tag` is a Rails helper that outputs an HTML `<link>`
       tag pointing at the compiled "tailwind" stylesheet, so the browser
