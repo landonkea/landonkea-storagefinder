@@ -31,13 +31,13 @@
         HTTP DELETE request, which the routes map to the controller's
         `destroy` action. "btn-danger" is this app's custom CSS class
         signaling a destructive action (typically styled red).
-        `data: { confirm: "..." }` is meant to show a browser confirmation
-        popup before the delete submits — see the flagged note at the end
-        of this pass, since this attribute name may not actually trigger a
-        confirmation under this app's Turbo-based setup. %>
+        `data: { turbo_confirm: "..." }` pops a browser confirmation dialog
+        before the delete submits — it must be `turbo_confirm` (not plain
+        `confirm`) because this app's forms are intercepted by Turbo, which
+        only recognizes its own `turbo_confirm` data attribute. %>
     <%= button_to "Delete", alert_rule_path(@alert_rule), method: :delete,
           class: "btn-danger",
-          data: { confirm: "Delete '#{@alert_rule.name}'?" } %>
+          data: { turbo_confirm: "Delete '#{@alert_rule.name}'?" } %>
   </div>
 </div>
 

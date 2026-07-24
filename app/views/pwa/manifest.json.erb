@@ -29,14 +29,12 @@
   working tag) writes it with a space in the middle, as `% >`, so it
   doesn't end the comment early.
 
-  FLAG (see end-of-task report): config/routes.rb does not declare a route
-  for `rails/pwa#manifest` (the controller Rails ships specifically to
-  render this file), and app/views/layouts/application.html.erb has no
-  `<link rel="manifest" ...>` tag pointing at it either — note that tag's
-  closing `>` alone is safe (it's a single character, not the two-char
-  `% >` sequence ERB looks for). That combination means this file is not
-  currently wired up to be served or referenced by any page — a browser
-  has no way to discover it. Not fixed here — comments-only pass. %>
+  FIXED: this file used to have no route pointing at it and no `<link
+  rel="manifest">` tag referencing it, so a browser had no way to ever
+  discover or request it. config/routes.rb now declares
+  `get "manifest" => "rails/pwa#manifest", as: :pwa_manifest`, and
+  app/views/layouts/application.html.erb now includes
+  `<link rel="manifest" href="<%= pwa_manifest_path % >">` in its `<head>`. %>
 <%# `{` opens the manifest's single top-level JSON object — everything
   else in this file is a key/value pair inside it, closed by the matching
   `}` at the very end of the file. JSON (JavaScript Object Notation) is a
