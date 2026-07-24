@@ -242,7 +242,7 @@ jobs:
         # which can save a folder after the job finishes and restore it at
         # the start of a later run, keyed by whatever `key:` evaluates to
         # below.
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         # `env:` here sets a variable scoped to just THIS step (shadowing/
         # supplementing the job-level `env:` above), used only to compute
         # the cache key below.
