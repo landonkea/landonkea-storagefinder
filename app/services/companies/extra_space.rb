@@ -28,16 +28,26 @@
 # base_parser.rb's opening comment for a fuller explanation of selectors and
 # of Ruby's `protected`/`private` visibility keywords, both used here too.
 #
-# FLAG (see end-of-review notes): unlike the sibling parsers in this folder
-# (cube_smart.rb, devon_self_storage.rb, public_storage.rb, etc.), this
-# file's header has none of the "verified by driving the live site" recon
-# detail those files carry, and nearly every selector below is written as a
-# long, speculative comma-separated CSS list (e.g.
+# FLAG (still unverified — see attempt below): unlike the sibling parsers
+# in this folder (cube_smart.rb, devon_self_storage.rb, public_storage.rb,
+# etc.), this file's header has none of the "verified by driving the live
+# site" recon detail those files carry, and nearly every selector below is
+# written as a long, speculative comma-separated CSS list (e.g.
 # "[data-testid='facility-card'], .facility-card, .search-result-item")
-# rather than one selector confirmed against real HTML. That pattern reads as
-# "guessed, never confirmed against the real site" rather than "verified" —
-# worth re-running ReconService against the live site before trusting this
-# parser's output.
+# rather than one selector confirmed against real HTML.
+#
+# ReconService was actually run against the live URL in this file's header
+# comment to try to verify/fix these selectors. The result: extraspace.com
+# served a PerimeterX "Press & Hold to confirm you are a human (and not a
+# bot)" CAPTCHA challenge instead of the real search-results page — no
+# facility/unit HTML was returned at all, so there was nothing to check
+# these selectors against. This means the speculative selectors below are
+# STILL unverified, but now for a more serious reason than "nobody checked
+# yet": this site may reject this app's own automated crawls in production
+# the same way, independent of whether these selectors are correct. If
+# real crawls against Extra Space are failing, check the logs for this
+# same "Access to this page has been denied" / CAPTCHA pattern before
+# assuming it's a selector problem.
 class Companies::ExtraSpace < Companies::BaseParser
   # A Ruby "constant" (ALL_CAPS name) holding Extra Space's website root,
   # reused below when building absolute URLs from relative "/foo" links.
