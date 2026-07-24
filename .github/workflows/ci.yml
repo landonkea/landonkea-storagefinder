@@ -67,7 +67,7 @@ jobs:
         # action that clones this repository's code onto the VM — without
         # it, the VM would be empty and there'd be nothing to test. `@v6`
         # pins which published version of that action to use.
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Blank line — visual separation between steps.
 
@@ -156,7 +156,7 @@ jobs:
       # VM, so even though scan_ruby already checked out code, this job
       # must do it again independently.
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Blank line — visual separation.
 
@@ -210,7 +210,7 @@ jobs:
       # as in the previous two jobs (each job is isolated and needs its own
       # copy of the code).
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Blank line — visual separation.
 
@@ -320,7 +320,7 @@ jobs:
       # `- name: Checkout code` — clone the repo onto this job's VM, same
       # pattern as every other job (jobs never share a VM or filesystem).
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Blank line — visual separation.
 
