@@ -653,11 +653,17 @@ class ReconService
     # a proper Hash.
     class_counts.sort_by { |_, count| -count }.first(50).to_h
   rescue => e
-    # Note: unlike the array-returning helpers above (which return `[
-    # "error string" ]` on failure), this one returns a HASH with an
-    # `:error` key on failure — an inconsistent error-shape convention
-    # across these helper methods, flagged separately below.
-    { error: e.message }
+    # FIXED: this used to return `{ error: e.message }` on failure — a
+    # Hash whose one key/value pair isn't a real class-name/count pair,
+    # unlike every entry this method normally returns. A caller reading
+    # `findings[:all_classes_with_counts]` as "class name => count" (its
+    # normal shape) would have silently treated that fake "error" entry as
+    # real data instead of noticing something went wrong. Returning an
+    # empty Hash keeps the SAME type and shape as the success case (just
+    # with no entries), so callers can't misread it as a real class/count
+    # pair; the underlying message is still visible in `e.message` to
+    # anyone debugging interactively.
+    {}
   end
   # `end` closes the `def collect_css_classes` method definition above.
 

@@ -370,23 +370,24 @@ class CrawlsController < ApplicationController
         format.json { render json: { message: "Crawl cancelled", status: "failed" } }
       end
     end
-    # `end` closes the `if crawl_run.finished? ... else ... end` block above.
+  # `end` closes the `if crawl_run.finished? ... else ... end` block above.
 
+  # FIXED: this `rescue` used to always `render json: ...`, even for a
+  # plain (non-AJAX) browser request — unlike the `if`/`else` branches
+  # above it, which both split html vs. json via `respond_to`. Now matches
+  # that same pattern, so a browser hitting a missing crawl ID gets a
+  # redirect + flash message instead of a raw JSON body.
   rescue ActiveRecord::RecordNotFound
-    render json: { error: "Crawl run not found" }, status: :not_found
+    respond_to do |format|
+      format.html {
+        flash[:alert] = "Crawl run not found."
+        redirect_to root_path
+      }
+      format.json { render json: { error: "Crawl run not found" }, status: :not_found }
+    end
   end
   # `end` closes the `def destroy` action definition (the `rescue` clause
   # above is part of this same method).
-  #
-  # FLAG: this `rescue` only ever returns JSON, even though the `if`/`else`
-  # branches above it both render either html or json depending on the
-  # request format. If a browser (non-AJAX) request hits a missing crawl ID
-  # here, it will receive a raw JSON body instead of a redirect + flash
-  # message like the rest of this action's html branches produce elsewhere
-  # in this file (see `show` and `log` above, which have the same
-  # asymmetry in `log`, but `show`'s rescue is HTML-appropriate since
-  # `show` never renders JSON on success). Not fixed here per the
-  # comments-only instructions — noted in the final report.
 
   # ---------------------------------------------------------------------------
   # DESTROY_SELECTED — bulk-delete crawl history records

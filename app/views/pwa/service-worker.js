@@ -19,12 +19,14 @@
 // as a ready-to-uncomment starting point for a developer who wants to add
 // Web Push notification support later.
 //
-// FLAG (see end-of-task report): same issue noted in manifest.json.erb —
-// config/routes.rb has no route for `rails/pwa#service_worker`, and no
-// page registers a service worker via JavaScript
-// (`navigator.serviceWorker.register(...)`) either. Even if the code below
-// were uncommented, nothing currently causes a browser to install or run
-// this file. Not fixed here — comments-only pass.
+// PARTIALLY FIXED: config/routes.rb now declares
+// `get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker`,
+// so this file is reachable at a real URL. Still NOT wired up: no page
+// registers it via JavaScript (`navigator.serviceWorker.register(...)`) —
+// left that way deliberately, since every line below is still commented
+// out (a stub with no functional code), so registering it right now would
+// install a service worker that does nothing. Add a registration call once
+// the code below is actually uncommented and doing something real.
 //
 // Below this point, every "//" line (including every bare "//" with no
 // text after it) is part of the ORIGINAL file, character-for-character —

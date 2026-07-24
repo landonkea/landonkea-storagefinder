@@ -133,15 +133,15 @@
             convention). `crawl_path(@running_crawl)` builds the URL for
             this specific crawl record (e.g. "/crawls/12"). "btn-danger
             text-xs" is this app's red/destructive button style, sized
-            small. `data: { confirm: "..." }` is meant to pop a
-            confirmation dialog before canceling — see the flagged note at
-            the end of this pass regarding this attribute versus Turbo's
-            `turbo_confirm`. %>
+            small. `data: { turbo_confirm: "..." }` pops a confirmation
+            dialog before canceling — it must be `turbo_confirm` (not plain
+            `confirm`) since this app's forms are intercepted by Turbo,
+            which only recognizes its own `turbo_confirm` data attribute. %>
         <%= button_to "Cancel Crawl",
               crawl_path(@running_crawl),
               method: :delete,
               class:  "btn-danger text-xs",
-              data:   { confirm: "Cancel the running crawl?" } %>
+              data:   { turbo_confirm: "Cancel the running crawl?" } %>
       </div>
 
       <%# Live log feed — new messages appear here via ActionCable %>
