@@ -147,3 +147,11 @@
 # `/recon/*` excludes the contents of a `recon/` folder — output from the
 # "recon" feature referenced in the comment above.
 /recon/*
+
+# Ignore key files for decrypting credentials and more.
+/config/*.key
+
+
+# Ignore key files for decrypting credentials and more.
+/config/credentials/*.key
+
