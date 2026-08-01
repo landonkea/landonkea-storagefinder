@@ -113,16 +113,15 @@ registry:
   # setting could instead point at.
   # Alternatives: hub.docker.com / registry.digitalocean.com / ghcr.io / ...
   # "server:" names the actual registry host+port this app pushes to —
-  # "localhost:5555" means a registry running on the SAME machine this
-  # `bin/kamal` command is run from (i.e. presumably a local/self-hosted
-  # registry container, not a public cloud registry), listening on port
-  # 5555. NOTE: this exact port number, 5555, is also the port this app's
-  # own Rails/Puma server listens on (see config/environments/
-  # development.rb and config/initializers/mdns.rb) — worth double-checking
-  # these are genuinely meant to be the same number for two different
-  # purposes and not an accidental copy/paste, see this pass's final
-  # "flagged issues" note.
-  server: localhost:5555
+  # "localhost:5050" means a registry running on the SAME machine this
+  # `bin/kamal` command is run from (i.e. a local/self-hosted registry
+  # container, not a public cloud registry), listening on port 5050.
+  # This is deliberately DIFFERENT from port 5555 (the dev Rails/Puma
+  # server's port — see config/environments/development.rb and
+  # config/initializers/mdns.rb): an earlier version of this file used
+  # 5555 for both, which would fail to start whichever one you launched
+  # second while the other was still running on the same machine.
+  server: localhost:5050
 
   # Blank line — ignored by YAML, purely visual spacing.
 
@@ -168,26 +167,30 @@ env:
     - RAILS_MASTER_KEY
   # "clear:" is a YAML nested map — plain, non-secret KEY: VALUE
   # environment variables set directly here.
-  clear:
-    # A comment explaining the setting below: it introduces the choice to
-    # run Solid Queue's job-processing "supervisor" process (which polls
-    # for and runs enqueued jobs) INSIDE the same container/process as
-    # Puma (Rails' own web server), rather than as a fully separate
-    # process/container — simpler to operate for a small, single-server
-    # deployment, at the cost of web requests and job processing competing
-    # for the same process's resources. NOTE: this app's actual active job
-    # adapter is `:async` (see config/application.rb's BACKGROUND JOBS
-    # section), NOT Solid Queue — see this pass's final "flagged issues"
-    # note, since this setting appears to configure a job backend the app
-    # doesn't currently use.
-    # Run the Solid Queue Supervisor inside the web server's Puma process to do jobs.
-    # When you start using multiple servers, you should split out job processing to a dedicated machine.
-    # "SOLID_QUEUE_IN_PUMA: true" — a plain KEY: VALUE pair; "true" here is
-    # interpreted by YAML as its native boolean true (see config/locales/
-    # en.yml's own comment block for the list of case-insensitive strings —
-    # true/false/on/off/yes/no — that YAML treats specially as booleans
-    # unless quoted).
-    SOLID_QUEUE_IN_PUMA: true
+  # "clear: {}" — an explicit empty YAML Hash (flow-style `{}`, meaning "a
+  # Hash with zero keys," as opposed to leaving nothing after "clear:" at
+  # all, which YAML would instead parse as `nil`/null — not a Hash — and
+  # Kamal's own config validator rejects with "env/clear: should be a
+  # hash"). This IS the bug that used to exist here: a previously-present
+  # `SOLID_QUEUE_IN_PUMA: true` line was removed as dead config (see the
+  # comment block below for why), but simply deleting it left "clear:"
+  # value-less, i.e. `clear: nil`, which broke `bin/kamal config` entirely
+  # (confirmed by running it — it fails validation immediately, before ever
+  # reaching a real server). Every setting below is commented-out example
+  # syntax, so there's currently nothing real to put here — "{}" keeps this
+  # section syntactically a valid (empty) Hash, matching what Kamal expects,
+  # until a real "clear:" env var is actually needed again.
+  clear: {}
+    # NOTE: this app's actual active job adapter is `:async` (see
+    # config/application.rb's BACKGROUND JOBS section), not Solid Queue —
+    # Rails 8's generator scaffolds Solid Queue/Cache/Cable by default
+    # (config/queue.yml, config/recurring.yml, db/queue_schema.rb, etc.
+    # all still exist, unused) even though this app deliberately stayed on
+    # the simpler in-process `:async` adapter for a small single-machine
+    # deployment. A previously-present `SOLID_QUEUE_IN_PUMA: true` setting
+    # here did nothing under `:async` (there's no Solid Queue supervisor
+    # process to run inside Puma), so it's been removed as misleading dead
+    # config. If this app switches to `:solid_queue` later, re-add it here.
 
     # Blank line — ignored by YAML, purely visual spacing.
 

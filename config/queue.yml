@@ -4,8 +4,16 @@
 # config/application.rb's BACKGROUND JOBS section, and config/environments/
 # production.rb, both of which set `config.active_job.queue_adapter =
 # :async`), NOT Solid Queue — this file follows the generic shape Rails
-# generates for Solid Queue by default, but does not appear to currently
-# take effect; see this pass's final "flagged issues" note.
+# generates for Solid Queue by default, but does not currently take effect:
+# nothing in this app starts a Solid Queue dispatcher/worker process (no
+# `bin/jobs`, no `:solid_queue` Puma plugin — see config/puma.rb), and the
+# `solid_queue` gem isn't even in the Gemfile. This file (and
+# config/recurring.yml, which configures Solid Queue's recurring-task
+# schedule) are unused Rails 8 generator scaffolding, left in place in case
+# this single-process, in-memory `:async` setup ever needs to become a real
+# persistent job queue (e.g. if jobs need to survive a process restart, or
+# run across more than one process) — not worth deleting for something that
+# costs nothing to leave, but don't assume it's doing anything today.
 #
 # YAML primer: lines starting with "#" are comments, ignored by whatever
 # parses this file. Plain "key: value" pairs work like entries in a Ruby

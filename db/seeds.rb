@@ -224,11 +224,13 @@ seed_setting(
 # Setting holding the password (or app-specific password) used to log into
 # the SMTP server. Starts blank. `input_type: "password"` tells the
 # Settings page to render this as a masked password field rather than
-# plain text, so it isn't shown on-screen while typing. NOTE: this value is
-# still stored as plain, UNENCRYPTED text in the "value" column of the
-# settings table (see the flagged issue at the end of this review) —
-# `input_type: "password"` only changes how the HTML input LOOKS, it does
-# not encrypt anything in the database.
+# plain text, so it isn't shown on-screen while typing — that only affects
+# how the HTML input LOOKS, it doesn't encrypt anything by itself. The
+# actual encryption-at-rest is handled separately, at the model level: see
+# `encrypts :value` in app/models/setting.rb, which transparently encrypts
+# EVERY setting's `value` column (not just password-typed ones) before it's
+# written to the database, so this SMTP password is not stored as plain
+# text.
 seed_setting(
   key:        "email_smtp_password",
   value:      "",

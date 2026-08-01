@@ -136,9 +136,12 @@ production:
   # for the same reasons as "cache" above. NOTE: this app's actual active
   # Active Job adapter setting (see config/application.rb's BACKGROUND JOBS
   # section) is `:async`, an in-process adapter that does NOT persist
-  # anything to a database at all — see this pass's final "flagged issues"
-  # note about this connection appearing to be unused by the app's current
-  # configuration.
+  # anything to a database at all — so this connection, and the
+  # storage/production_queue.sqlite3 file it points at, are currently
+  # unused (see config/queue.yml and config/recurring.yml for the fuller
+  # explanation: the `solid_queue` gem isn't even in the Gemfile). Left in
+  # place as harmless scaffolding alongside those other unused Solid Queue
+  # config files rather than removed piecemeal.
   queue:
     # Same shared default settings merged in again.
     <<: *default
@@ -160,4 +163,55 @@ production:
     database: storage/production_cable.sqlite3
     # This connection's own separate migrations directory, for whatever
     # Solid Cable's own required tables need.
+    migrations_paths: db/cable_migrate
+
+# Blank line — ignored by YAML, purely visual spacing.
+
+# "staging:" configures StorageFinder's THIRD environment (see
+# config/environments/staging.rb for the fuller explanation of what staging
+# is for: a safe rehearsal environment for trying a real Kamal deploy before
+# pointing it at production). This block is structured IDENTICALLY to
+# "production:" above (same four named connections: primary/cache/queue/
+# cable, same migrations_paths) — the only thing that differs is every
+# "database:" path below, which points at entirely separate SQLite files
+# (storage/staging*.sqlite3, never storage/production*.sqlite3). That
+# separation is what makes staging safe: it can be deployed, migrated,
+# seeded, and even have its data wiped, without ever touching a single byte
+# of real production data — the two environments simply never share a file.
+staging:
+  # "primary:" — this environment's own main application data (Unit,
+  # Facility, etc.), kept completely separate from production's.
+  primary:
+    <<: *default
+    database: storage/staging.sqlite3
+  # "cache:" — mirrors production's dedicated cache connection/file, unused
+  # today for the same reason explained in production's "cache:" block
+  # above (this app's active config.cache_store is :memory_store, not a
+  # database-backed store) — kept here only so staging's structure fully
+  # matches production's, in case that ever changes.
+  cache:
+    <<: *default
+    database: storage/staging_cache.sqlite3
+    migrations_paths: db/cache_migrate
+  # "queue:" — mirrors production's dedicated queue connection/file, unused
+  # today for the same reason explained in production's "queue:" block
+  # above (this app's active Active Job adapter is :async, not Solid
+  # Queue) — kept here only so staging's structure fully matches
+  # production's.
+  queue:
+    <<: *default
+    database: storage/staging_queue.sqlite3
+    migrations_paths: db/queue_migrate
+  # "cable:" — mirrors production's Solid Cable connection/file. Unlike
+  # cache/queue above, this one IS actually used once config/cable.yml's
+  # production section takes effect (see config/application.rb, where a
+  # previously-hardcoded override that broke this has been removed) —
+  # config/cable.yml only defines adapters for development/test/production
+  # though, not staging, so staging currently falls back to Action Cable's
+  # own default adapter behavior rather than solid_cable specifically; this
+  # connection/file is defined here regardless so the database structure
+  # stays consistent and ready if cable.yml gains a staging section later.
+  cable:
+    <<: *default
+    database: storage/staging_cable.sqlite3
     migrations_paths: db/cable_migrate
