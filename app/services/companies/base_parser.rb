@@ -194,6 +194,17 @@ class Companies::BaseParser
       log_info("Found #{locations.length} location(s) listed")
 
       # Step 3: For each location, visit its page and extract unit prices
+      #
+      # REFACTORING NOTE: the per-location work used to be inlined directly
+      # in this loop (upsert facility, open its page, parse/filter/save
+      # units, two rescue clauses — around 100 lines) — a comment/refactor
+      # audit flagged it as a self-contained unit of work that could be
+      # pulled out, matching this file's own established pattern of small,
+      # single-purpose helpers (open_page, apply_filters, save_unit,
+      # upsert_facility are all already separate methods below). It's now
+      # `process_location` (in the `protected` section further down),
+      # which returns a `[facility_saved, units_saved_count]` pair — this
+      # loop just accumulates those pairs into the running totals.
       locations.each_with_index do |location_data, index|
         # `.each_with_index do |element, index| ... end` is a Ruby loop: it
         # walks through every element of the `locations` array, running the
@@ -207,111 +218,15 @@ class Companies::BaseParser
         # key, similar to a string but more memory-efficient since identical
         # symbols are the same object in memory.
 
-        begin
-          # Inner begin/rescue: errors on ONE location shouldn't stop the
-          # loop from processing the rest of the locations.
-          # Find or create the Facility record in the database
-          facility = upsert_facility(location_data)
-          # "Upsert" = update if it already exists, insert (create) if not.
-          # See the `upsert_facility` method further down for details.
-
-          # Visit the facility's pricing page
-          facility_page_url = location_data[:url]
-          if facility_page_url.blank?
-            # `.blank?` is a Rails helper: true for nil, empty string, empty
-            # array, whitespace-only string, etc. — a broader check than
-            # Ruby's plain `.nil?` or `.empty?`.
-            log_warning("No URL for #{location_data[:name]} — skipping unit pricing")
-            next
-            # `next` skips the rest of THIS iteration of the `each_with_index`
-            # loop and moves on to the next location — like `continue` in
-            # other languages.
-          end
-          # `end` closes the `if facility_page_url.blank?` check.
-
-          facility_page = open_page(facility_page_url)
-          # Opens a new browser tab at this specific facility's own page
-          # (separate from the search-results page opened earlier).
-
-          # Extract unit data from the facility page
-          raw_units = parse_units(facility_page, facility)
-          # Calls the SUBCLASS's `parse_units` method with the newly opened
-          # facility page and the ActiveRecord `facility` object, returning
-          # an Array of raw (unfiltered) unit-attribute Hashes.
-
-          if raw_units.empty?
-            log_warning("No units found at #{location_data[:name]}. Page may need updating.")
-            take_error_screenshot(facility_page, "no_units_#{facility.id}")
-          else
-            # `else` here pairs with the `if raw_units.empty?` above — this
-            # branch runs when at least one unit WAS found.
-            # Step 4: Filter units based on user's filter options
-            filtered_units = apply_filters(raw_units)
-            # Narrows `raw_units` down to only the ones matching the user's
-            # chosen filters (size, climate control, etc.) — see
-            # `apply_filters` further down.
-
-            log_info("Found #{raw_units.length} units, #{filtered_units.length} match filters at #{location_data[:name]}")
-
-            # Step 5: Save matching units to the database
-            filtered_units.each do |unit_data|
-              # Loops over each surviving unit hash (no index needed here, so
-              # plain `.each` instead of `.each_with_index`).
-              save_unit(unit_data, facility)
-              # Writes this unit to the database, associated with the
-              # facility — see `save_unit` further down.
-              units_saved += 1
-              # `+=` is shorthand for `units_saved = units_saved + 1` —
-              # increments our running tally by one for each unit saved.
-            end
-            # `end` closes the `filtered_units.each do |unit_data|` loop.
-
-            facilities_saved += 1
-            # Counts this facility as successfully processed (only reached
-            # when raw_units was non-empty).
-          end
-          # `end` closes the `if raw_units.empty? ... else ... end` branch.
-
-        rescue Playwright::TimeoutError => e
-          # This `rescue` clause only catches errors of type
-          # `Playwright::TimeoutError` (or subclasses of it) — a specific
-          # exception class Playwright raises when a page takes too long to
-          # respond. `=> e` captures the actual exception object into a local
-          # variable `e` so we can read its message below.
-          # Page took too long to load
-          log_error(
-            "Timeout loading page for #{location_data[:name]}: #{e.message}. " \
-            "This can happen on slow connections or slow hardware. Try increasing " \
-            "crawl_delay_between_requests_ms in Settings.",
-            url: location_data[:url]
-          )
-          # The trailing `\` at the end of a line lets a Ruby string literal
-          # continue onto the next line without inserting a literal newline —
-          # it's purely for keeping source lines from getting too long. The
-          # two string pieces get concatenated into one long message.
-
-        rescue => e
-          # A bare `rescue => e` with no exception class after it catches
-          # `StandardError` and its subclasses — i.e. "any other normal
-          # error we didn't specifically handle above." This must come AFTER
-          # the more specific `Playwright::TimeoutError` rescue, because Ruby
-          # checks rescue clauses top-to-bottom and uses the first one that
-          # matches.
-          # Any other error on this specific location — log it and keep going
-          log_error(
-            "Error processing #{location_data[:name]}: #{e.class}: #{e.message}. " \
-            "Backtrace: #{e.backtrace.first(3).join(' | ')}",
-            url: location_data[:url]
-          )
-          # `e.class` is the exception's Ruby class name (e.g. "NoMethodError"),
-          # `e.backtrace` is an Array of Strings describing the call stack
-          # where the error happened; `.first(3)` takes just the first 3
-          # entries and `.join(' | ')` glues them into one string separated
-          # by " | ", so the log stays readable instead of dumping a giant
-          # stack trace.
-        end
-        # `end` closes the inner `begin ... rescue ... end` block that wraps
-        # the processing of a single location.
+        # `process_location` handles its OWN error cases internally (a
+        # timed-out page load, or any other unexpected error for this ONE
+        # location) and always returns a `[facility_saved, units_saved]`
+        # pair — `[false, 0]` if this location failed for any reason — so
+        # there's no begin/rescue needed here at all; one bad location can
+        # never stop the rest of this loop from running.
+        facility_saved, units_saved_here = process_location(location_data)
+        facilities_saved += 1 if facility_saved
+        units_saved      += units_saved_here
 
         # Polite delay between location requests — avoids overwhelming the site
         # and helps with rate limiting on slow hardware
@@ -445,6 +360,122 @@ class Companies::BaseParser
   # crawl. This documents "these are internal building blocks, not part of
   # the public API" and prevents outside code from accidentally depending on
   # them.
+
+  # Processes ONE location from the search-results page: upserts its
+  # Facility record, opens its own pricing page, parses/filters/saves its
+  # units. Extracted out of `run`'s main loop above (see that loop's
+  # REFACTORING NOTE) — this is the unit of work that used to be inlined
+  # there.
+  #
+  # Returns a two-element Array `[facility_saved, units_saved_count]`:
+  # `facility_saved` is `true`/`false` (whether this location should count
+  # toward the facilities-processed total — false if it had no URL, no
+  # units found, or any error occurred), and `units_saved_count` is how
+  # many individual units were actually written to the database for this
+  # one location (`0` in every failure case). ANY failure for this ONE
+  # location (a timeout, a bad parser, a network error) is caught here and
+  # turned into `[false, 0]` instead of raising — so one bad location can
+  # never stop `run`'s loop from moving on to the next one.
+  def process_location(location_data)
+    # Find or create the Facility record in the database
+    facility = upsert_facility(location_data)
+    # "Upsert" = update if it already exists, insert (create) if not.
+    # See the `upsert_facility` method further down for details.
+
+    # Visit the facility's pricing page
+    facility_page_url = location_data[:url]
+    if facility_page_url.blank?
+      # `.blank?` is a Rails helper: true for nil, empty string, empty
+      # array, whitespace-only string, etc. — a broader check than
+      # Ruby's plain `.nil?` or `.empty?`.
+      log_warning("No URL for #{location_data[:name]} — skipping unit pricing")
+      return [ false, 0 ]
+    end
+    # `end` closes the `if facility_page_url.blank?` check.
+
+    facility_page = open_page(facility_page_url)
+    # Opens a new browser tab at this specific facility's own page
+    # (separate from the search-results page opened in `run`).
+
+    # Extract unit data from the facility page
+    raw_units = parse_units(facility_page, facility)
+    # Calls the SUBCLASS's `parse_units` method with the newly opened
+    # facility page and the ActiveRecord `facility` object, returning
+    # an Array of raw (unfiltered) unit-attribute Hashes.
+
+    if raw_units.empty?
+      log_warning("No units found at #{location_data[:name]}. Page may need updating.")
+      take_error_screenshot(facility_page, "no_units_#{facility.id}")
+      return [ false, 0 ]
+    end
+    # `end` closes the `if raw_units.empty?` block above.
+
+    # Step 4: Filter units based on user's filter options
+    filtered_units = apply_filters(raw_units)
+    # Narrows `raw_units` down to only the ones matching the user's
+    # chosen filters (size, climate control, etc.) — see
+    # `apply_filters` further down.
+
+    log_info("Found #{raw_units.length} units, #{filtered_units.length} match filters at #{location_data[:name]}")
+
+    # Step 5: Save matching units to the database
+    filtered_units.each do |unit_data|
+      # Loops over each surviving unit hash (no index needed here, so
+      # plain `.each` instead of `.each_with_index`).
+      save_unit(unit_data, facility)
+      # Writes this unit to the database, associated with the
+      # facility — see `save_unit` further down.
+    end
+    # `end` closes the `filtered_units.each do |unit_data|` loop.
+
+    # This location counts as successfully processed (only reached when
+    # raw_units was non-empty) — the caller adds `filtered_units.length`
+    # onto its own running units_saved total.
+    [ true, filtered_units.length ]
+
+  rescue Playwright::TimeoutError => e
+    # This `rescue` clause only catches errors of type
+    # `Playwright::TimeoutError` (or subclasses of it) — a specific
+    # exception class Playwright raises when a page takes too long to
+    # respond. `=> e` captures the actual exception object into a local
+    # variable `e` so we can read its message below.
+    # Page took too long to load
+    log_error(
+      "Timeout loading page for #{location_data[:name]}: #{e.message}. " \
+      "This can happen on slow connections or slow hardware. Try increasing " \
+      "crawl_delay_between_requests_ms in Settings.",
+      url: location_data[:url]
+    )
+    # The trailing `\` at the end of a line lets a Ruby string literal
+    # continue onto the next line without inserting a literal newline —
+    # it's purely for keeping source lines from getting too long. The
+    # two string pieces get concatenated into one long message.
+    [ false, 0 ]
+
+  rescue => e
+    # A bare `rescue => e` with no exception class after it catches
+    # `StandardError` and its subclasses — i.e. "any other normal
+    # error we didn't specifically handle above." This must come AFTER
+    # the more specific `Playwright::TimeoutError` rescue, because Ruby
+    # checks rescue clauses top-to-bottom and uses the first one that
+    # matches.
+    # Any other error on this specific location — log it and let the
+    # caller move on to the next one
+    log_error(
+      "Error processing #{location_data[:name]}: #{e.class}: #{e.message}. " \
+      "Backtrace: #{e.backtrace.first(3).join(' | ')}",
+      url: location_data[:url]
+    )
+    # `e.class` is the exception's Ruby class name (e.g. "NoMethodError"),
+    # `e.backtrace` is an Array of Strings describing the call stack
+    # where the error happened; `.first(3)` takes just the first 3
+    # entries and `.join(' | ')` glues them into one string separated
+    # by " | ", so the log stays readable instead of dumping a giant
+    # stack trace.
+    [ false, 0 ]
+  end
+  # `end` closes the `def process_location` method definition (including
+  # its attached `rescue` clauses).
 
   # Opens a URL in a new browser page with automatic retry logic
   # Returns the Playwright page object

@@ -1,0 +1,127 @@
+# This file (config/deploy.staging.yml) is a Kamal "destination" file — it
+# does NOT stand alone. Running `bin/kamal <command> -d staging` tells Kamal
+# to read THIS file and deep-merge it on top of the base config/deploy.yml
+# (confirmed via `bin/kamal docs`: "the configuration will also be read from
+# `config/deploy.staging.yml` and merged with the base configuration").
+# Every setting NOT mentioned in this file (registry, RAILS_MASTER_KEY
+# secret, builder arch, aliases, asset_path, ...) is simply inherited
+# unchanged from config/deploy.yml — only the handful of keys below are
+# deliberately overridden, specifically so a staging deploy runs as a
+# clearly SEPARATE service from production, on the SAME physical server
+# (this is a single-server home LAN setup — see config/deploy.yml — there's
+# no second machine to deploy staging to instead).
+#
+# WITHOUT these overrides, a plain `bin/kamal deploy -d staging` would still
+# avoid colliding container NAMES (Kamal automatically appends the
+# destination, "staging", to each container's name — see
+# Kamal::Configuration::Role#container_prefix in the kamal gem's own
+# source), but it would silently reuse production's image name, volume, and
+# (implicitly) production's own catch-all proxy routing. Each override below
+# closes one of those gaps explicitly, rather than relying on that implicit
+# behavior.
+
+# "service:" — overrides the base file's "storagefinder". Giving staging its
+# own distinct service name (rather than relying only on Kamal's automatic
+# destination-suffixing of container names) makes `bin/kamal details`/`bin/
+# kamal app logs`/etc. output unambiguous at a glance, and keeps this file
+# self-documenting about what it deploys.
+service: storagefinder-staging
+
+# Blank line — ignored by YAML, purely visual spacing.
+
+# "image:" — overrides the base file's "storagefinder". Without this
+# override, staging would build/push/pull the exact same image name as
+# production from the shared local registry (config/registry:server:
+# localhost:5050, inherited unchanged from config/deploy.yml below) — which
+# would work, but makes it easy to accidentally confuse which image
+# corresponds to which running service when inspecting the registry or
+# `docker images` directly on the server. A distinct image name keeps the
+# two fully separate at every layer, not just by destination suffix.
+image: storagefinder-staging
+
+# Blank line — ignored by YAML, purely visual spacing.
+
+# "servers:" — deploys to the SAME server as production, 192.168.0.1. This
+# is intentional, not an oversight: this app has exactly one physical
+# server available (see config/deploy.yml's own explanation of the LAN
+# setup), so "staging" here means "a second, isolated container running
+# alongside production on that one machine" — a safe rehearsal for what a
+# real `bin/kamal deploy` (no -d flag, meaning production) will do, not a
+# separate environment on separate hardware.
+servers:
+  web:
+    - 192.168.0.1
+
+# Blank line — ignored by YAML, purely visual spacing.
+
+# "proxy:" — overrides/extends the base file's proxy behavior (which is
+# entirely commented out/inactive in config/deploy.yml, meaning production
+# currently has NO "host"/"hosts" set at all). Per `bin/kamal docs proxy`:
+# "If no hosts are set, then all requests will be forwarded, except for
+# matching requests for other apps deployed on that server that do have a
+# host set." In plain terms: production is currently the server's catch-all
+# app — kamal-proxy forwards it every request that doesn't match some OTHER
+# app's more specific host. If staging were deployed with no host set
+# either, both services would be ambiguously competing for that same
+# catch-all slot. Giving staging its own explicit host avoids that: staging
+# only receives requests whose HTTP Host header matches
+# "storagefinder-staging.local" specifically, and production keeps
+# catching everything else exactly as it does today — deploying staging
+# cannot change production's existing routing behavior.
+#
+# CAVEAT (documented, not silently assumed): config/initializers/mdns.rb
+# only ever announces the single, hardcoded name "storagefinder.local" via
+# mDNS — regardless of which environment/container is running it — so
+# "storagefinder-staging.local" will NOT automatically resolve on the LAN
+# the way "storagefinder.local" does. To actually reach staging by that
+# hostname, either add a manual DNS/hosts-file entry mapping it to
+# 192.168.0.1 on whichever device you're testing from, or simply send the
+# Host header explicitly, e.g.:
+#   curl -H "Host: storagefinder-staging.local" http://192.168.0.1/
+# See this repo's README "Environments" section for the fuller walkthrough.
+#
+# No "app_port:" override is needed here: every container built from this
+# app's Dockerfile listens on port 80 internally via Thruster (see
+# Dockerfile's "EXPOSE 80"/CMD lines) regardless of which destination it was
+# deployed as — that's a per-CONTAINER internal port, isolated by Docker's
+# own networking, not something staging and production could ever collide
+# on even without an override.
+proxy:
+  host: storagefinder-staging.local
+
+# Blank line — ignored by YAML, purely visual spacing.
+
+# "env:" — deep-merges with the base file's "env:" section (RAILS_MASTER_KEY
+# under "secret:" is inherited unchanged; nothing here removes it). This
+# adds exactly one new "clear:" (non-secret) environment variable.
+env:
+  clear:
+    # "RAILS_ENV: staging" is the single most important line in this whole
+    # file: it's what makes the container booted from this destination
+    # actually RUN as RAILS_ENV=staging (loading config/environments/
+    # staging.rb, and — per config/database.yml's "staging:" block —
+    # connecting to storage/staging*.sqlite3 instead of storage/
+    # production*.sqlite3). Without this line, a container deployed via
+    # `-d staging` would still default to RAILS_ENV=production internally
+    # (see the Dockerfile's `ENV RAILS_ENV="production"` baked into the
+    # image itself), silently defeating the entire point of a staging
+    # destination — it would boot as production in every way that matters,
+    # just under a different container/image name.
+    RAILS_ENV: staging
+
+# Blank line — ignored by YAML, purely visual spacing.
+
+# "volumes:" — overrides the base file's single volume entry
+# ("storagefinder_storage:/rails/storage") with a distinctly-named Docker
+# volume, "storagefinder_staging_storage". This is what actually keeps
+# staging's persistent data (its SQLite files, any locally-stored Active
+# Storage uploads) physically separate from production's on disk — without
+# this override, both destinations would mount the SAME underlying volume
+# at the same /rails/storage container path, meaning a staging deploy could
+# read or corrupt real production data despite RAILS_ENV pointing at
+# different database FILE NAMES (the multi-database config/database.yml
+# split protects against staging/production sharing table rows, but only if
+# the underlying volume/directory is also actually separate, which this
+# line guarantees).
+volumes:
+  - "storagefinder_staging_storage:/rails/storage"

@@ -1,14 +1,39 @@
-# Background for a novice: Rails apps run in one of several "environments"
-# at a time — development (local coding, see config/environments/
-# development.rb), test (automated test runs, see config/environments/
-# test.rb), and production (this file) — the real, live version actual
-# users use. Which environment is active is controlled by the RAILS_ENV
-# environment variable; StorageFinder's Kamal deploy (see config/deploy.yml)
-# runs the app with RAILS_ENV=production inside its Docker container.
-# Settings here only take effect while RAILS_ENV is "production" — they
-# override whatever config/application.rb set for the same option, but only
-# in this one environment.
-
+# This file (config/environments/staging.rb) configures StorageFinder's
+# THIRD environment, "staging" — a safe rehearsal environment for trying a
+# real Kamal deploy before pointing it at production. Rails automatically
+# loads exactly one file from config/environments/ at boot, chosen by the
+# RAILS_ENV environment variable's value (e.g. RAILS_ENV=staging loads THIS
+# file; RAILS_ENV=production loads production.rb instead) — there's no
+# extra wiring needed beyond this file existing with a matching name.
+#
+# WHY THIS FILE IS A COPY OF production.rb, NOT A "require" OF IT: Rails
+# environment files are plain Ruby scripts that call `Rails.application.
+# configure do ... end` unconditionally — the block itself doesn't check
+# which environment is active (Rails only decides THAT by choosing which
+# file to load in the first place). That means `require_relative
+# "production"` from here would work today, but with a sharp edge: it would
+# silently apply ALL of production.rb's settings to staging even if a
+# future edit to production.rb assumed it only ever runs under
+# RAILS_ENV=production (e.g. anything reading `Rails.env == "production"`
+# directly, rather than trusting "whatever this file's settings say").
+# Duplicating the settings here instead is Rails' own documented convention
+# for a staging environment (see the Rails Guides' "Rails Environment
+# Settings" / multiple-environments docs) and keeps staging free to diverge
+# from production later without that divergence being an accidental
+# surprise buried in a shared file.
+#
+# WHAT MAKES STAGING SAFE TO RUN ON THE SAME PHYSICAL SERVER AS PRODUCTION:
+# staging intentionally uses the exact same settings as production below
+# (same eager loading, same caching behavior, same log format — so a
+# staging deploy is a faithful rehearsal of what a production deploy would
+# do) but points at completely separate DATA: config/database.yml defines a
+# "staging:" block with its own dedicated SQLite files (storage/
+# staging.sqlite3 and friends, never storage/production.sqlite3), and
+# config/deploy.staging.yml (a separate Kamal "destination" file) deploys
+# it as a distinctly-named service/image/volume so it runs as its own
+# container alongside — not instead of — the production container. See the
+# "Environments" section of this repo's README for the full picture and how
+# to actually run a staging deploy.
 # `require` loads a Ruby standard-library/gem file by searching Ruby's load
 # path. This specific require pulls in Rails' "core extension" that adds
 # convenience methods like `.days`/`.year` onto plain Ruby Integers (e.g.
@@ -20,7 +45,9 @@ require "active_support/core_ext/integer/time"
 # `Rails.application.configure do ... end` opens a block where `config` (a
 # special object holding every setting for the whole app) can be modified.
 # Rails runs this block automatically at boot, but ONLY when RAILS_ENV is
-# "production" — the rest of this file is skipped entirely otherwise.
+# "staging" — the rest of this file is skipped entirely otherwise (see the
+# top-of-file comment above for how Rails decides which environment file to
+# load in the first place).
 Rails.application.configure do
   # A comment (left by Rails' generator) explaining that everything set
   # inside this block overrides the equivalent setting from
@@ -367,4 +394,5 @@ Rails.application.configure do
 end
 # `end` closes the `Rails.application.configure do` block opened near the
 # top of the file — every setting above only applies while running in the
-# production environment.
+# staging environment (RAILS_ENV=staging). See this file's own top-of-file
+# comment for why these settings intentionally mirror production.rb.

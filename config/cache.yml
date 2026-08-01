@@ -3,9 +3,15 @@
 # active config.cache_store setting (see config/environments/development.rb
 # and config/environments/production.rb) is actually `:memory_store` in
 # every environment, NOT a store that reads this specific file's
-# `store_options`/`database` keys; see this pass's final "flagged issues"
-# note for more on that mismatch. This file follows the same generic shape
-# Rails generates for Solid Cache regardless.
+# `store_options`/`database` keys. That means this file's settings —
+# including the `database: cache` line in its production section below,
+# and the dedicated storage/production_cache.sqlite3 connection defined for
+# it in config/database.yml — are not currently read by anything; Solid
+# Cache's gem isn't even in the Gemfile. This file follows the same generic
+# shape Rails generates for Solid Cache regardless, kept as unused
+# scaffolding in case caching needs outgrow `:memory_store` (e.g. wanting
+# cache entries to survive a process restart) and this app switches to
+# Solid Cache later — not worth deleting, but don't assume it's active.
 #
 # YAML primer, since some of this file's syntax is more advanced: lines
 # starting with "#" are comments, ignored by whatever parses this file (same
