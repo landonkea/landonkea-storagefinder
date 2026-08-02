@@ -365,11 +365,23 @@ module Storagefinder
     # populate this same setting in a consistent format. NOTE: this line
     # applies unconditionally in EVERY environment because it lives in this
     # shared config/application.rb rather than in one environment-specific
-    # file — see this pass's final "flagged issues" note about how this
-    # relates to config/cable.yml's own, environment-specific `adapter:`
-    # settings (which include a DIFFERENT adapter, `solid_cable`, for
-    # production).
-    config.action_cable.cable = { "adapter" => "async" }
+    # file.
+    #
+    # FIXED (previously a real bug): this line used to hardcode the async
+    # adapter for EVERY environment, including production — which silently
+    # overrode config/cable.yml's own production section (`adapter:
+    # solid_cable`, wired to a dedicated database connection and persistent
+    # Docker volume). Rails only falls back to reading config/cable.yml when
+    # `config.action_cable.cable` is left unset; setting it explicitly here,
+    # unconditionally, meant cable.yml's production block was dead
+    # configuration — production would have used the in-process async
+    # adapter no differently than development, defeating the point of
+    # solid_cable (multi-process/multi-worker WebSocket broadcasting). This
+    # line has been removed so each environment's config/cable.yml section
+    # actually takes effect as designed. (In practice this app currently
+    # runs Puma with a single worker process, so async would have worked by
+    # accident — but the override would have silently broken WebSocket
+    # broadcasting the moment WEB_CONCURRENCY was ever raised above 1.)
   end
   # `end` closes the `class Application < Rails::Application` definition
   # opened above.

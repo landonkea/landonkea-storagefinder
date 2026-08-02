@@ -57,6 +57,66 @@ network-independent parts of the scraping services. It doesn't launch a real
 Playwright browser or hit real company websites; those code paths are
 covered up to the point where a browser would actually be needed.
 
+## Environments
+
+This app has three environments, each with its own settings file under
+`config/environments/` and — for the two that get deployed — its own
+isolated data:
+
+| Environment  | `RAILS_ENV`  | Where it runs                          | Data files |
+|--------------|--------------|-----------------------------------------|------------|
+| `development`| `development`| Your own machine, via `./start.sh`      | `storage/development.sqlite3` |
+| `staging`    | `staging`    | The same LAN server as production (192.168.0.1), as a separate container | `storage/staging*.sqlite3` |
+| `production` | `production` | The LAN server (192.168.0.1), the real deploy | `storage/production*.sqlite3` |
+
+**`staging` exists as a rehearsal environment**, not a second "real" app.
+`config/environments/staging.rb` intentionally duplicates
+`config/environments/production.rb` line-for-line (see that file's own
+top-of-file comment for why it's a duplicate rather than a `require`) so
+that deploying to staging exercises exactly the same code paths and Rails
+settings a real production deploy would — eager loading, eager error pages,
+the works — but against entirely separate data (`config/database.yml`'s
+`staging:` block points at `storage/staging*.sqlite3`, never touching
+`storage/production*.sqlite3`) and a separate Kamal-managed container
+(`config/deploy.staging.yml`, a Kamal "destination" file — see below).
+
+### Deploying staging
+
+```
+bin/kamal deploy -d staging
+```
+
+This deploys a second, independent container (`storagefinder-staging`,
+distinct image name, distinct `storagefinder_staging_storage` Docker
+volume) to the *same* physical server as production — there's only one
+server available on this LAN setup, so "staging" means "an isolated
+container alongside production," not a separate machine. It does **not**
+touch the running production container, its volume, or its data.
+
+Staging is reached via its own Host header (`storagefinder-staging.local`)
+rather than production's catch-all routing — see the `proxy:` section of
+`config/deploy.staging.yml` for the full explanation, including how to
+actually hit it (`curl -H "Host: storagefinder-staging.local"
+http://192.168.0.1/`, or add a manual DNS/hosts-file entry) since this
+app's mDNS initializer only ever announces the plain `storagefinder.local`
+name regardless of environment.
+
+**Important:** `bin/kamal deploy -d staging` must be run from the LAN,
+i.e. from the repo owner's own machine on the same network as
+192.168.0.1 — it opens a real SSH connection to that server. It cannot be
+run from a sandboxed/cloud environment with no route to the LAN.
+
+Before deploying for real, you can validate the merged staging config
+locally without touching the server at all:
+
+```
+bin/kamal config -d staging
+```
+
+This prints Kamal's fully-merged configuration (base `config/deploy.yml` +
+`config/deploy.staging.yml`) and will fail loudly if anything doesn't
+validate — a good pre-flight check before ever opening an SSH connection.
+
 ## Deployment (Kamal)
 
 This app deploys as a Docker container via [Kamal](https://kamal-deploy.org).
@@ -67,9 +127,14 @@ This app deploys as a Docker container via [Kamal](https://kamal-deploy.org).
    `RAILS_MASTER_KEY` from it (`RAILS_MASTER_KEY=$(cat config/master.key)`).
    **Never commit `config/master.key`** (it's gitignored already).
 3. `bin/kamal setup` the first time, `bin/kamal deploy` after that.
+4. For a staging rehearsal instead of a real production deploy, add
+   `-d staging` to any Kamal command (e.g. `bin/kamal deploy -d staging`) —
+   see the "Environments" section above.
 
 Data (SQLite database, Active Storage files) persists across deploys via the
-`storagefinder_storage` volume declared in `config/deploy.yml`.
+`storagefinder_storage` volume declared in `config/deploy.yml` (production)
+or the separate `storagefinder_staging_storage` volume declared in
+`config/deploy.staging.yml` (staging).
 
 ### CI
 
