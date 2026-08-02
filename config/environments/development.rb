@@ -334,6 +334,42 @@ Rails.application.configure do
   # (`3[01]`) — together, exactly the second-octet range that RFC 1918
   # reserves for this private block.
   config.hosts << /172\.(1[6-9]|2\d|3[01])\.\d+\.\d+/
+
+  # Blank line — purely visual spacing, has no effect on Ruby.
+
+  # Bullet (see Gemfile's :development group) watches every ActiveRecord
+  # query issued during a request/console session and flags N+1 queries —
+  # a loop that issues one extra DB query per record instead of eager-
+  # loading the association up front — plus unused eager-loads and missing
+  # counter caches. `config.after_initialize do ... end` defers this block
+  # until Rails has finished booting, which is Bullet's own documented
+  # requirement (its config methods aren't available any earlier).
+  config.after_initialize do
+    # Turns Bullet on at all; every other Bullet setting below is a no-op
+    # while this is false.
+    Bullet.enable = true
+    # Logs warnings to Rails.root/log/bullet.log, a dedicated log file just
+    # for Bullet's findings, so they're easy to review after exercising the
+    # app without digging through the normal development log.
+    Bullet.bullet_logger = true
+    # Also writes warnings into the normal Rails log
+    # (log/development.log), so they show up alongside everything else
+    # without needing to open a second file.
+    Bullet.rails_logger = true
+    # Pops up a JavaScript `alert()` in the browser the moment Bullet
+    # detects a problem on a rendered page — the most immediately visible
+    # option while manually clicking around during development.
+    Bullet.alert = true
+    # Logs warnings to the browser's own console.log as well, for cases
+    # where a popped-up alert() would be disruptive (e.g. many warnings on
+    # one page) but the browser devtools console is still open.
+    Bullet.console = true
+    # Adds a small floating footer to the bottom-left of every page
+    # listing the queries Bullet flagged for that request — an
+    # always-visible summary that doesn't require opening devtools or a
+    # log file at all.
+    Bullet.add_footer = true
+  end
 end
 # `end` closes the `Rails.application.configure do` block opened near the
 # top of the file — every setting above only applies while running in the

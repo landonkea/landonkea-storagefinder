@@ -245,5 +245,11 @@ group :development do
   # unhandled exception occurs locally, you get a live REPL at the point of
   # failure right in the error page, instead of only a stack trace.
   gem "web-console"
+  # `gem "bullet"` watches ActiveRecord queries during development and
+  # flags N+1 queries (a loop that issues one extra DB query per record
+  # instead of eager-loading everything up front) as well as unused
+  # eager-loads and missing counter caches — surfaced as an alert/log line
+  # so they can be found and fixed before they ever reach production.
+  gem "bullet"
   # `end` closes the `group :development do` block opened above.
 end
