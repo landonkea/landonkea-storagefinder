@@ -2,10 +2,17 @@
 # tasks" feature — jobs/commands that should run automatically on a
 # repeating schedule (like a cron job), rather than being enqueued one-off
 # by application code. NOTE: as explained in config/queue.yml, this app's
-# actual active job adapter is `:async`, not Solid Queue — so, as with
-# config/queue.yml, it's unclear whether the schedule defined in this file's
-# "production:" section below actually runs at all; see this pass's final
-# "flagged issues" note.
+# actual active job adapter is `:async`, not Solid Queue. Solid Queue's own
+# recurring-task scheduler is a separate process (started via `bin/jobs` or
+# the `:solid_queue` Puma plugin) that reads this file — since this app runs
+# neither of those, the "production:" schedule below does NOT currently run
+# at all; it's inert. This file, like config/queue.yml, is unused Rails 8
+# generator scaffolding, kept in the repo in case a future move to Solid
+# Queue (e.g. if this app is ever split across multiple machines/processes
+# and needs real persistent job tracking instead of in-memory `:async`)
+# picks it back up — deleting it isn't worth the churn for something that
+# costs nothing to leave in place, but don't assume it's doing anything
+# today.
 #
 # YAML primer: lines starting with "#" are comments, ignored by whatever
 # parses this file. Plain "key: value" pairs work like entries in a Ruby

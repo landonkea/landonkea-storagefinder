@@ -147,11 +147,14 @@ Geocoder.configure(
   # Whether to throw exceptions on geocoding failure
   # NOTE: this comment describes the setting as if it were a plain boolean
   # ("false = ...") but the value actually assigned below is an empty
-  # ARRAY (`[]`), not the boolean `false` — see the "flagged issues" note
-  # in this pass's final report; the two are not quite the same thing in
-  # this gem's own configuration API, though empty-array does still result
-  # in "don't raise for any specific error class," so the practical safety
-  # behavior described here is not wrong, just imprecisely worded.
+  # ARRAY (`[]`), not the boolean `false`. Not a bug — this gem's
+  # `always_raise:` option accepts either `true`/`false` OR an Array of
+  # specific exception classes that should always raise; `[]` and `false`
+  # both mean "never raise" in practice, so the label above is imprecise
+  # wording left over from the Rails-generator comment style, not incorrect
+  # behavior. Left as-is rather than "corrected" to `false`, since `[]` is
+  # this gem's own documented, idiomatic way to express "no exceptions in
+  # the always-raise list."
   # false = return empty array on failure (safer)
   # `always_raise:` normally accepts either `true`/`false`, or an Array of
   # specific exception classes that SHOULD always raise even while others
