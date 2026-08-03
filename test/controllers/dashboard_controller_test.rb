@@ -178,6 +178,32 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_match "—", response.body
   end
   # `end` closes the "index shows no issue badge..." test block.
+
+  test "index disables the StorAmerica company checkbox and marks it unsupported" do
+    # StorAmerica's parser (app/services/companies/stor_america.rb) is a
+    # stub — it always returns zero results. CompanyRegistry.stubbed?
+    # drives the dashboard's checkbox rendering (see
+    # app/views/dashboard/index.html.erb) to disable it and label it
+    # clearly, instead of silently letting it be selected.
+    #
+    # The company checkboxes only render on the "start a new crawl" form,
+    # which the dashboard hides while a crawl is already running (see
+    # `if @crawl_running && @running_crawl` in index.html.erb) —
+    # test/fixtures/crawl_runs.yml's "running_crawl" fixture is active by
+    # default, so it's reset to "completed" here first.
+    CrawlRun.where(status: "running").update_all(status: "completed")
+
+    get root_path
+    assert_response :success
+
+    # `assert_select` parses the response HTML and finds elements matching
+    # a CSS selector — this locates the specific checkbox whose value is
+    # "StorAmerica" and asserts it carries the `disabled` attribute.
+    assert_select "input[name='companies[]'][value='StorAmerica'][disabled]"
+    assert_match "(not yet supported)", response.body
+  end
+  # `end` closes the "index disables the StorAmerica company checkbox..."
+  # test block.
 end
 # `end` closes the `class DashboardControllerTest < ActionDispatch::IntegrationTest`
 # definition that started at the top of the file.

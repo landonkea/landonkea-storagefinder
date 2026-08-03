@@ -48,7 +48,15 @@ export default class extends Controller {
     // every <input> whose `name` attribute is exactly "companies[]" (the
     // square brackets in the name make Rails treat submitted values as an
     // array on the server side).
-    const checkboxes = this.element.querySelectorAll("input[name='companies[]']")
+    // `:not(:disabled)` excludes stub-company checkboxes (see
+    // app/views/dashboard/index.html.erb — a company like StorAmerica
+    // whose parser isn't implemented yet gets `disabled` set) from both
+    // the "are they all checked?" calculation below and the toggle itself;
+    // a disabled checkbox can't be usefully checked/unchecked by a user
+    // anyway, and leaving it out of the count keeps "Toggle all" from
+    // treating one permanently-unchecked stub as a reason to think
+    // something's still unselected.
+    const checkboxes = this.element.querySelectorAll("input[name='companies[]']:not(:disabled)")
 
     // If all are checked, uncheck all. If any are unchecked, check all.
     // `Array.from(checkboxes)` converts the NodeList returned by
