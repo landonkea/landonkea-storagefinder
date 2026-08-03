@@ -412,5 +412,64 @@ jobs:
         # CI run) succeeds.
         run: bin/rails test
 
+  # Blank line — visual separation before this final, additive job,
+  # indented back to the `jobs:` level.
+  test_report:
+    # This job is purely additive: it does not replace or duplicate the
+    # gating done by `lint`/`test` above (those still fail the workflow on
+    # their own). It exists to produce a persisted, downloadable artifact
+    # summarizing a run — pass/fail counts, failures, and RuboCop offense
+    # count — via `bin/rails test:report` (see lib/tasks/test_report.rake
+    # and the "Test results report" section of the README).
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libavahi-compat-libdnssd-dev
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+      - name: Build Tailwind CSS
+        run: bin/rails tailwindcss:build
+
+      - name: Prepare the test database
+        env:
+          RAILS_ENV: test
+          RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+        run: bin/rails db:test:prepare
+
+      # `continue-on-error: true` means a report that finds failures does
+      # NOT turn this step (or the job/workflow) red — `bin/rails
+      # test:report` exits non-zero when it finds test failures or RuboCop
+      # offenses (useful when run locally/standalone), but here that
+      # signal is redundant with the `lint`/`test` jobs above, which
+      # already gate the workflow. This job's only purpose is producing
+      # the artifact uploaded in the next step, even on a failing run.
+      - name: Run bin/rails test:report
+        continue-on-error: true
+        env:
+          RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+        run: bin/rails test:report
+
+      # `if: always()` runs this upload step even though the previous step
+      # may have "failed" in isolation (before continue-on-error suppressed
+      # it) — by default GitHub Actions skips later steps after a failure,
+      # so this override ensures the report still gets uploaded when the
+      # suite/RuboCop found problems, which is exactly when the report is
+      # most useful to have.
+      - name: Upload test results report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/latest.md
+          if-no-files-found: warn
+
 # Trailing blank line at the end of the file — has no effect; many editors
 # and linters expect text files to end with a newline.
