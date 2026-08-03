@@ -109,6 +109,22 @@ class DashboardController < ApplicationController
     # crawl records from within the last N months; `.limit(20)` caps the
     # result to at most 20 rows so the history panel doesn't grow unbounded.
     @crawl_history  = CrawlRun.history(months: history_months).limit(20)
+
+    # Warning/error counts per crawl run, shown as small badges next to each
+    # row in the history table (see app/views/dashboard/_crawl_history.html.erb).
+    # Built as ONE grouped COUNT query across every row in @crawl_history,
+    # rather than looping and calling `crawl.crawl_log_entries.warnings.count`
+    # once per row in the view — that per-row approach would fire a separate
+    # SQL query for every visible crawl (an "N+1 query" problem), where this
+    # single query returns every count needed up front. `.group(:crawl_run_id,
+    # :level).count` produces a Hash keyed by `[crawl_run_id, level]` pairs,
+    # e.g. `{ [5, "warning"] => 3, [5, "error"] => 1 }` — see
+    # ApplicationHelper#crawl_log_issue_count for how each row's cell reads
+    # out of it.
+    @crawl_log_counts = CrawlLogEntry
+      .where(crawl_run_id: @crawl_history.map(&:id), level: %w[warning error])
+      .group(:crawl_run_id, :level)
+      .count
   end
   # `end` closes the `def index` action definition opened above.
 

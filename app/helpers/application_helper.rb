@@ -11,6 +11,17 @@
 # its own matching helper module (e.g. DashboardHelper for
 # DashboardController), but none of those exist yet in this app.
 module ApplicationHelper
+  # Reads one count out of the `@crawl_log_counts` Hash DashboardController#index
+  # builds (see that method's own comment for why it's built as one grouped
+  # query up front instead of querying per-row here). `crawl_run_id:` and
+  # `level:` (either "warning" or "error") together form the Hash's key —
+  # `.fetch([crawl_run_id, level], 0)` looks that pair up and returns 0
+  # instead of `nil` when there were no matching log entries, so callers in
+  # the view (see app/views/dashboard/_crawl_history.html.erb) never have to
+  # guard against a `nil` count themselves.
+  def crawl_log_issue_count(crawl_run_id:, level:)
+    (@crawl_log_counts || {}).fetch([ crawl_run_id, level ], 0)
+  end
 end
 # `end` closes the `module ApplicationHelper` block opened above. The module
 # body is empty — no shared helper methods have been added yet, but the file

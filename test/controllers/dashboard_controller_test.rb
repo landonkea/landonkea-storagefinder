@@ -156,6 +156,28 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   end
   # `end` closes the "results sort param is sanitized against SQL injection"
   # test block.
+
+  test "index shows a warning/error badge count on crawl history rows that have log issues" do
+    # test/fixtures/crawl_log_entries.yml's "error_entry" fixture belongs to
+    # crawl_run_id 1 (crawl_runs(:previous_completed), pinned to that exact
+    # id) — this asserts DashboardController#index's @crawl_log_counts
+    # query surfaces that single error entry as a rendered "⚠ 1" badge
+    # rather than silently dropping it.
+    get root_path
+    assert_response :success
+    assert_match "⚠ 1", response.body
+  end
+  # `end` closes the "index shows a warning/error badge count..." test block.
+
+  test "index shows no issue badge for a crawl with no warning/error log entries" do
+    # crawl_runs(:current_completed) (id 2) has no crawl_log_entries fixture
+    # rows at all — its history row should render the plain "—" placeholder
+    # instead of any badge.
+    get root_path
+    assert_response :success
+    assert_match "—", response.body
+  end
+  # `end` closes the "index shows no issue badge..." test block.
 end
 # `end` closes the `class DashboardControllerTest < ActionDispatch::IntegrationTest`
 # definition that started at the top of the file.
