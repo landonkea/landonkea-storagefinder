@@ -166,6 +166,44 @@ class AlertRulesController < ApplicationController
   end
   # `end` closes the `def destroy` action definition opened above.
 
+  # `destroy_selected` bulk-deletes several alert rules in one request —
+  # mirrors CrawlsController#destroy_selected (see that method's own
+  # comments for the fuller explanation of each step; unlike crawl records,
+  # every alert rule is always safely deletable regardless of state, so
+  # there's no "skip still-running ones" branch here to mirror).
+  def destroy_selected
+    ids = Array(params[:ids]).map(&:to_i).reject(&:zero?)
+
+    if ids.empty?
+      respond_to do |format|
+        format.html {
+          flash[:alert] = "No alert rules were selected."
+          redirect_to alert_rules_path
+        }
+        format.json { render json: { error: "No ids given" }, status: :unprocessable_entity }
+      end
+      return
+    end
+    # `end` closes the `if ids.empty?` block above.
+
+    # `.where(id: ids)` scopes down to just the selected rows before
+    # counting/destroying, so a stale/tampered id that doesn't exist (or
+    # belongs to some other table) can't inflate the reported count.
+    deleted_count = AlertRule.where(id: ids).count
+    AlertRule.where(id: ids).destroy_all
+
+    message = "Deleted #{deleted_count} alert rule#{"s" unless deleted_count == 1}."
+
+    respond_to do |format|
+      format.html {
+        flash[:notice] = message
+        redirect_to alert_rules_path
+      }
+      format.json { render json: { message: message, deleted: deleted_count } }
+    end
+  end
+  # `end` closes the `def destroy_selected` action definition opened above.
+
   # `private` marks every method below as internal to this class — not
   # directly reachable as a URL/action, and not callable from outside this
   # controller. `set_alert_rule` and `alert_rule_params` below are
