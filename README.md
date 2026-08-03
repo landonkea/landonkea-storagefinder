@@ -40,10 +40,12 @@ look for the `auth:` section. This repo's `config/credentials.yml.enc` is
 already set up with an `auth:` block and the `active_record_encryption:`
 keys that `Setting#value` needs (SMTP passwords, Discord webhook URLs, etc.
 are encrypted at rest, not stored in plaintext) — you just need
-`config/master.key` to read/change them. **Basic Auth does not cover the
-`/cable` ActionCable endpoint**, since it doesn't route through
-`ApplicationController` — live dashboard updates over that socket aren't
-gated the same way the rest of the app is.
+`config/master.key` to read/change them. HTTP Basic Auth technically only
+covers ordinary HTTP requests (it wouldn't automatically protect the
+`/cable` ActionCable/WebSocket endpoint, since that connects directly to
+`app/channels/application_cable/connection.rb` instead of routing through
+`ApplicationController`) — that connection class re-checks the same
+username/password itself, so `/cable` is gated too.
 
 ## Running tests
 
