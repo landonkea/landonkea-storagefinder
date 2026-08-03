@@ -193,6 +193,34 @@ Rails.application.routes.draw do
   resources :alert_rules  # Full CRUD: index, show, new, create, edit, update, destroy
 
   # ---------------------------------------------------------------------------
+  # API KEYS (admin-only management UI, behind the same Basic Auth as
+  # everything above)
+  # ---------------------------------------------------------------------------
+  # `only: [ :index, :create, :destroy ]` — issuing/revoking keys, no
+  # separate show/edit page. `regenerate` is a custom member route (needs
+  # an :id) for rotating a key's token without deleting its usage history.
+  resources :api_keys, only: [ :index, :create, :destroy ] do
+    member do
+      post "regenerate"   # POST /api_keys/:id/regenerate — rotates the token
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # PUBLIC JSON API — token-authenticated (ApiKey), NOT behind Basic Auth.
+  # ---------------------------------------------------------------------------
+  # `namespace :api do namespace :v1 do ... end end` prefixes every route
+  # inside with "/api/v1" in the URL AND expects controllers nested inside
+  # Ruby modules Api::V1:: (e.g. Api::V1::FacilitiesController) — unlike the
+  # `scope` used for /exports above, `namespace` changes both the URL and
+  # the expected controller module nesting.
+  namespace :api do
+    namespace :v1 do
+      resources :facilities, only: [ :index, :show ]
+      resources :units,      only: [ :index ]
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # ACTION CABLE — WebSocket endpoint for live crawl progress
   # ---------------------------------------------------------------------------
   # `mount` attaches an entire separate Rack application (not a single
