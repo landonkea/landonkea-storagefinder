@@ -58,6 +58,12 @@ application.register("crawl-form",    CrawlFormController)
 import CrawlHistoryController from "controllers/crawl_history_controller"
 application.register("crawl-history", CrawlHistoryController)
 
+// Facility map — renders the Leaflet map of nearby facilities on the
+// dashboard (see app/javascript/controllers/facility_map_controller.js and
+// the "leaflet" pin in config/importmap.rb).
+import FacilityMapController from "controllers/facility_map_controller"
+application.register("facility-map", FacilityMapController)
+
 // This import has no `import X from` or `import { X } from` part at all —
 // it's a "side-effect only" import, meaning we don't need any value out of
 // the "consumer" module, we just want its top-level code (in consumer.js)

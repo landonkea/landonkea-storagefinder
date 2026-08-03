@@ -533,6 +533,44 @@
 <%# Closes the `if @latest_crawl && @units.any?` check opened above. %>
 
 <%# =========================================================================
+  3B. NEAREST FACILITIES — quick view
+  A compact list, independent of whatever filters/sort are applied to the
+  main results table below. Powered by Facility.nearest_to (see
+  app/models/facility.rb) via DashboardController#build_nearest_facilities.
+========================================================================= %>
+<%# `@nearest_facilities` is an array of { facility:, distance_miles:,
+    cheapest_unit: } hashes (empty if there's no crawl, or its search
+    origin was never geocoded — see build_nearest_facilities). %>
+<% if @nearest_facilities.any? %>
+  <div class="card mb-4">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
+      📍 Nearest Facilities
+    </h2>
+    <%# "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" lays these out
+        as a responsive grid: one column on small screens, two on medium,
+        four on large — rather than one long vertical list. %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <% @nearest_facilities.each do |entry| %>
+        <% f = entry[:facility] %>
+        <% unit = entry[:cheapest_unit] %>
+        <div class="bg-gray-800/50 rounded p-3">
+          <div class="font-semibold text-white text-xs truncate"><%= f.company %></div>
+          <div class="text-gray-500 text-xs truncate"><%= f.name %></div>
+          <div class="flex items-baseline justify-between mt-2">
+            <span class="text-gray-400 text-xs"><%= entry[:distance_miles] %> mi</span>
+            <% if unit %>
+              <span class="font-bold text-sm <%= unit.price_color_class %>"><%= unit.formatted_price %></span>
+            <% else %>
+              <span class="text-gray-600 text-xs">No price</span>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<%# =========================================================================
   4. RESULTS TABLE
 ========================================================================= %>
 <%# "card mb-6" boxed styling with margin below; `id="results-container"`
@@ -844,6 +882,43 @@
   <%# Closes the `if @latest_crawl.nil? / elsif @units.empty? / else`
       three-way branch opened near the top of this section. %>
 </div>
+
+<%# =========================================================================
+  4B. FACILITY MAP
+  A Leaflet map (no API key needed, unlike Google Maps) with one pin per
+  facility currently shown in the results table above, colored to match the
+  same green/yellow/red price bands used in the table and its legend.
+========================================================================= %>
+<%# `@map_facilities` is an array of plain Hashes built by
+    DashboardController#build_map_facilities — empty whenever there's no
+    crawl yet, or no matching unit has geocoded coordinates. %>
+<% if @map_facilities.any? %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+      🗺️ Facility Map
+    </h2>
+    <%# `data: { controller: "facility-map", facility_map_facilities_value: @map_facilities.to_json }`
+        attaches the "facility-map" Stimulus controller (see
+        app/javascript/controllers/facility_map_controller.js) to this div,
+        and passes it the pin data as a Stimulus "value" — Stimulus's
+        convention for handing a controller typed data from the DOM,
+        serialized here as a JSON string via `.to_json`. "h-96" fixes this
+        map's height (Leaflet requires an explicit height on its container
+        — an unbounded height collapses to 0px and shows nothing).
+        "rounded overflow-hidden" clips the map's contents (including its
+        default white background) to this app's rounded-corner style. %>
+    <div id="facility-map"
+         class="h-96 rounded overflow-hidden"
+         data-controller="facility-map"
+         data-facility-map-facilities-value="<%= @map_facilities.to_json %>"></div>
+    <div class="flex gap-4 mt-3 text-xs text-gray-500">
+      <span>Price color key:</span>
+      <span class="price-green">● Under $100</span>
+      <span class="price-yellow">● $100–$149</span>
+      <span class="price-red">● $150+</span>
+    </div>
+  </div>
+<% end %>
 
 <%# =========================================================================
   5. PRICE TREND CHART

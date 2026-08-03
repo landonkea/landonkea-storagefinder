@@ -51,7 +51,7 @@
 # Rails knows which migrations still need to run on `db:migrate` versus
 # which are already reflected in the database. The matching `end` at the
 # very bottom of this file closes this `.define do` block.
-ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_03_000000) do
   # `create_table "alert_rules"` defines a database table (think: a
   # spreadsheet with named columns) named "alert_rules" — one row per
   # user-defined notification rule (see the migration
@@ -74,6 +74,15 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # this rule to one storage company. No `default:`/`null: false` shown,
     # so it's optional and can be left blank (nil).
     t.string "company_filter"
+    # `t.integer "cooldown_minutes"` adds a "quiet hours" window (see the
+    # migration db/migrate/20260803000000_add_cooldown_minutes_to_alert_rules.rb)
+    # — once this rule fires, it won't fire again until this many minutes
+    # have passed, even if its trigger condition still matches on a later
+    # crawl. `default: 0` means "no cooldown" (fire every time it matches,
+    # today's original behavior) unless a rule explicitly opts in to a
+    # longer window. `null: false` — every row always has SOME integer
+    # value here, guaranteed by that same default.
+    t.integer "cooldown_minutes", default: 0, null: false
     # `t.datetime "created_at"` adds a timestamp column recording when this
     # row was created. `null: false` means the database requires every row
     # to have this value — it's one of the automatic columns Rails' earlier
