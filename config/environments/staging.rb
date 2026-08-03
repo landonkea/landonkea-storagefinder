@@ -243,27 +243,27 @@ Rails.application.configure do
   # This multi-line comment is this app's OWN custom note (not Rails' stock
   # generated comment) explaining an intentional, non-default choice made
   # below: many Rails production setups use "Solid Cache" (a database-backed
-  # cache) and "Solid Queue" (a database-backed job queue) so that cached
-  # data/pending jobs survive a server restart and can be shared across
-  # multiple server processes/machines. This app deliberately does NOT use
-  # either — it runs as a single process on a single machine (a small,
+  # cache) so that cached data survives a server restart and can be shared
+  # across multiple server processes/machines. This app deliberately does
+  # NOT use it — it runs as a single process on a single machine (a small,
   # self-hosted LAN app — see config/deploy.yml, which deploys to exactly
-  # one server), so there's no second process to coordinate durable state
-  # with, and the added complexity of those gems (which, per this comment,
-  # aren't even installed) isn't worth it. The practical consequence: if
-  # this production process restarts, in-memory cache entries and any job
-  # still waiting to run are simply lost.
-  # Use the same in-process cache store and job adapter as development.
-  # This is a single-process, single-user LAN app — there's no second
-  # process for a durable queue/cache to coordinate with, so the
-  # solid_queue/solid_cache gems this used to reference (and never had
-  # installed) aren't needed. Job state simply doesn't survive a restart.
+  # one server), so there's no second process to coordinate durable cache
+  # state with, and the added complexity of that gem isn't worth it. The
+  # practical consequence: if this process restarts, in-memory cache
+  # entries are simply lost.
   # `:memory_store` (matching development.rb) keeps Rails.cache entries in
   # this process's own RAM.
   config.cache_store = :memory_store
-  # (No `config.active_job.queue_adapter` line here: config/application.rb
-  # already sets `:async` for every environment, including production, so
-  # restating it here would be a pure no-op duplicate.)
+
+  # Blank line — purely visual spacing, has no effect on Ruby.
+
+  # UNLIKE the cache store above, staging mirrors production's use of Solid
+  # Queue for background jobs — see config/environments/production.rb's own
+  # copy of this comment for the full explanation (this exists so staging
+  # is a faithful rehearsal of what actually happens in production, per
+  # this file's own top-of-file explanation of what staging is for).
+  config.active_job.queue_adapter = :solid_queue
+  config.solid_queue.connects_to = { database: { writing: :queue } }
 
   # Blank line — purely visual spacing, has no effect on Ruby.
 

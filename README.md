@@ -136,6 +136,23 @@ Data (SQLite database, Active Storage files) persists across deploys via the
 or the separate `storagefinder_staging_storage` volume declared in
 `config/deploy.staging.yml` (staging).
 
+### Background jobs & the scheduler
+
+Production and staging run background jobs through
+[Solid Queue](https://github.com/rails/solid_queue) instead of the
+in-process `:async` adapter development uses — `config/deploy.yml` deploys
+a second container (the `job:` role, running `bin/jobs`) alongside the
+normal web container specifically to run it. This is what makes the
+Settings page's "Enable scheduled automatic crawls" toggle actually work:
+`config/recurring.yml` has Solid Queue run `ScheduledCrawlCheckJob`
+(`app/jobs/scheduled_crawl_check_job.rb`) once a minute; it checks
+`schedule_enabled`/`schedule_cron`/`schedule_city`/`schedule_radius_miles`
+against the current time and, when they match, kicks off a crawl exactly
+like clicking "Run Crawl" would. If you deploy with `bin/kamal setup`, both
+roles get created automatically; if you're upgrading an existing deploy,
+re-run `bin/kamal setup` (not just `deploy`) so the new `job:` role's
+container gets created.
+
 ### CI
 
 `.github/workflows/ci.yml` runs Brakeman, bundler-audit, an importmap audit,
