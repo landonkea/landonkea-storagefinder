@@ -97,6 +97,14 @@ class DashboardController < ApplicationController
     @price_history = build_price_history
 
     # -------------------------------------------------------------------------
+    # Average price by company, unit availability by size, and crawl
+    # success/failure rate — data for the extra dashboard charts.
+    # -------------------------------------------------------------------------
+    @avg_price_by_company    = build_avg_price_by_company
+    @unit_availability_by_size = build_unit_availability_by_size
+    @crawl_status_by_day     = build_crawl_status_by_day
+
+    # -------------------------------------------------------------------------
     # Crawl history for the history panel
     # -------------------------------------------------------------------------
     # `Setting.get("history_keep_months", default: 6)` reads a user-
@@ -388,6 +396,63 @@ class DashboardController < ApplicationController
   end
   # `end` closes the `def build_price_history` method definition (the
   # `rescue` clause above is part of this same method).
+
+  # Build average monthly price per company for the bar chart.
+  # Scoped to the latest completed crawl's units, same "real, priced,
+  # standard" filters as build_price_history above, so the bar chart and
+  # line chart agree on what counts as a valid priced unit.
+  def build_avg_price_by_company
+    return {} unless @latest_crawl
+
+    @latest_crawl.units
+        .joins(:facility)
+        .where(size: Unit::DEFAULT_SIZES)
+        .where(climate_controlled: true)
+        .where.not(monthly_price: nil)
+        # `.group("facilities.company")` groups by the company column on
+        # the JOINED facilities table (same pattern as build_results_query's
+        # company filter above) rather than a column on units itself.
+        .group("facilities.company")
+        .average(:monthly_price)
+  rescue => e
+    Rails.logger.warn("[DashboardController] Could not build avg price by company: #{e.message}")
+    {}
+  end
+
+  # Build a count of currently-available units per size for the pie chart.
+  # Scoped to the latest completed crawl, since availability is only
+  # meaningful for the most recent snapshot of the market.
+  def build_unit_availability_by_size
+    return {} unless @latest_crawl
+
+    @latest_crawl.units
+        .where(available: true)
+        .group(:size)
+        .count
+  rescue => e
+    Rails.logger.warn("[DashboardController] Could not build unit availability by size: #{e.message}")
+    {}
+  end
+
+  # Build crawl success/failure counts per day for the last 30 days.
+  # CrawlRun doesn't track a per-company companies_crawled/companies_failed
+  # split by day — those two columns are just running counters on ONE crawl
+  # row (see CrawlRun#increment_companies_crawled!/#increment_companies_failed!).
+  # The closest "success/failure rate over time" signal at the CrawlRun
+  # level is each run's own terminal `status` ("completed" vs "failed"), so
+  # this groups by status and by day. `.group(:status)` combined with
+  # `.group_by_day(:created_at)` produces a Hash keyed by [status, day] that
+  # chartkick/groupdate render as one line per status.
+  def build_crawl_status_by_day
+    CrawlRun
+      .where(status: %w[completed failed])
+      .group(:status)
+      .group_by_day(:created_at, last: 30)
+      .count
+  rescue => e
+    Rails.logger.warn("[DashboardController] Could not build crawl status by day: #{e.message}")
+    {}
+  end
 end
 # `end` closes the `class DashboardController` definition opened at the top
 # of the file.
