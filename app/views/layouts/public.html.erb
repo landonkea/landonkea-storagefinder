@@ -1,0 +1,68 @@
+<%# =============================================================================
+    PUBLIC LAYOUT
+    Wraps every page rendered by PublicSearchController (search results,
+    facility detail). Deliberately separate from layouts/application.html.erb
+    — same visual theme/CSS conventions (dark background, emerald accents,
+    Tailwind utilities, same asset pipeline), but a different nav bar and
+    footer: no links to the admin-only Dashboard/Alert Rules/Settings pages,
+    since those all sit behind HTTP Basic Auth and would just be dead ends
+    (or a confusing login prompt) for an anonymous prospective customer
+    landing here.
+============================================================================= %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title><%= current_page_title %></title>
+
+  <link rel="manifest" href="<%= pwa_manifest_path %>">
+
+  <%# Same compiled Tailwind stylesheet as the admin layout — this page
+      reuses the app's existing design system rather than inventing a new
+      one. %>
+  <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+  <%= javascript_importmap_tags %>
+  <%= csrf_meta_tags %>
+</head>
+
+<body class="bg-gray-950 text-gray-100 min-h-screen font-mono">
+
+  <%# ======================================================================= %>
+  <%# NAVIGATION BAR — logo only, no admin links %>
+  <%# ======================================================================= %>
+  <nav class="bg-gray-900 border-b border-gray-800 sticky top-0 z-50">
+    <div class="max-w-screen-xl mx-auto px-4 flex items-center justify-between h-14">
+      <%= link_to public_search_path, class: "flex items-center gap-2 text-emerald-400 font-bold text-lg hover:text-emerald-300 transition-colors" do %>
+        <span class="text-2xl">🏪</span>
+        <span>StorageFinder</span>
+      <% end %>
+
+      <%= link_to "Search Facilities", public_search_path,
+            class: "text-sm text-gray-300 hover:text-emerald-400 transition-colors" %>
+    </div>
+  </nav>
+
+  <% if flash[:notice].present? %>
+    <div class="bg-emerald-900/50 border-b border-emerald-700 text-emerald-300 px-4 py-3 text-sm" role="alert">
+      ✓ <%= flash[:notice] %>
+    </div>
+  <% end %>
+
+  <% if flash[:alert].present? %>
+    <div class="bg-red-900/50 border-b border-red-700 text-red-300 px-4 py-3 text-sm" role="alert">
+      ✗ <%= flash[:alert] %>
+    </div>
+  <% end %>
+
+  <main class="max-w-screen-xl mx-auto px-4 py-6">
+    <%= yield %>
+  </main>
+
+  <footer class="border-t border-gray-800 mt-12 py-6 text-center text-xs text-gray-600">
+    StorageFinder — compare storage unit prices near you
+  </footer>
+
+</body>
+</html>

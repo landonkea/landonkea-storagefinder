@@ -1,0 +1,88 @@
+<%# =============================================================================
+    PUBLIC SEARCH — facility detail page
+    Rendered by PublicSearchController#show. Shows one facility's current
+    unit pricing/availability so a prospective customer can decide whether
+    to book.
+============================================================================= %>
+
+<%= link_to "← Back to search results", public_search_path,
+      class: "text-sm text-gray-400 hover:text-emerald-400 transition-colors" %>
+
+<div class="card mt-4 mb-6">
+  <div class="flex items-start justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-emerald-400"><%= @facility.name %></h1>
+      <p class="text-sm text-gray-400 mt-1"><%= @facility.company %></p>
+      <p class="text-sm text-gray-300 mt-2"><%= @facility.full_address %></p>
+      <% if @facility.formatted_phone %>
+        <p class="text-sm text-gray-300"><%= @facility.formatted_phone %></p>
+      <% end %>
+    </div>
+
+    <div class="flex flex-col gap-2 items-end">
+      <% if safe_external_url?(@facility.maps_url) %>
+        <%= link_to "View on Map ↗", @facility.maps_url, target: "_blank", rel: "noopener noreferrer",
+              class: "btn-secondary text-sm" %>
+      <% end %>
+      <% if @facility.has_climate_control? %>
+        <span class="badge-blue">Climate Controlled Units Available</span>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<h2 class="text-lg font-semibold text-gray-100 mb-3">Current Unit Pricing &amp; Availability</h2>
+
+<% if @units.empty? %>
+  <div class="card text-center text-gray-400">
+    No units are currently listed as available at this facility.
+  </div>
+<% else %>
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr>
+          <th class="table-header">Size</th>
+          <th class="table-header">Sq Ft</th>
+          <th class="table-header">Features</th>
+          <th class="table-header">Price</th>
+          <th class="table-header"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @units.each do |unit| %>
+          <tr class="table-row">
+            <td class="py-3 text-gray-100 font-medium"><%= unit.size %></td>
+            <td class="py-3 text-gray-400"><%= unit.sqft_label %></td>
+            <td class="py-3">
+              <div class="flex gap-1.5 flex-wrap">
+                <% if unit.climate_controlled? %>
+                  <span class="badge-blue">Climate</span>
+                <% end %>
+                <% if unit.drive_up? %>
+                  <span class="badge-gray">Drive-Up</span>
+                <% end %>
+              </div>
+            </td>
+            <td class="py-3">
+              <span class="font-semibold <%= unit.price_color_class %>">
+                <%= unit.formatted_price %>
+              </span>
+              <% if unit.formatted_web_special %>
+                <span class="text-xs text-emerald-400 block">
+                  Web special: <%= unit.formatted_web_special %>
+                </span>
+              <% end %>
+            </td>
+            <td class="py-3 text-right">
+              <% if safe_external_url?(unit.booking_url) %>
+                <%= link_to "Book ↗", unit.booking_url, target: "_blank", rel: "noopener noreferrer",
+                      class: "btn-primary text-xs" %>
+              <% end %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>

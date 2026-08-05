@@ -1,0 +1,155 @@
+<%# =============================================================================
+    PUBLIC SEARCH — results page
+    Rendered by PublicSearchController#index. Lets a prospective customer
+    filter facilities by city/location, unit size, and price range, then
+    sort the results by price or distance and click into a facility's
+    detail page.
+============================================================================= %>
+
+<div class="mb-6">
+  <h1 class="text-2xl font-bold text-emerald-400">Find Storage Near You</h1>
+  <p class="text-sm text-gray-400 mt-1">Compare prices and availability across storage facilities.</p>
+</div>
+
+<%# ===========================================================================
+    SEARCH / FILTER FORM
+    A plain GET form — every filter ends up as a query param, so results are
+    linkable/bookmarkable and this whole page works without JavaScript
+    (except the optional "Use my location" button below).
+=========================================================================== %>
+<div class="card mb-6">
+  <%= form_with url: public_search_path, method: :get, local: true, id: "search-form", class: "space-y-4" do %>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div>
+        <label class="form-label" for="city">City</label>
+        <input type="text" name="city" id="city" value="<%= @city %>"
+               placeholder="e.g. Gilbert" class="form-input">
+      </div>
+
+      <div>
+        <label class="form-label" for="min_price">Min Price</label>
+        <input type="number" name="min_price" id="min_price" value="<%= params[:min_price] %>"
+               placeholder="$0" min="0" step="1" class="form-input">
+      </div>
+
+      <div>
+        <label class="form-label" for="max_price">Max Price</label>
+        <input type="number" name="max_price" id="max_price" value="<%= params[:max_price] %>"
+               placeholder="No max" min="0" step="1" class="form-input">
+      </div>
+
+      <div>
+        <label class="form-label" for="sort">Sort By</label>
+        <div class="flex gap-2">
+          <select name="sort" id="sort" class="form-select-sm flex-1">
+            <option value="price" <%= "selected" if @sort == "price" %>>Price</option>
+            <option value="distance" <%= "selected" if @sort == "distance" %>>Distance</option>
+          </select>
+          <select name="dir" class="form-select-sm">
+            <option value="asc" <%= "selected" if @dir == "asc" %>>Low → High</option>
+            <option value="desc" <%= "selected" if @dir == "desc" %>>High → Low</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <label class="form-label">Unit Size</label>
+      <div class="flex flex-wrap gap-3">
+        <% @available_sizes.each do |size| %>
+          <label class="inline-flex items-center gap-1.5 text-sm text-gray-300">
+            <input type="checkbox" name="sizes[]" value="<%= size %>"
+                   <%= "checked" if @selected_sizes.include?(size) %>
+                   class="rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500">
+            <%= size %>
+          </label>
+        <% end %>
+      </div>
+    </div>
+
+    <%# Hidden lat/lng fields, filled in by the "Use my location" button
+        below via the browser's geolocation API. Kept as plain hidden
+        inputs (not a JS framework) so the form still degrades to
+        "just city/price/size filters" if geolocation isn't available or
+        JavaScript is disabled. %>
+    <input type="hidden" name="lat" id="lat-field" value="<%= params[:lat] %>">
+    <input type="hidden" name="lng" id="lng-field" value="<%= params[:lng] %>">
+
+    <div class="flex items-center gap-3">
+      <button type="submit" class="btn-primary">Search</button>
+      <button type="button" id="use-location-btn" class="btn-secondary">📍 Use My Location</button>
+      <%= link_to "Reset", public_search_path, class: "text-sm text-gray-400 hover:text-emerald-400 transition-colors" %>
+      <% if @origin %>
+        <span class="text-xs text-gray-500">Sorting from your current location</span>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+<%# ===========================================================================
+    RESULTS
+=========================================================================== %>
+<p class="text-sm text-gray-400 mb-4">
+  <%= pluralize(@facilities.length, "facility", plural: "facilities") %> found
+</p>
+
+<% if @facilities.empty? %>
+  <div class="card text-center text-gray-400">
+    No facilities match your search. Try widening your filters.
+  </div>
+<% else %>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <% @facilities.each do |facility| %>
+      <%= link_to public_search_facility_path(facility), class: "card block hover:border-emerald-700 transition-colors" do %>
+        <div class="flex items-start justify-between mb-2">
+          <div>
+            <h2 class="font-semibold text-gray-100"><%= facility.name %></h2>
+            <p class="text-xs text-gray-500"><%= facility.company %></p>
+          </div>
+          <% if facility.min_price %>
+            <span class="text-lg font-bold <%= facility.cheapest_available_unit.price_color_class %>">
+              $<%= "%.0f" % facility.min_price %><span class="text-xs text-gray-500">/mo</span>
+            </span>
+          <% else %>
+            <span class="text-sm price-unknown">No price listed</span>
+          <% end %>
+        </div>
+
+        <p class="text-sm text-gray-400"><%= facility.address %>, <%= facility.city %>, <%= facility.state %></p>
+
+        <div class="flex items-center gap-2 mt-3 flex-wrap">
+          <% if distance_from_origin(facility, @origin) %>
+            <span class="badge-gray"><%= distance_from_origin(facility, @origin) %></span>
+          <% end %>
+          <span class="badge-green"><%= facility.available_unit_count %> unit<%= "s" unless facility.available_unit_count == 1 %> available</span>
+          <% if facility.has_climate_control? %>
+            <span class="badge-blue">Climate Controlled</span>
+          <% end %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>
+
+<%# ===========================================================================
+    "USE MY LOCATION" — small vanilla-JS enhancement, no build step / no
+    Stimulus controller needed for something this small: reads the
+    browser's geolocation, fills the hidden lat/lng fields, and resubmits
+    the search form so results sort by real distance.
+=========================================================================== %>
+<script>
+  document.getElementById("use-location-btn").addEventListener("click", function () {
+    if (!navigator.geolocation) {
+      alert("Your browser doesn't support location search.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function (position) {
+      document.getElementById("lat-field").value = position.coords.latitude;
+      document.getElementById("lng-field").value = position.coords.longitude;
+      document.getElementById("sort").value = "distance";
+      document.getElementById("search-form").requestSubmit();
+    }, function () {
+      alert("Couldn't get your location. You can still search by city.");
+    });
+  });
+</script>
