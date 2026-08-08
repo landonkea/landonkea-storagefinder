@@ -63,6 +63,24 @@ Rails.application.routes.draw do
   root "dashboard#index"   # GET / → DashboardController#index
 
   # ---------------------------------------------------------------------------
+  # PUBLIC SEARCH — customer-facing search/comparison page
+  # ---------------------------------------------------------------------------
+  # Routed to PublicSearchController, which deliberately does NOT inherit
+  # from ApplicationController (see app/controllers/public_search_controller.rb
+  # for the full explanation) — so, like "up" and the PWA routes above,
+  # requests here are NOT behind the site-wide HTTP Basic Auth. Unlike those
+  # two, this is a real multi-page feature meant for prospective customers,
+  # not infrastructure plumbing.
+  # ---------------------------------------------------------------------------
+  # GET "/search" — the search/filter/compare results page.
+  get "search",    to: "public_search#index", as: :public_search
+  # GET "/search/:id" — one facility's detail page (current unit pricing &
+  # availability). Placed under "/search" (rather than a bare "/facilities")
+  # so it's visually/URL-grouped with the public search feature it belongs
+  # to, distinct from any future admin-side facility routes.
+  get "search/:id", to: "public_search#show",  as: :public_search_facility
+
+  # ---------------------------------------------------------------------------
   # DASHBOARD
   # ---------------------------------------------------------------------------
   # `get "dashboard", to: "dashboard#index", as: :dashboard` is the same
