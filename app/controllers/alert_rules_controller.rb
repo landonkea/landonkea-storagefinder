@@ -252,7 +252,7 @@ class AlertRulesController < ApplicationController
       :email_enabled, :email_address,
       :discord_enabled, :discord_webhook_url,
       :sms_enabled, :sms_phone_number,
-      :active
+      :active, :cooldown_minutes
     )
     # The multi-line list above is one single method call to `.permit`,
     # split across lines for readability — Ruby doesn't require each

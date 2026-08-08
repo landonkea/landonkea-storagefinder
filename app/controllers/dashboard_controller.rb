@@ -92,6 +92,29 @@ class DashboardController < ApplicationController
     @sort_dir             = params[:dir] || "asc"
 
     # -------------------------------------------------------------------------
+    # Nearest facilities — a compact "quick view" list, independent of the
+    # filtered/sorted main results table above.
+    # -------------------------------------------------------------------------
+    # Wires up `Facility.nearest_to` (see app/models/facility.rb) — a
+    # Haversine-distance SQL scope that, before this feature, was fully
+    # written but never actually called anywhere in the app. Unlike the
+    # "Nearest first" option in the sort dropdown (which orders by the
+    # `facilities.distance_miles` column, a value only populated AFTER a
+    # successful `Facility.calculate_distances_from` run at the end of a
+    # crawl — see app/jobs/crawl_job.rb), this panel computes distance FRESH
+    # at query time directly from the crawl's own search origin, so it stays
+    # correct even for a facility whose distance_miles happens to be
+    # missing/stale for any reason.
+    @nearest_facilities = build_nearest_facilities
+
+    # -------------------------------------------------------------------------
+    # Map pin data for the Leaflet map — one entry per facility with
+    # coordinates, built from the same filtered/sorted @units used by the
+    # results table above (so the map always matches what's in the table).
+    # -------------------------------------------------------------------------
+    @map_facilities = build_map_facilities
+
+    # -------------------------------------------------------------------------
     # Price history data for the trend chart
     # -------------------------------------------------------------------------
     @price_history = build_price_history
@@ -362,6 +385,99 @@ class DashboardController < ApplicationController
     allowed.include?(column) ? column : "monthly_price"
   end
   # `end` closes the `def sanitize_sort_column` method definition opened above.
+
+  # Build the "nearest facilities" quick-view list using Facility.nearest_to
+  # (the Haversine SQL scope defined on the Facility model). Returns an
+  # empty array whenever there's no crawl to anchor the search to, or that
+  # crawl's search origin was never successfully geocoded.
+  def build_nearest_facilities
+    # `@latest_crawl&.search_lat` — safe navigation, since @latest_crawl can
+    # be nil (no crawl has ever completed). Both search_lat AND search_lng
+    # must be present to compute any distance at all.
+    return [] unless @latest_crawl&.search_lat && @latest_crawl&.search_lng
+
+    # `Facility.nearest_to(lat, lng)` orders every facility by great-circle
+    # distance from the given point (nearest first); `.geocoded` (also
+    # defined on Facility) additionally excludes any facility missing
+    # lat/lng entirely — belt-and-suspenders alongside nearest_to's own
+    # `where.not(latitude: nil, longitude: nil)`. `.limit(8)` keeps this a
+    # compact "quick view," not a second full results table.
+    nearest = Facility.nearest_to(@latest_crawl.search_lat, @latest_crawl.search_lng)
+                       .geocoded
+                       .limit(8)
+
+    # Pairs each facility with a freshly computed distance (via the
+    # geocoder gem's own distance helper — the same one
+    # Facility.calculate_distances_from uses) and its cheapest available
+    # unit, so the view can show "$89/mo, 2.1 miles" without any further
+    # per-row database lookups.
+    nearest.map do |facility|
+      distance = Geocoder::Calculations.distance_between(
+        [ @latest_crawl.search_lat, @latest_crawl.search_lng ],
+        [ facility.latitude, facility.longitude ],
+        units: :mi
+      )
+      { facility: facility, distance_miles: distance.round(1), cheapest_unit: facility.cheapest_available_unit }
+    end
+  # A malformed/missing origin (e.g. a very old crawl record) shouldn't
+  # crash the whole dashboard — same defensive pattern as
+  # build_price_history below.
+  rescue => e
+    Rails.logger.warn("[DashboardController] Could not build nearest facilities: #{e.message}")
+    []
+  end
+  # `end` closes the `def build_nearest_facilities` method definition.
+
+  # Build the data the Leaflet map needs: one entry per facility currently
+  # shown in the (filtered/sorted) results table, using each facility's
+  # cheapest matching unit for the pin's price/color.
+  def build_map_facilities
+    return [] unless @latest_crawl
+
+    # Collapse the current unit list down to one entry per facility,
+    # keeping whichever unit is cheapest at that facility — a facility with
+    # five matching unit sizes should get exactly one map pin, not five
+    # overlapping ones.
+    cheapest_by_facility = {}
+    @units.includes(:facility).each do |unit|
+      facility = unit.facility
+      next if facility.latitude.blank? || facility.longitude.blank?
+
+      existing = cheapest_by_facility[facility.id]
+      # Keep this unit if there's no entry yet, or this unit's price beats
+      # the one already stored — `unit.best_price` may itself be nil (no
+      # price scraped), in which case it never replaces a priced entry.
+      if existing.nil? || (unit.best_price && (existing[:unit].best_price.nil? || unit.best_price < existing[:unit].best_price))
+        cheapest_by_facility[facility.id] = { facility: facility, unit: unit }
+      end
+    end
+
+    # `.values` discards the facility-id keys (only needed above to dedupe),
+    # leaving a plain array of { facility:, unit: } pairs. `.map` then turns
+    # each pair into the plain Hash of primitive values the map's
+    # JavaScript needs (see app/javascript/controllers/facility_map_controller.js) —
+    # deliberately NOT passing whole ActiveRecord objects, since those get
+    # serialized to JSON in the view via `.to_json` and only plain
+    # attributes make sense on the other side of that boundary.
+    cheapest_by_facility.values.map do |pair|
+      facility = pair[:facility]
+      unit     = pair[:unit]
+      {
+        id:           facility.id,
+        name:         facility.name,
+        company:      facility.company,
+        lat:          facility.latitude,
+        lng:          facility.longitude,
+        price:        unit.formatted_price,
+        price_color:  unit.price_color_class,
+        size:         unit.size,
+        distance:     facility.distance_label,
+        address:      facility.full_address,
+        maps_url:     facility.maps_url
+      }
+    end
+  end
+  # `end` closes the `def build_map_facilities` method definition.
 
   # Build price history data for the trend chart
   # Returns data grouped by week for the last 6 months

@@ -123,6 +123,21 @@ class AlertCheckerJob < ApplicationJob
   private
 
   def check_rule(rule, current_run, previous_run)
+    # Skip entirely if this rule is still within its own "quiet hours"
+    # cooldown window (see AlertRule#in_cooldown? — configured via the
+    # rule's cooldown_minutes field). Without this check, a rule like
+    # "price below $100" would re-send an identical alert after EVERY
+    # crawl for as long as the price stayed under $100, not just once when
+    # it first dropped below — this early return is what stops that.
+    if rule.in_cooldown?
+      Rails.logger.info(
+        "[AlertCheckerJob] Rule '#{rule.name}' is in cooldown until " \
+        "#{(rule.last_triggered_at + rule.cooldown_minutes.minutes).strftime("%b %d at %I:%M %p")} — skipping"
+      )
+      return
+    end
+    # `end` closes the `if rule.in_cooldown?` block above.
+
     # Get all units from the current crawl that could match this rule
     #
     # `current_run.units` is an ActiveRecord association — it loads (or

@@ -151,6 +151,41 @@ class AlertCheckerJobTest < ActiveSupport::TestCase
   end
   # `end` closes the "does not fire...no previous crawl" test block above.
 
+  test "does not re-fire a rule that is still within its cooldown window" do
+    # price_threshold_rule's threshold is $100; current_mesa_10x15 is $90,
+    # so this rule's trigger condition matches on every crawl below — the
+    # cooldown is what should stop it from re-firing here.
+    rule = alert_rules(:price_threshold_rule)
+    AlertRule.where.not(id: rule.id).update_all(active: false)
+    # Simulate the rule having fired 10 minutes ago, well inside a 60-minute
+    # cooldown window.
+    rule.update!(cooldown_minutes: 60, last_triggered_at: 10.minutes.ago)
+
+    AlertCheckerJob.perform_now(crawl_run_id: crawl_runs(:current_completed).id)
+
+    # `last_triggered_at` should be UNCHANGED (still ~10 minutes ago, not
+    # bumped to "now") — proving the job skipped this rule entirely rather
+    # than sending a second alert and re-stamping the timestamp.
+    assert_in_delta 10.minutes.ago.to_f, rule.reload.last_triggered_at.to_f, 5.seconds.to_f
+  end
+  # `end` closes the "does not re-fire...cooldown" test block above.
+
+  test "fires again once the cooldown window has elapsed" do
+    rule = alert_rules(:price_threshold_rule)
+    AlertRule.where.not(id: rule.id).update_all(active: false)
+    # 90 minutes ago is outside a 60-minute cooldown window, so this rule
+    # should be free to fire again.
+    rule.update!(cooldown_minutes: 60, last_triggered_at: 90.minutes.ago)
+
+    AlertCheckerJob.perform_now(crawl_run_id: crawl_runs(:current_completed).id)
+
+    # `last_triggered_at` should now be recent (re-stamped by
+    # record_triggered! during this job run), not the original 90-minutes-
+    # ago value.
+    assert_in_delta Time.current.to_f, rule.reload.last_triggered_at.to_f, 5.seconds.to_f
+  end
+  # `end` closes the "fires again once...elapsed" test block above.
+
   test "unit_size_filter narrows which units are checked" do
     rule = alert_rules(:price_threshold_rule)
     # `rule.update!(unit_size_filter: "10x10")` writes a new value to this

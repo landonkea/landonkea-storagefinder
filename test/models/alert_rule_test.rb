@@ -266,6 +266,53 @@ class AlertRuleTest < ActiveSupport::TestCase
   end
   # `end` closes this `test` block.
 
+  test "cooldown_minutes must be zero or a positive whole number" do
+    rule = AlertRule.new(valid_attributes.merge(cooldown_minutes: -5))
+    refute rule.valid?
+    assert_includes rule.errors[:cooldown_minutes], "Cooldown must be a whole number of minutes (0 or more)"
+
+    rule = AlertRule.new(valid_attributes.merge(cooldown_minutes: 1.5))
+    refute rule.valid?
+    assert_includes rule.errors[:cooldown_minutes], "Cooldown must be a whole number of minutes (0 or more)"
+
+    rule = AlertRule.new(valid_attributes.merge(cooldown_minutes: 0))
+    assert rule.valid?, rule.errors.full_messages.join(", ")
+  end
+  # `end` closes this `test` block.
+
+  test "in_cooldown? is false when cooldown_minutes is zero, regardless of last_triggered_at" do
+    rule = AlertRule.new(valid_attributes.merge(cooldown_minutes: 0, last_triggered_at: Time.current))
+    refute rule.in_cooldown?
+  end
+  # `end` closes this `test` block.
+
+  test "in_cooldown? is false when the rule has never triggered" do
+    rule = AlertRule.new(valid_attributes.merge(cooldown_minutes: 60, last_triggered_at: nil))
+    refute rule.in_cooldown?
+  end
+  # `end` closes this `test` block.
+
+  test "in_cooldown? is true while still inside the cooldown window" do
+    rule = AlertRule.new(valid_attributes.merge(cooldown_minutes: 60, last_triggered_at: 10.minutes.ago))
+    assert rule.in_cooldown?
+  end
+  # `end` closes this `test` block.
+
+  test "in_cooldown? is false once the cooldown window has elapsed" do
+    rule = AlertRule.new(valid_attributes.merge(cooldown_minutes: 60, last_triggered_at: 90.minutes.ago))
+    refute rule.in_cooldown?
+  end
+  # `end` closes this `test` block.
+
+  test "description mentions the cooldown window only when one is set" do
+    rule = alert_rules(:price_threshold_rule)
+    refute_match(/at most once per/, rule.description)
+
+    rule.cooldown_minutes = 30
+    assert_match(/at most once per 30min/, rule.description)
+  end
+  # `end` closes this `test` block.
+
   test "record_triggered! stamps last_triggered_at" do
     rule = alert_rules(:price_drop_rule)
     # `assert_nil` is a Minitest assertion checking its argument is exactly
