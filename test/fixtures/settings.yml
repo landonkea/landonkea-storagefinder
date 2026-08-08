@@ -239,3 +239,20 @@ display_default_sort:
   category: display
   label: Default sort order for results table
   input_type: select
+
+# Mirrors db/seeds.rb's display_price_green_max/display_price_yellow_max —
+# the configurable breakpoints Unit#price_color_class reads (see
+# app/models/unit.rb) instead of hardcoding $100/$150.
+display_price_green_max:
+  key: display_price_green_max
+  value: "99"
+  category: display
+  label: Price badge is green at or below this amount ($)
+  input_type: number
+
+display_price_yellow_max:
+  key: display_price_yellow_max
+  value: "149"
+  category: display
+  label: Price badge is yellow at or below this amount ($) — above it, red
+  input_type: number

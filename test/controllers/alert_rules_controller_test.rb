@@ -209,6 +209,28 @@ class AlertRulesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to alert_rules_path
   end
   # `end` closes the "destroy deletes the rule and redirects" test block.
+
+  test "destroy_selected deletes every given id and redirects" do
+    ids = [ alert_rules(:price_drop_rule).id, alert_rules(:inactive_rule).id ]
+
+    assert_difference "AlertRule.count", -2 do
+      delete destroy_selected_alert_rules_path, params: { ids: ids }
+    end
+
+    assert_redirected_to alert_rules_path
+    assert_equal "Deleted 2 alert rules.", flash[:notice]
+  end
+  # `end` closes the "destroy_selected deletes every given id..." test block.
+
+  test "destroy_selected leaves everything alone when no ids are given" do
+    assert_no_difference "AlertRule.count" do
+      delete destroy_selected_alert_rules_path
+    end
+
+    assert_redirected_to alert_rules_path
+    assert_equal "No alert rules were selected.", flash[:alert]
+  end
+  # `end` closes the "destroy_selected leaves everything alone..." test block.
 end
 # `end` closes the `class AlertRulesControllerTest < ActionDispatch::IntegrationTest`
 # definition that started at the top of the file.

@@ -57,7 +57,36 @@
 <% else %>
   <%# Closes/branches the `if @alert_rules.empty?` check above — everything
       from here down only renders when there IS at least one alert rule. %>
-  <div class="card">
+  <%# `data-controller="crawl-history"` re-attaches the SAME Stimulus
+      controller the dashboard's crawl-history table uses (see
+      app/javascript/controllers/crawl_history_controller.js and
+      app/views/dashboard/_crawl_history.html.erb) — despite the
+      "crawl-history" name, its actual behavior (select-all checkbox,
+      per-row toggling, enabling a bulk-delete button once something's
+      checked) is entirely generic, not crawl-specific, so it's reused
+      here rather than duplicated into a near-identical second controller
+      file. %>
+  <div class="card" data-controller="crawl-history">
+    <%# Standalone bulk-delete form — same pattern as
+        app/views/dashboard/_crawl_history.html.erb: its checkboxes live in
+        the table rows below (associated via `form="..."` rather than
+        nesting, since each row also has its own separate `button_to`
+        delete form and HTML forbids nesting one `<form>` inside another). %>
+    <%= form_with url: destroy_selected_alert_rules_path, method: :delete, id: "bulk-delete-alert-rules-form",
+          data: { turbo_confirm: "Delete all selected alert rules? This cannot be undone." } do %>
+    <% end %>
+
+    <%# "flex items-center justify-between mb-4" lays a "Delete Selected"
+        button out flush-right above the table, mirroring the crawl history
+        panel's own header row. %>
+    <div class="flex items-center justify-between mb-4">
+      <button type="submit" form="bulk-delete-alert-rules-form" disabled
+              data-crawl-history-target="bulkDeleteButton"
+              class="text-xs text-red-500 hover:text-red-300 bg-transparent border border-red-900/50 rounded px-2 py-1 disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-red-500 ml-auto">
+        Delete Selected
+      </button>
+    </div>
+
     <%# "w-full text-sm" makes the table stretch to fill its container's
         width, with small-sized text throughout. %>
     <table class="w-full text-sm">
@@ -66,6 +95,11 @@
             this header row as small, muted, all-caps column labels with a
             thin line underneath separating it from the data rows. %>
         <tr class="text-gray-500 text-xs uppercase border-b border-gray-800">
+          <%# Narrow header cell holding the "select all" checkbox — same
+              pattern as the crawl history table's own first column. %>
+          <th class="text-left pb-3 w-6">
+            <input type="checkbox" data-crawl-history-target="selectAll" data-action="change->crawl-history#toggleAll">
+          </th>
           <%# "text-left pb-3" left-aligns each header cell's text and adds
               padding below it, spacing the header text away from the
               underline border. Repeated identically across most columns
@@ -93,6 +127,18 @@
               background highlight while the mouse pointer is over the row,
               purely a visual/CSS behavior with no Ruby involved. %>
           <tr class="border-b border-gray-800/40 hover:bg-gray-800/20">
+            <td class="py-3">
+              <%# `name="ids[]"` — the trailing `[]` is a plain HTML form
+                  convention meaning "one value in an array of values
+                  sharing this name"; when the bulk-delete form submits, the
+                  server receives every checked checkbox's value together as
+                  an `ids` array. `form="bulk-delete-alert-rules-form"`
+                  associates this checkbox with the form defined at the top
+                  of this file despite not being nested inside it (same
+                  reasoning as the crawl history table). %>
+              <input type="checkbox" name="ids[]" value="<%= rule.id %>" form="bulk-delete-alert-rules-form"
+                     data-crawl-history-target="rowCheckbox" data-action="change->crawl-history#toggleRow">
+            </td>
             <%# "py-3" adds vertical padding inside each cell; "font-medium
                 text-white" makes the rule's name stand out as the row's
                 primary identifier. %>

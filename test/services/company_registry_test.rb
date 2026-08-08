@@ -116,6 +116,17 @@ class CompanyRegistryTest < ActiveSupport::TestCase
     assert_match(/Could not build parser for 'Not A Real Storage Company'/, error.message)
   end
   # `end` closes the "build_parser wraps errors with context..." test block above.
+
+  test "stubbed? is true for StorAmerica and false for a fully implemented company" do
+    # `CompanyRegistry.stubbed?` (see company_registry.rb's STUBBED_COMPANIES
+    # constant) is what drives the dashboard disabling StorAmerica's
+    # checkbox and labeling it "(not yet supported)" — see
+    # test/controllers/dashboard_controller_test.rb for that view-level
+    # assertion.
+    assert CompanyRegistry.stubbed?("StorAmerica")
+    refute CompanyRegistry.stubbed?("Public Storage")
+  end
+  # `end` closes the "stubbed? is true for StorAmerica..." test block above.
 end
 # `end` closes the `class CompanyRegistryTest < ActiveSupport::TestCase`
 # definition that started at the top of this file.

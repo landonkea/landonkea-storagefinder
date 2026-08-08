@@ -310,6 +310,15 @@
                 this block once per name with `company` bound to the
                 current one, generating one checkbox per company. %>
             <% @available_companies.each do |company| %>
+              <%# `CompanyRegistry.stubbed?(company)` is true only for
+                  companies whose parser is a known stub (currently just
+                  StorAmerica — see app/services/company_registry.rb's
+                  STUBBED_COMPANIES) — a crawl against one would silently
+                  return zero results, which used to be indistinguishable
+                  in the UI from "this company legitimately has no
+                  availability right now." `stub` below drives both this
+                  checkbox's disabled state and the label text/styling. %>
+              <% stub = CompanyRegistry.stubbed?(company) %>
               <%# Wrapping the checkbox and its text in one `<label>` makes
                   the whole pill clickable, not just the tiny checkbox
                   square — plain HTML/browser behavior. "flex items-center
@@ -317,8 +326,13 @@
                   text-xs cursor-pointer transition-colors" styles it as a
                   small rounded "pill" button that darkens/lightens
                   slightly on hover (transition-colors makes that color
-                  change animate smoothly instead of snapping instantly). %>
-              <label class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-xs cursor-pointer transition-colors">
+                  change animate smoothly instead of snapping instantly).
+                  For a stub company, "opacity-50 cursor-not-allowed
+                  hover:bg-gray-800" (via the ternary below) mutes the pill
+                  and swaps the cursor to signal it can't actually be
+                  toggled, and drops the hover-darken effect since there's
+                  nothing to click. %>
+              <label class="flex items-center gap-1.5 bg-gray-800 px-2 py-1 rounded text-xs transition-colors <%= stub ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-700 cursor-pointer" %>">
                 <%# This is a PLAIN HTML checkbox, not a Rails form-builder
                     helper like `f.check_box` — that's fine since this form
                     has no single backing model object per checkbox anyway.
@@ -327,21 +341,29 @@
                     every CHECKED box among all these company checkboxes
                     gets submitted together as one `companies` array param
                     (e.g. companies: ["Public Storage", "U-Haul"]),
-                    unchecked ones simply aren't included at all.
-                    `value="<%= company % >"` sets which company name this
-                    particular checkbox represents. The bare word `checked`
-                    (no value, just its presence) is a plain HTML boolean
-                    attribute that starts every company pre-selected by
-                    default. "accent-emerald-500" recolors the checkbox's
-                    own check mark/fill to this app's green accent. %>
+                    unchecked ones simply aren't included at all — and a
+                    DISABLED checkbox (see `disabled: stub` below) is never
+                    submitted regardless of its checked state, which is
+                    exactly what's wanted for a stub company: it should
+                    never end up in the submitted `companies[]` list at
+                    all. `value="<%= company % >"` sets which company name
+                    this particular checkbox represents. `checked: !stub`
+                    starts every real company pre-selected by default, but
+                    leaves a stub company unchecked (checking a disabled
+                    box would be misleading UI). "accent-emerald-500"
+                    recolors the checkbox's own check mark/fill to this
+                    app's green accent. %>
                 <input type="checkbox"
                        name="companies[]"
                        value="<%= company %>"
-                       checked
+                       <%= "checked" unless stub %>
+                       <%= "disabled" if stub %>
                        class="accent-emerald-500">
                 <%# Prints the company's name as this checkbox's visible
-                    label text. %>
-                <%= company %>
+                    label text — with a "(not yet supported)" suffix for a
+                    stub company, so it's clear from the label alone (not
+                    just the muted styling) why it can't be selected. %>
+                <%= company %><% if stub %> <span class="text-gray-500">(not yet supported)</span><% end %>
               </label>
             <% end %>
             <%# Closes the `@available_companies.each do |company|` loop

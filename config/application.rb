@@ -343,7 +343,16 @@ module Storagefinder
     # here because this is a small, single-machine app.
     # In-process async adapter — no Redis or Postgres needed for a
     # single-machine local app backed by SQLite (GoodJob requires Postgres,
-    # so it isn't usable here).
+    # so it isn't usable here). This is the APP-WIDE DEFAULT, in effect for
+    # development and any environment that doesn't override it. Production
+    # and staging DO override it (see config/environments/production.rb and
+    # config/environments/staging.rb) to `:solid_queue` instead, because
+    # the scheduled-crawl feature (see config/recurring.yml and
+    # app/jobs/scheduled_crawl_check_job.rb) needs a real recurring-task
+    # dispatcher that keeps checking the clock on its own — something the
+    # in-process `:async` adapter, which only ever runs a job when THIS
+    # process itself enqueues one, cannot do. The test environment also
+    # overrides this (see config/environments/test.rb, which sets `:test`).
     config.active_job.queue_adapter = :async
 
     # Blank line — purely visual spacing, has no effect on Ruby.

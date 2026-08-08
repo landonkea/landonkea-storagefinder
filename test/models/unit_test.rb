@@ -193,6 +193,21 @@ class UnitTest < ActiveSupport::TestCase
   end
   # `end` closes this `test` block.
 
+  test "price_color_class respects configurable display_price_green_max/display_price_yellow_max settings" do
+    # Lowers the breakpoints from their fixture defaults (99/149 — see
+    # test/fixtures/settings.yml) to prove price_color_class actually reads
+    # these Setting rows at call time rather than the old hardcoded
+    # $100/$150 constants — a $50 unit, "green" under the default
+    # breakpoints, should become "yellow" once the green ceiling drops
+    # below it.
+    Setting.set("display_price_green_max", "10")
+    Setting.set("display_price_yellow_max", "60")
+
+    assert_equal "price-yellow", Unit.new(monthly_price: 50).price_color_class
+    assert_equal "price-red",    Unit.new(monthly_price: 200).price_color_class
+  end
+  # `end` closes this `test` block.
+
   test "matches_default_filters? requires climate control, indoor, non-drive-up, and minimum size" do
     # Builds a Unit with every attribute set to satisfy ALL of
     # `matches_default_filters?`'s conditions at once (see
