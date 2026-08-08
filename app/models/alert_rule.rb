@@ -59,6 +59,19 @@ class AlertRule < ApplicationRecord
     message:      "Threshold price must be greater than $0"
   }, allow_nil: true
 
+  # cooldown_minutes must be zero or a positive whole number of minutes.
+  # `0` (the column's default — see the migration
+  # db/migrate/20260803000000_add_cooldown_minutes_to_alert_rules.rb) means
+  # "no cooldown, fire every time the trigger condition matches" — today's
+  # original behavior. `greater_than_or_equal_to: 0` allows exactly 0 as
+  # well as any positive number; `only_integer: true` rejects fractional
+  # minutes like 1.5.
+  validates :cooldown_minutes, numericality: {
+    greater_than_or_equal_to: 0,
+    only_integer:              true,
+    message:                   "Cooldown must be a whole number of minutes (0 or more)"
+  }
+
   # At least one delivery method must be enabled
   # `validate` (no trailing "s", unlike `validates` above) registers a
   # CUSTOM validation method by name (as a symbol) rather than a built-in
@@ -174,6 +187,10 @@ class AlertRule < ApplicationRecord
     parts << "for #{unit_size_filter}" if unit_size_filter.present?
     # Same idea, appending a company-filter note only if one is set.
     parts << "at #{company_filter}"    if company_filter.present?
+    # Same idea again, noting the cooldown window only when one is actually
+    # configured (cooldown_minutes > 0) — most rules have no cooldown, so
+    # this stays silent for them.
+    parts << "(at most once per #{cooldown_minutes}min)" if cooldown_minutes.to_i > 0
 
     # `delivery = []` starts a fresh empty array for the list of delivery
     # channels this rule uses (Email/Discord/SMS).
@@ -198,6 +215,28 @@ class AlertRule < ApplicationRecord
     parts.join(" ")
   end
   # `end` closes the `def description` method definition.
+
+  # Is this rule currently in its "quiet hours" cooldown window?
+  # Returns true if this rule fired recently enough that it should NOT fire
+  # again yet, even if its trigger condition still matches on the current
+  # crawl. Called by AlertCheckerJob#check_rule before sending a new alert.
+  #
+  # `cooldown_minutes.to_i <= 0` treats a nil/zero/negative cooldown as "no
+  # cooldown configured" — this rule can always fire again immediately.
+  # `last_triggered_at.nil?` handles a rule that has never fired before
+  # (nothing to cool down from yet).
+  def in_cooldown?
+    return false if cooldown_minutes.to_i <= 0
+    return false if last_triggered_at.nil?
+
+    # True while we're still within `cooldown_minutes` minutes of the last
+    # time this rule fired. `cooldown_minutes.minutes` converts the plain
+    # integer into a Rails duration; adding it to `last_triggered_at` gives
+    # the exact moment the cooldown window ends; `> Time.current` is true
+    # only while that moment is still in the future.
+    (last_triggered_at + cooldown_minutes.minutes) > Time.current
+  end
+  # `end` closes the `def in_cooldown?` method definition.
 
   # Record that this alert fired right now
   def record_triggered!

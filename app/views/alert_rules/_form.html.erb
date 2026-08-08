@@ -143,6 +143,18 @@
     </div>
   </div>
 
+  <%# --- Cooldown / quiet hours field ---
+      Without this, a rule keeps re-firing on every single crawl for as
+      long as its condition still matches (e.g. "price below $100" would
+      re-alert every crawl while the price stays under $100). Setting a
+      cooldown here means "once this rule fires, wait at least this many
+      minutes before firing again" — see AlertRule#in_cooldown? and
+      AlertCheckerJob#check_rule for how this value is actually enforced. %>
+  <div class="w-48">
+    <label class="form-label">Cooldown (minutes, optional)</label>
+    <%= f.number_field :cooldown_minutes, min: 0, step: 1, class: "form-input", placeholder: "0 = no cooldown" %>
+  </div>
+
   <%# --- Delivery methods section --- %>
   <%# "border-t border-gray-800" draws a thin gray line across the top of
       this block, visually separating it from the fields above; "pt-5" adds

@@ -78,3 +78,16 @@ pin "chartkick", to: "chartkick.js"
 # this records which version of the package this vendored file corresponds
 # to, so future upgrades know what they're replacing.
 pin "@rails/actioncable", to: "@rails--actioncable.js" # @8.1.300
+
+# Leaflet — powers the facility map on the dashboard (see
+# app/javascript/controllers/facility_map_controller.js). Vendored under
+# vendor/javascript/leaflet.js for the same offline-friendly reason as
+# Chartkick above (this app runs on a LAN with no guaranteed internet
+# access) — its matching CSS lives at app/assets/stylesheets/leaflet.css,
+# linked in the layout via stylesheet_link_tag. Note the map TILES
+# themselves (the actual street imagery) still come from OpenStreetMap's
+# tile servers over the network at render time in the browser — same as
+# how the geocoder gem already calls out to Nominatim during a crawl — so
+# the map's pins/legend/popups work fully offline, but the background
+# imagery only loads with internet access.
+pin "leaflet", to: "leaflet.js" # @1.9.4
