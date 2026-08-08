@@ -915,6 +915,85 @@
 <%# Closes the `if @price_history.any?` check above. %>
 
 <%# =========================================================================
+  5b. AVERAGE PRICE BY COMPANY (bar chart)
+========================================================================= %>
+<%# `@avg_price_by_company` is a Hash of { company_name => average_price }
+    built by the controller's `build_avg_price_by_company` method, scoped to
+    the latest completed crawl's priced units. `.any?` guards against
+    rendering an empty chart when there's no data yet. %>
+<% if @avg_price_by_company.any? %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+      Average Price by Company
+    </h2>
+    <%# `bar_chart` is another chartkick helper, same family as `line_chart`
+        above but drawing horizontal/vertical bars instead of a line — one
+        bar per hash key (company name here). Same `prefix`/`thousands`
+        currency formatting and transparent-background library options as
+        the price trend chart, for a consistent look. %>
+    <%= bar_chart @avg_price_by_company,
+          prefix:     "$",
+          thousands:  ",",
+          colors:     ["#34d399"],
+          library:    {
+            backgroundColor: "transparent"
+          } %>
+  </div>
+<% end %>
+<%# Closes the `if @avg_price_by_company.any?` check above. %>
+
+<%# =========================================================================
+  5c. UNIT AVAILABILITY BY SIZE (pie chart)
+========================================================================= %>
+<%# `@unit_availability_by_size` is a Hash of { size => count_of_available_units }
+    built by `build_unit_availability_by_size`, also scoped to the latest
+    completed crawl. %>
+<% if @unit_availability_by_size.any? %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+      Available Units by Size
+    </h2>
+    <%# `pie_chart` is a chartkick helper drawing one wedge per hash key.
+        `colors:` here supplies a small palette (one color per wedge) rather
+        than the single-color arrays used above, since a pie chart needs to
+        visually distinguish each slice. %>
+    <%= pie_chart @unit_availability_by_size,
+          colors:  ["#34d399", "#60a5fa", "#fbbf24", "#f87171", "#a78bfa", "#f472b6"],
+          library: {
+            backgroundColor: "transparent"
+          } %>
+  </div>
+<% end %>
+<%# Closes the `if @unit_availability_by_size.any?` check above. %>
+
+<%# =========================================================================
+  5d. CRAWL SUCCESS/FAILURE RATE (group_by_day chart)
+========================================================================= %>
+<%# `@crawl_status_by_day` is a Hash built by `build_crawl_status_by_day`,
+    grouping CrawlRun rows by `status` ("completed"/"failed") and by day
+    over the last 30 days — its keys are `[status, day]` pairs, a shape
+    chartkick/groupdate render as one line per status automatically. %>
+<% if @crawl_status_by_day.any? %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+      Crawl Success/Failure Rate (last 30 days)
+    </h2>
+    <%# `line_chart` again, same helper as the price trend chart — chartkick
+        detects the `[group, day]`-keyed Hash shape and draws one colored
+        line per group ("completed" and "failed") instead of a single
+        series. `colors:` supplies one color per line, in the order the
+        groups first appear in the data (green for completed, red for
+        failed, matching this app's price-color conventions elsewhere). %>
+    <%= line_chart @crawl_status_by_day,
+          colors:  ["#34d399", "#f87171"],
+          library: {
+            backgroundColor: "transparent"
+          } %>
+  </div>
+<% end %>
+<%# Closes the `if @crawl_status_by_day.any?` check above. %>
+
+<%# =========================================================================
   6. CRAWL HISTORY
 ========================================================================= %>
 <%# `render "crawl_history"` includes the PARTIAL defined in
