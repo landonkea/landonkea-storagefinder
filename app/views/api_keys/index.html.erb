@@ -1,0 +1,94 @@
+<%# API Keys — admin management page for tokens that authenticate requests
+    to the read-only JSON API under /api/v1 (see app/controllers/api/).
+    This page itself is behind the same HTTP Basic Auth as the rest of the
+    dashboard; the keys issued here are what LET external tools skip that
+    Basic Auth password when calling the API instead. %>
+
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-emerald-400">API Keys</h1>
+    <p class="text-sm text-gray-400 mt-1">
+      Manage tokens for programmatic access to
+      <code class="text-emerald-400">/api/v1/facilities</code> and
+      <code class="text-emerald-400">/api/v1/units</code>
+    </p>
+  </div>
+</div>
+
+<%# One-time reveal of a freshly created/regenerated token. flash[:new_token]
+    is set by ApiKeysController#create and #regenerate — after this page
+    render it's gone, so this is the ONLY time the raw token is ever shown. %>
+<% if flash[:new_token].present? %>
+  <div class="card bg-emerald-900/30 border border-emerald-700 mb-6">
+    <p class="text-sm text-emerald-300 font-semibold mb-2">
+      ⚠ Copy this token now — it won't be shown again:
+    </p>
+    <code class="block bg-gray-950 text-emerald-400 px-3 py-2 rounded text-sm break-all"><%= flash[:new_token] %></code>
+    <p class="text-xs text-gray-400 mt-2">
+      Send it as <code>Authorization: Bearer &lt;token&gt;</code> on requests to the API.
+    </p>
+  </div>
+<% end %>
+
+<div class="card mb-6">
+  <h2 class="text-lg font-semibold text-gray-200 mb-3">Create a new key</h2>
+  <%= form_with model: @api_key, url: api_keys_path, method: :post, local: true, class: "flex items-end gap-3" do |f| %>
+    <div class="flex-1">
+      <%= f.label :name, "Label", class: "block text-sm text-gray-400 mb-1" %>
+      <%= f.text_field :name, placeholder: "e.g. Zapier integration", class: "form-input w-full" %>
+      <% if @api_key.errors[:name].present? %>
+        <p class="text-red-400 text-xs mt-1"><%= @api_key.errors[:name].first %></p>
+      <% end %>
+    </div>
+    <%= f.submit "Create key", class: "btn-primary" %>
+  <% end %>
+</div>
+
+<% if @api_keys.empty? %>
+  <div class="card text-center py-12">
+    <p class="text-gray-400 text-lg">No API keys yet</p>
+    <p class="text-gray-600 text-sm mt-2">Create one above to allow programmatic access to /api/v1</p>
+  </div>
+<% else %>
+  <div class="card overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-gray-400 border-b border-gray-700">
+          <th class="pb-2 pr-4">Name</th>
+          <th class="pb-2 pr-4">Token</th>
+          <th class="pb-2 pr-4">Status</th>
+          <th class="pb-2 pr-4">Requests</th>
+          <th class="pb-2 pr-4">Last used</th>
+          <th class="pb-2 pr-4">Created</th>
+          <th class="pb-2"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @api_keys.each do |api_key| %>
+          <tr class="border-b border-gray-800">
+            <td class="py-2 pr-4 text-gray-200"><%= api_key.name %></td>
+            <td class="py-2 pr-4 font-mono text-gray-400"><%= api_key.masked_token %></td>
+            <td class="py-2 pr-4">
+              <% if api_key.active? %>
+                <span class="text-emerald-400">Active</span>
+              <% else %>
+                <span class="text-gray-500">Revoked</span>
+              <% end %>
+            </td>
+            <td class="py-2 pr-4 text-gray-400"><%= api_key.request_count %></td>
+            <td class="py-2 pr-4 text-gray-400"><%= api_key.last_used_at&.strftime("%b %-d, %Y %-l:%M%P") || "Never" %></td>
+            <td class="py-2 pr-4 text-gray-400"><%= api_key.created_at.strftime("%b %-d, %Y") %></td>
+            <td class="py-2 text-right whitespace-nowrap">
+              <%= button_to "Regenerate", regenerate_api_key_path(api_key), method: :post,
+                    class: "text-gray-400 hover:text-emerald-400 text-xs mr-3",
+                    form: { data: { turbo_confirm: "Regenerate the token for \"#{api_key.name}\"? The old token will stop working immediately." } } %>
+              <%= button_to "Delete", api_key_path(api_key), method: :delete,
+                    class: "text-red-400 hover:text-red-300 text-xs",
+                    form: { data: { turbo_confirm: "Delete API key \"#{api_key.name}\"? This can't be undone." } } %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+<% end %>
