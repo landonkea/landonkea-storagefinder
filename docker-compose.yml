@@ -1,0 +1,57 @@
+# docker-compose.yml — standalone LOCAL DEVELOPMENT setup, distinct from
+# config/deploy.yml/config/deploy.staging.yml (which configure Kamal, a
+# real remote deploy tool). Running `docker compose up --build` builds the
+# same `Dockerfile` Kamal uses for production images and runs it locally,
+# so you can exercise the fully packaged app without installing Ruby,
+# Node, or SQLite on your own machine. See the "Local development with
+# Docker Compose" section of the README for the full walkthrough.
+#
+# No separate database service is defined here (unlike a typical Postgres/
+# MySQL app's docker-compose.yml) because this app is entirely SQLite-based
+# — see config/database.yml (app data, Solid Queue, Solid Cable each get
+# their own storage/*.sqlite3 file) and config/cable.yml (solid_cable in
+# production). All of that just needs a persistent directory, provided
+# below via the `storage` named volume.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Overrides the image's default CMD (`./bin/thrust ./bin/rails
+    # server`) to run the Rails server directly on port 80 instead. The
+    # `thruster` gem that `bin/thrust` needs isn't in this app's Gemfile,
+    # so the default CMD currently can't boot at all (in this container or
+    # in a real Kamal deploy) — that's a pre-existing gap unrelated to this
+    # compose file. Thruster is an HTTP acceleration proxy anyway, not
+    # something a single local dev container needs, so bypassing it here
+    # keeps this file self-contained without touching the Dockerfile/
+    # Gemfile's production behavior.
+    command: ["./bin/rails", "server", "-b", "0.0.0.0", "-p", "80"]
+    # Maps the host's port 3000 to the container's port 80 (what the
+    # Dockerfile EXPOSEs and what the command above listens on).
+    ports:
+      - "3000:80"
+    environment:
+      # Booting the app (even just to serve a request) decrypts
+      # config/credentials.yml.enc, which needs the master key — same
+      # requirement as CI (.github/workflows/ci.yml) and a real Kamal
+      # deploy (.kamal/secrets). Set this in your shell before running
+      # `docker compose up`, e.g.:
+      #   export RAILS_MASTER_KEY=$(cat config/master.key)
+      # or put that same line in a .env file (gitignored via /.env*)
+      # alongside this docker-compose.yml — Docker Compose loads .env
+      # automatically and substitutes ${RAILS_MASTER_KEY} below with it.
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY}
+    volumes:
+      # Mounts the named `storage` volume (declared below) at /rails/storage
+      # inside the container — the same path config/database.yml's
+      # `database:` settings point at (e.g. storage/production.sqlite3).
+      # Using a named volume (rather than bind-mounting ./storage from the
+      # host) avoids file-ownership mismatches between the host user and
+      # the container's non-root `rails` user (see Dockerfile), while still
+      # persisting all data across `docker compose down`/`up` cycles.
+      - storage:/rails/storage
+
+volumes:
+  storage:
