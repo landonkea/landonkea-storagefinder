@@ -58,17 +58,23 @@ servers:
     # self-hosted app running on a home/local network rather than the
     # public internet.
     - 192.168.0.1
-  # A commented-out example (every line here starts with "#", so none of it
-  # is active configuration) showing how a SECOND role, named "job", could
-  # be defined — this pattern is for splitting background-job processing
-  # onto its own dedicated server, separate from the one serving web
-  # requests, once a single server's capacity isn't enough. It stays
-  # inactive because StorageFinder currently runs both web and job
-  # processing together via the SOLID_QUEUE_IN_PUMA setting further below.
-  # job:
-  #   hosts:
-  #     - 192.168.0.1
-  #   cmd: bin/jobs
+  # "job:" is a SECOND role, running the exact same 192.168.0.1 server (this
+  # is still a one-machine deployment — see the single "web:" host above and
+  # config/deploy.yml's persistent-volume comment further down) as its own
+  # separate container, but started with a different command: `cmd: bin/jobs`
+  # runs Solid Queue's dispatcher/worker/scheduler process (see bin/jobs and
+  # config/queue.yml) instead of the normal Puma web server. This is what
+  # actually executes background jobs and the recurring tasks in
+  # config/recurring.yml (including the scheduled-crawl check — see
+  # app/jobs/scheduled_crawl_check_job.rb) once `config.active_job.
+  # queue_adapter = :solid_queue` (see config/environments/production.rb) is
+  # in effect. Kept as its own role/container rather than folded into the
+  # "web:" role above so a slow/misbehaving crawl job can't starve Puma's
+  # ability to serve ordinary page requests, and vice versa.
+  job:
+    hosts:
+      - 192.168.0.1
+    cmd: bin/jobs
 
 # Blank line — ignored by YAML, purely visual spacing.
 

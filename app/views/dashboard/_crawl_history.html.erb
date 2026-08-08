@@ -114,6 +114,11 @@
           <th class="text-left pb-2">City</th>
           <th class="text-left pb-2">Status</th>
           <th class="text-left pb-2">Results</th>
+          <%# Holds the warning/error count badges added below — see
+              DashboardController#index's @crawl_log_counts and
+              ApplicationHelper#crawl_log_issue_count for where the numbers
+              come from. %>
+          <th class="text-left pb-2">Issues</th>
           <th class="text-left pb-2">Duration</th>
           <%# Empty header cell — this column holds the per-row "Log"/"Delete"
               action links below, which need no text label of their own. %>
@@ -197,6 +202,29 @@
             <%# "text-gray-400" muted text showing counts pulled from saved
                 integer columns on the crawl record. %>
             <td class="py-2 text-gray-400"><%= crawl.facilities_found %> facilities, <%= crawl.units_found %> units</td>
+            <td class="py-2">
+              <%# `crawl_log_issue_count` (ApplicationHelper) reads this
+                  row's warning/error counts out of the
+                  `@crawl_log_counts` Hash built once, up front, by
+                  DashboardController#index — see that method's comment
+                  for why it's one grouped query instead of a per-row one.
+                  Each badge only renders when its count is non-zero, so a
+                  clean crawl shows neither. %>
+              <% warning_count = crawl_log_issue_count(crawl_run_id: crawl.id, level: "warning") %>
+              <% error_count   = crawl_log_issue_count(crawl_run_id: crawl.id, level: "error") %>
+              <% if warning_count.zero? && error_count.zero? %>
+                <span class="text-gray-700">—</span>
+              <% else %>
+                <div class="flex gap-1">
+                  <% if error_count.positive? %>
+                    <span class="text-xs text-red-400" title="<%= error_count %> error log entr<%= error_count == 1 ? "y" : "ies" %>">⚠ <%= error_count %></span>
+                  <% end %>
+                  <% if warning_count.positive? %>
+                    <span class="text-xs text-yellow-400" title="<%= warning_count %> warning log entr<%= warning_count == 1 ? "y" : "ies" %>">⚠ <%= warning_count %></span>
+                  <% end %>
+                </div>
+              <% end %>
+            </td>
             <%# "text-gray-500" dimmer text. `duration_label` is presumably
                 a model method formatting elapsed time as a friendly string. %>
             <td class="py-2 text-gray-500"><%= crawl.duration_label %></td>

@@ -40,10 +40,12 @@ look for the `auth:` section. This repo's `config/credentials.yml.enc` is
 already set up with an `auth:` block and the `active_record_encryption:`
 keys that `Setting#value` needs (SMTP passwords, Discord webhook URLs, etc.
 are encrypted at rest, not stored in plaintext) — you just need
-`config/master.key` to read/change them. **Basic Auth does not cover the
-`/cable` ActionCable endpoint**, since it doesn't route through
-`ApplicationController` — live dashboard updates over that socket aren't
-gated the same way the rest of the app is.
+`config/master.key` to read/change them. HTTP Basic Auth technically only
+covers ordinary HTTP requests (it wouldn't automatically protect the
+`/cable` ActionCable/WebSocket endpoint, since that connects directly to
+`app/channels/application_cable/connection.rb` instead of routing through
+`ApplicationController`) — that connection class re-checks the same
+username/password itself, so `/cable` is gated too.
 
 ## Running tests
 
@@ -135,6 +137,23 @@ Data (SQLite database, Active Storage files) persists across deploys via the
 `storagefinder_storage` volume declared in `config/deploy.yml` (production)
 or the separate `storagefinder_staging_storage` volume declared in
 `config/deploy.staging.yml` (staging).
+
+### Background jobs & the scheduler
+
+Production and staging run background jobs through
+[Solid Queue](https://github.com/rails/solid_queue) instead of the
+in-process `:async` adapter development uses — `config/deploy.yml` deploys
+a second container (the `job:` role, running `bin/jobs`) alongside the
+normal web container specifically to run it. This is what makes the
+Settings page's "Enable scheduled automatic crawls" toggle actually work:
+`config/recurring.yml` has Solid Queue run `ScheduledCrawlCheckJob`
+(`app/jobs/scheduled_crawl_check_job.rb`) once a minute; it checks
+`schedule_enabled`/`schedule_cron`/`schedule_city`/`schedule_radius_miles`
+against the current time and, when they match, kicks off a crawl exactly
+like clicking "Run Crawl" would. If you deploy with `bin/kamal setup`, both
+roles get created automatically; if you're upgrading an existing deploy,
+re-run `bin/kamal setup` (not just `deploy`) so the new `job:` role's
+container gets created.
 
 ### CI
 

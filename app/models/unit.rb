@@ -283,21 +283,38 @@ class Unit < ApplicationRecord
 
   # Returns a CSS color class for the price (green/yellow/red)
   # Used in the dashboard table to color-code cells
+  #
+  # The two breakpoints below used to be hardcoded ($100/$150) — they're
+  # now Setting rows (see db/seeds.rb's "display_price_green_max"/
+  # "display_price_yellow_max", category "display"), configurable from the
+  # Settings page like every other tunable value in this app, rather than
+  # requiring a code change to move the line between "that's a good price"
+  # and "that's expensive."
   def price_color_class
     return "price-unknown" if best_price.nil?
+
+    # `Setting.get(key, default: ...)` reads the current configured
+    # breakpoint, falling back to the original hardcoded values if the
+    # setting row is somehow missing (e.g. an older database that hasn't
+    # run the latest db/seeds.rb yet) — see Setting.get in
+    # app/models/setting.rb, which also casts the stored string back to a
+    # number via each row's `input_type`.
+    green_max  = Setting.get("display_price_green_max",  default: 99)
+    yellow_max = Setting.get("display_price_yellow_max", default: 149)
 
     # `case best_price when ... end` is Ruby's multi-branch conditional.
     # Unlike the `case`/`when` examples elsewhere in this codebase that
     # compare against exact values, the `when` clauses here use RANGES:
-    # `..99.99` is a "beginless range" meaning "everything up to and
-    # including 99.99" (no explicit starting value), and `100..149` is an
-    # ordinary range meaning "100 through 149 inclusive." Ruby's `case`
-    # checks each range with `===`, which for a Range means "does this
-    # range include the value being tested."
+    # `..green_max` is a "beginless range" meaning "everything up to and
+    # including green_max" (no explicit starting value), and
+    # `green_max..yellow_max` is an ordinary range built from the two
+    # configured breakpoints. Ruby's `case` checks each range with `===`,
+    # which for a Range means "does this range include the value being
+    # tested."
     case best_price
-    when ..99.99   then "price-green"   # Under $100
-    when 100..149  then "price-yellow"  # $100-$149
-    else                "price-red"     # $150+
+    when ..green_max          then "price-green"
+    when green_max..yellow_max then "price-yellow"
+    else                            "price-red"
     end
     # `end` closes the `case best_price` block above; its result (whichever
     # string matched) is this method's return value.

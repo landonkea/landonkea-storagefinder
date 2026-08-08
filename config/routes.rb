@@ -190,7 +190,19 @@ Rails.application.routes.draw do
   # update, destroy) for AlertRulesController — full create/read/update/
   # delete management of alert rule records, unlike the trimmed-down
   # `resources :crawls` above.
-  resources :alert_rules  # Full CRUD: index, show, new, create, edit, update, destroy
+  resources :alert_rules do  # Full CRUD: index, show, new, create, edit, update, destroy
+    # `collection do ... end` nests routes scoped to the alert_rules
+    # resource AS A WHOLE (no `:id` segment) — mirrors the same pattern used
+    # by `resources :crawls` above for bulk-deleting several records at once
+    # instead of one request per row.
+    collection do
+      # Declares DELETE "/alert_rules/destroy_selected", routed to
+      # AlertRulesController#destroy_selected.
+      delete "destroy_selected"   # DELETE /alert_rules/destroy_selected — bulk-delete checked rules
+    end
+    # `end` closes the `collection do` block above.
+  end
+  # `end` closes the `resources :alert_rules do` block opened above.
 
   # ---------------------------------------------------------------------------
   # ACTION CABLE — WebSocket endpoint for live crawl progress

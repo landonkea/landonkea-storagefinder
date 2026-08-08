@@ -66,6 +66,20 @@ module CompanyRegistry
     # and be attempted, even though its crawl logic is incomplete.
     "StorAmerica"         => Companies::StorAmerica
   }.freeze
+
+  # `STUBBED_COMPANIES` lists every company name whose parser is a stub
+  # (see app/services/companies/stor_america.rb's own header comment) —
+  # registered here so the rest of the app knows what CAN be crawled, but
+  # whose `parse_locations` always returns `[]` and logs a warning rather
+  # than actually scraping anything. Kept as its own small, explicit list
+  # (rather than, say, inspecting each parser class for some "stub?" flag)
+  # so a human deciding whether a company is really ready has one obvious
+  # place to update — the dashboard's company checkboxes (see
+  # app/views/dashboard/index.html.erb) read this list to disable
+  # StorAmerica's checkbox and label it "(not yet supported)" instead of
+  # silently letting a user select it and get zero results back with no
+  # explanation.
+  STUBBED_COMPANIES = [ "StorAmerica" ].freeze
   # `.freeze` is called on the whole hash literal above. Freezing an object
   # in Ruby makes it immutable — any later attempt to modify this hash
   # (like `COMPANIES["X"] = Y`) would raise a FrozenError instead of
@@ -160,6 +174,13 @@ module CompanyRegistry
     # just with more context about what was being attempted when it broke.
   end
   # `end` closes the `def self.build_parser` method definition above.
+
+  # Returns true if `company_name`'s parser is a known stub (registered, but
+  # not yet actually implemented) — see STUBBED_COMPANIES above.
+  def self.stubbed?(company_name)
+    STUBBED_COMPANIES.include?(company_name)
+  end
+  # `end` closes the `def self.stubbed?` method definition above.
 
   # Returns true if we have a parser for this company
   def self.registered?(company_name)

@@ -368,6 +368,31 @@ seed_setting(
   input_type: "select"
 )
 
+# Setting controlling the price (in whole dollars) below which a unit's
+# price badge is colored GREEN in the results table — see
+# Unit#price_color_class in app/models/unit.rb, which reads this value
+# instead of the $100/$150 breakpoints it used to hardcode. Shown as a
+# number input.
+seed_setting(
+  key:        "display_price_green_max",
+  value:      "99",
+  category:   "display",
+  label:      "Price badge is green at or below this amount ($)",
+  input_type: "number"
+)
+
+# Setting controlling the price (in whole dollars) below which a unit's
+# price badge is colored YELLOW rather than RED — a price strictly above
+# both this and display_price_green_max above shows red. Shown as a number
+# input.
+seed_setting(
+  key:        "display_price_yellow_max",
+  value:      "149",
+  category:   "display",
+  label:      "Price badge is yellow at or below this amount ($) — above it, red",
+  input_type: "number"
+)
+
 # Prints a blank line to the console, purely for visual spacing in the
 # terminal output.
 puts ""

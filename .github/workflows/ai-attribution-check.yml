@@ -1,0 +1,74 @@
+name: Block AI Attribution
+
+on:
+  pull_request:
+    branches: [main, master, dev, staging]
+  push:
+    branches: [main, master, dev, staging]
+
+jobs:
+  check-no-ai-attribution:
+    runs-on: ubuntu-latest
+    name: Block AI Author / Co-Author
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan commits for AI attribution
+        run: |
+          echo "Scanning commits for AI attribution..."
+          
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE=${{ github.event.pull_request.base.sha }}
+            HEAD=${{ github.event.pull_request.head.sha }}
+            COMMITS=$(git log --format="%H" "$BASE".."$HEAD" 2>/dev/null || git log --format="%H" "$HEAD" -1)
+          else
+            COMMITS=$(git log --format="%H" HEAD -5)
+          fi
+          
+          FOUND=0
+          for SHA in $COMMITS; do
+            MSG=$(git log -1 --format="%B" "$SHA")
+            AUTHOR_NAME=$(git log -1 --format="%an" "$SHA")
+            AUTHOR_EMAIL=$(git log -1 --format="%ae" "$SHA")
+            COMMITTER_NAME=$(git log -1 --format="%cn" "$SHA")
+            COMMITTER_EMAIL=$(git log -1 --format="%ce" "$SHA")
+            
+            BLOCKED="claude opencode anthropic"
+            
+            for keyword in $BLOCKED; do
+              if echo "$MSG $AUTHOR_NAME $AUTHOR_EMAIL $COMMITTER_NAME $COMMITTER_EMAIL" | grep -qi "$keyword"; then
+                echo ""
+                echo "❌ AI attribution found in commit $SHA:"
+                echo "   Author: $AUTHOR_NAME <$AUTHOR_EMAIL>"
+                echo "   Committer: $COMMITTER_NAME <$COMMITTER_EMAIL>"
+                echo "   Message preview: $(echo "$MSG" | head -3)"
+                FOUND=1
+              fi
+            done
+          done
+          
+          if [ "$FOUND" -eq 1 ]; then
+            echo ""
+            echo "❌ Commits contain AI author/committer or attribution."
+            echo "   Remove all AI references before merging."
+            exit 1
+          fi
+          
+          echo "✓ No AI attribution found"
+
+      - name: Scan files for embedded attribution
+        run: |
+          echo "Scanning files for embedded AI attribution..."
+          MATCHES=$(grep -r -i -l "Co-Authored-By\|Generated with Claude\|Generated with opencode\|noreply@anthropic\|noreply@opencode" --include="*.md" --include="*.txt" --include="*.yml" --include="*.yaml" --include="*.json" --include="*.js" --include="*.ts" --include="*.py" --include="*.rb" --include="*.go" --include="*.java" --include="*.sh" . 2>/dev/null || true)
+          
+          if [ -n "$MATCHES" ]; then
+            echo ""
+            echo "❌ Files containing AI attribution references:"
+            echo "$MATCHES"
+            exit 1
+          fi
+          
+          echo "✓ No embedded AI attribution found in files"
