@@ -212,8 +212,14 @@ FROM base AS build
 # cleanup rationale as in the base stage above: remove apt's package
 # lists/cache within this same layer to avoid bloating the (throwaway, in
 # this case) "build" stage image further than needed.
+# `libavahi-compat-libdnssd-dev` is added here for the same reason
+# .github/workflows/ci.yml installs it before `bundle install` on the CI
+# runner: the `dnssd` gem (see Gemfile, used by config/initializers/mdns.rb)
+# has a native C extension that links against Apple Bonjour-compatible mDNS
+# headers this package provides — without it, `bundle install` below fails
+# to compile that gem and this whole build stage fails.
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libvips libyaml-dev pkg-config && \
+    apt-get install --no-install-recommends -y build-essential git libavahi-compat-libdnssd-dev libvips libyaml-dev pkg-config && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Blank line — pure visual separation.

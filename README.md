@@ -59,6 +59,49 @@ network-independent parts of the scraping services. It doesn't launch a real
 Playwright browser or hit real company websites; those code paths are
 covered up to the point where a browser would actually be needed.
 
+### Test results report
+
+```
+bin/rails test:report
+```
+
+Runs `bin/rails test` and `bin/rubocop`, then writes a single markdown
+summary — pass/fail counts, a timestamp, any failures/errors, and the
+RuboCop offense count — to `test-results/latest.md`. The report's content
+is gitignored (regenerated on demand, not source), but the `test-results/`
+directory itself is tracked so the path always exists. The task exits
+non-zero if either the test suite or RuboCop found problems, so it can gate
+scripts the same way running each tool separately would. CI runs this task
+on every push/PR and uploads `test-results/latest.md` as a downloadable
+build artifact (see `.github/workflows/ci.yml`) — it's additive alongside
+the existing lint/test jobs, not a replacement for them.
+
+## Local development with Docker Compose
+
+If you'd rather not install Ruby/SQLite/Node locally, `docker-compose.yml`
+lets you run the whole app in a container built from the same `Dockerfile`
+Kamal uses for production images:
+
+```
+export RAILS_MASTER_KEY=$(cat config/master.key)   # or put this line in a .env file
+docker compose up --build
+```
+
+The app is then reachable at <http://localhost:3000>. Data (SQLite
+databases for the app, Solid Queue, and Solid Cable, plus any Active
+Storage uploads) persists across `docker compose down`/`up` cycles in a
+named Docker volume mounted at `/rails/storage` inside the container — no
+separate database container is needed since this app is entirely
+SQLite-based (see `config/database.yml`). `RAILS_MASTER_KEY` must be set
+(from `config/master.key`, which is gitignored and never committed) because
+booting the app decrypts `config/credentials.yml.enc`, same as in CI and in
+a real Kamal deploy.
+
+This runs the same production-mode image Kamal deploys (the `Dockerfile`
+bakes in `RAILS_ENV=production`), so it's meant for exercising the fully
+packaged app locally, not for hot-reloading development — for that, use
+`./start.sh` per the "Local setup" section above.
+
 ## Environments
 
 This app has three environments, each with its own settings file under
@@ -162,6 +205,11 @@ RuboCop, and the test suite on every PR and push to `main`. The test job
 needs a `RAILS_MASTER_KEY` repository secret (Settings → Secrets and
 variables → Actions) set to the contents of `config/master.key` — without
 it, the app can't decrypt credentials at boot and the job fails.
+
+A separate `test_report` job additionally runs `bin/rails test:report` (see
+"Test results report" above) and uploads `test-results/latest.md` as a
+downloadable build artifact on every run, pass or fail — it doesn't gate
+the workflow itself, since the `lint`/`test` jobs already do that.
 
 ## Known limitations
 
