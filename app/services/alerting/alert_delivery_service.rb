@@ -2,11 +2,11 @@
 # ALERT DELIVERY SERVICE
 # =============================================================================
 # Sends alert notifications via Email and/or Discord.
-# SMS is wired up structurally but disabled — it requires a paid Twilio account.
+# SMS is wired up structurally but disabled, it requires a paid Twilio account.
 # =============================================================================
 
 # Another plain-Ruby "service object" (see app/services/company_registry.rb
-# for a full explanation of what that term means) — this one is responsible
+# for a full explanation of what that term means), this one is responsible
 # for actually SENDING an already-built alert message out over one or more
 # channels (email, Discord, SMS), as opposed to AlertMessageBuilder, which
 # only builds the message text/content and doesn't send anything itself.
@@ -22,7 +22,7 @@ class AlertDeliveryService
   end
   # `end` closes the `def self.deliver` class method definition above.
 
-  # The constructor — automatically runs when `.new(rule, message)` is
+  # The constructor, automatically runs when `.new(rule, message)` is
   # called, storing both arguments as instance variables (the `@` prefix)
   # so every other method below can read them without needing them passed
   # in again as arguments.
@@ -37,9 +37,9 @@ class AlertDeliveryService
   def deliver
     # Each line only calls its "deliver_*" method if BOTH conditions after
     # `if` are true: (1) this specific alert RULE has that channel turned
-    # on (`@rule.email_enabled?` etc. — presumably a boolean column/method
+    # on (`@rule.email_enabled?` etc., presumably a boolean column/method
     # on the AlertRule model), AND (2) the channel is enabled GLOBALLY for
-    # the whole app (`Setting.enabled?("email_enabled")` — reading an
+    # the whole app (`Setting.enabled?("email_enabled")`, reading an
     # app-wide setting, likely configurable from a Settings page). Both
     # gates have to be open for that channel to actually fire.
     deliver_email   if @rule.email_enabled?   && Setting.enabled?("email_enabled")
@@ -49,7 +49,7 @@ class AlertDeliveryService
   # `end` closes the `def deliver` method definition above.
 
   # `private` marks everything below as internal-only implementation
-  # detail — not meant to be called directly from outside this class.
+  # detail, not meant to be called directly from outside this class.
   private
 
   # ---------------------------------------------------------------------------
@@ -62,7 +62,7 @@ class AlertDeliveryService
     # needed to send mail.
     smtp_host     = Setting.get("email_smtp_host")
     # `default: 587` supplies a fallback if the setting was never
-    # explicitly configured — 587 is the standard SMTP submission port.
+    # explicitly configured, 587 is the standard SMTP submission port.
     # `.to_i` converts whatever comes back (which could be a String from
     # the database, or the default Integer) into an actual Integer, since
     # a port number needs to be numeric.
@@ -74,7 +74,7 @@ class AlertDeliveryService
     # username as the "from" address instead.
     from_address  = Setting.get("email_from_address") || smtp_username
     # `.presence` is a Rails helper: it returns the value itself if it's
-    # "present" (not nil, not blank), or `nil` if it's blank — letting the
+    # "present" (not nil, not blank), or `nil` if it's blank, letting the
     # `||` fallback trigger even if @rule.email_address is an empty string
     # rather than a true `nil`. So: use the rule's own email address if it
     # has one, otherwise fall back to the app-wide default recipient.
@@ -83,15 +83,15 @@ class AlertDeliveryService
     # Validate we have what we need before trying
     #
     # `.blank?` is a Rails helper meaning "nil, empty string, or
-    # whitespace-only" — the opposite of `.present?`. This checks that the
+    # whitespace-only", the opposite of `.present?`. This checks that the
     # essential SMTP credentials are all actually configured before
     # attempting to connect.
     if smtp_host.blank? || smtp_username.blank? || smtp_password.blank?
       Rails.logger.error(
-        "[AlertDeliveryService] Cannot send email alert — SMTP settings are incomplete. " \
+        "[AlertDeliveryService] Cannot send email alert, SMTP settings are incomplete. " \
         "Please configure email settings in the Settings page."
       )
-      # Bail out early — there's nothing useful we can do without SMTP
+      # Bail out early, there's nothing useful we can do without SMTP
       # credentials, so don't attempt to send.
       return
     end
@@ -99,7 +99,7 @@ class AlertDeliveryService
 
     if to_address.blank?
       Rails.logger.error(
-        "[AlertDeliveryService] Cannot send email alert — no recipient address configured. " \
+        "[AlertDeliveryService] Cannot send email alert, no recipient address configured. " \
         "Set 'Send alerts to' in Settings or specify an email on the alert rule."
       )
       return
@@ -112,7 +112,7 @@ class AlertDeliveryService
     # and logged clearly instead of crashing the whole alert-checking job.
     begin
       # `Mail.new do ... end` uses the `mail` gem's DSL (domain-specific
-      # language — a mini vocabulary of methods designed to read almost
+      # language, a mini vocabulary of methods designed to read almost
       # like plain English for a specific task) to build an email message
       # object. Inside the block, method calls like `from`, `to`, and
       # `subject` are actually setting properties on the message being
@@ -132,7 +132,7 @@ class AlertDeliveryService
         # `end` closes the `text_part do` block above.
 
         # `html_part do ... end` defines the rich HTML version of the
-        # same email — most modern email clients prefer/render this one
+        # same email, most modern email clients prefer/render this one
         # when both a text and HTML part are present.
         html_part do
           content_type "text/html; charset=UTF-8"
@@ -140,12 +140,12 @@ class AlertDeliveryService
         end
         # `end` closes the `html_part do` block above.
       end
-      # `end` closes the `Mail.new do` block above — `mail` now holds a
+      # `end` closes the `Mail.new do` block above, `mail` now holds a
       # fully-assembled (but not yet sent) email message object.
 
       # `mail.delivery_method :smtp, { ... }` configures HOW this
-      # particular message should be sent — via SMTP, using the settings
-      # hash that follows — overriding the app's default mail delivery
+      # particular message should be sent, via SMTP, using the settings
+      # hash that follows, overriding the app's default mail delivery
       # configuration just for this one message.
       mail.delivery_method :smtp, {
         address:              smtp_host,
@@ -159,7 +159,7 @@ class AlertDeliveryService
       }
 
       # `mail.deliver!` actually connects to the SMTP server and sends the
-      # message right now (synchronously — this line blocks until it
+      # message right now (synchronously, this line blocks until it
       # either succeeds or raises an error). The `!` again signals a
       # meaningful side effect (an email actually goes out).
       mail.deliver!
@@ -176,7 +176,7 @@ class AlertDeliveryService
       )
     rescue Net::SMTPServerBusy, Net::SMTPFatalError => e
       # A single `rescue` clause can list multiple error classes
-      # separated by commas — this one catches either kind and handles
+      # separated by commas, this one catches either kind and handles
       # them the same way.
       Rails.logger.error(
         "[AlertDeliveryService] SMTP server error sending email: #{e.message}"
@@ -199,13 +199,13 @@ class AlertDeliveryService
     # Use the rule's specific webhook URL if set, otherwise fall back to the global one
     #
     # A "webhook" is a URL that, when you POST data to it, triggers an
-    # action on the receiving service — here, Discord turns a POST to this
+    # action on the receiving service, here, Discord turns a POST to this
     # URL into a message posted in a specific channel.
     webhook_url = @rule.discord_webhook_url.presence || Setting.get("discord_webhook_url")
 
     if webhook_url.blank?
       Rails.logger.error(
-        "[AlertDeliveryService] Cannot send Discord alert — no webhook URL configured. " \
+        "[AlertDeliveryService] Cannot send Discord alert, no webhook URL configured. " \
         "Set a Discord webhook URL in Settings or on the alert rule."
       )
       return
@@ -225,11 +225,11 @@ class AlertDeliveryService
           title:       "🏪 #{@message[:subject]}",
           description: @message[:text_body],
           color:       5763719,  # Green color in Discord's decimal format
-          footer:      { text: "StorageFinder — #{Time.current.strftime("%B %d, %Y at %I:%M %p")}" }
+          footer:      { text: "StorageFinder, #{Time.current.strftime("%B %d, %Y at %I:%M %p")}" }
           # `Time.current` gets the current time (Rails-aware, respecting
           # the app's configured time zone). `.strftime("%B %d, %Y at %I:%M %p")`
           # formats it as a human-readable string, e.g.
-          # "July 22, 2026 at 03:45 PM" — each %-code is a formatting
+          # "July 22, 2026 at 03:45 PM", each %-code is a formatting
           # placeholder (%B = full month name, %d = day, %Y = 4-digit
           # year, %I = 12-hour hour, %M = minute, %p = AM/PM).
         }
@@ -241,7 +241,7 @@ class AlertDeliveryService
       # object configured to talk to the webhook_url. Faraday is a Ruby
       # gem/library for making HTTP requests. `f.options.open_timeout`/
       # `f.options.timeout` set how long to wait before giving up on
-      # connecting or on the whole request, respectively — without these,
+      # connecting or on the whole request, respectively, without these,
       # a slow/unresponsive server could hang this method indefinitely.
       conn = Faraday.new(webhook_url) do |f|
         f.options.open_timeout = 5   # Seconds to wait for the TCP connection
@@ -249,13 +249,13 @@ class AlertDeliveryService
         # `f.adapter Faraday.default_adapter` tells Faraday which
         # underlying HTTP library to actually use to perform the request
         # (Faraday itself is a wrapper/interface over several possible
-        # backends) — `default_adapter` uses whatever Faraday ships with
+        # backends), `default_adapter` uses whatever Faraday ships with
         # by default.
         f.adapter Faraday.default_adapter
       end
       # `end` closes the `Faraday.new(webhook_url) do |f|` configuration block.
 
-      # Post as JSON manually — avoids needing faraday middleware adapters
+      # Post as JSON manually, avoids needing faraday middleware adapters
       #
       # `conn.post do |req| ... end` performs an HTTP POST request using
       # the connection configured above.
@@ -267,7 +267,7 @@ class AlertDeliveryService
         # an actual JSON-formatted String, which becomes the request body.
         req.body = JSON.generate(payload)
       end
-      # `end` closes the `conn.post do |req|` block — `response` now holds
+      # `end` closes the `conn.post do |req|` block, `response` now holds
       # whatever Discord's server sent back.
 
       # `response.success?` is a Faraday helper that's true for HTTP
@@ -309,7 +309,7 @@ class AlertDeliveryService
   # `end` closes the `def deliver_discord` method definition above.
 
   # ---------------------------------------------------------------------------
-  # SMS DELIVERY (DISABLED — requires paid Twilio account)
+  # SMS DELIVERY (DISABLED, requires paid Twilio account)
   # ---------------------------------------------------------------------------
   def deliver_sms
     # This method is intentionally not fully implemented.
@@ -330,17 +330,17 @@ class AlertDeliveryService
     # no text message went out even though this method ran (rather than
     # thinking something silently failed).
     Rails.logger.info(
-      "[AlertDeliveryService] SMS alert skipped — SMS requires a paid Twilio account. " \
+      "[AlertDeliveryService] SMS alert skipped, SMS requires a paid Twilio account. " \
       "See comments in alert_delivery_service.rb for setup instructions."
     )
     # `nil` here is simply the method's return value (the last expression
-    # evaluated) — it doesn't do anything on its own, it's just explicit
+    # evaluated), it doesn't do anything on its own, it's just explicit
     # about "this method intentionally returns nothing meaningful."
     nil
 
     # --- UNCOMMENT THIS BLOCK AFTER TWILIO SETUP ---
     # Everything below this point is commented-out Ruby code (using `#` at
-    # the start of each line) — it's inert on purpose: it's a template for
+    # the start of each line), it's inert on purpose: it's a template for
     # a developer to uncomment and adapt once real Twilio credentials are
     # available, rather than code that runs today.
     # account_sid = Setting.get("sms_twilio_account_sid")

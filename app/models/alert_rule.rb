@@ -4,14 +4,14 @@
 # An AlertRule defines when to send a notification and where to send it.
 #
 # Trigger types:
-#   "price_drop"      — fires when any unit's price drops compared to last crawl
-#   "price_threshold" — fires when any unit's price falls below threshold_price
+#   "price_drop"     , fires when any unit's price drops compared to last crawl
+#   "price_threshold", fires when any unit's price falls below threshold_price
 # =============================================================================
 
 # `class AlertRule < ApplicationRecord` defines a Ruby class named AlertRule
 # that inherits from ApplicationRecord (see app/models/application_record.rb).
 # Inheriting from ApplicationRecord (which itself inherits from
-# `ActiveRecord::Base`) is what makes this an "ActiveRecord model" — Ruby
+# `ActiveRecord::Base`) is what makes this an "ActiveRecord model", Ruby
 # code that represents one row of a database table (here, the
 # "alert_rules" table, inferred automatically from the class name). Each
 # instance of AlertRule corresponds to one row; each column in the table
@@ -32,7 +32,7 @@ class AlertRule < ApplicationRecord
   validates :name,         presence:  { message: "Alert name is required" }
   # Requires `trigger_type` to be one of the values listed in the `in:`
   # array. `%w[price_drop price_threshold]` is Ruby's "percent-w" array
-  # literal shorthand — it's exactly equivalent to
+  # literal shorthand, it's exactly equivalent to
   # `["price_drop", "price_threshold"]` but saves you from typing quotes
   # and commas around each word.
   validates :trigger_type, inclusion: {
@@ -44,7 +44,7 @@ class AlertRule < ApplicationRecord
   # This validation is CONDITIONAL: the `if:` option takes a lambda (an
   # inline anonymous function, `-> { ... }`) that Rails calls on the record
   # being validated. Only when that lambda returns true does Rails actually
-  # check the `presence:` rule below it — so threshold_price is only
+  # check the `presence:` rule below it, so threshold_price is only
   # required when this particular rule's trigger_type is "price_threshold".
   validates :threshold_price, presence: {
     message: "Threshold price is required when using price threshold trigger"
@@ -52,7 +52,7 @@ class AlertRule < ApplicationRecord
 
   # Requires threshold_price (when present) to be a number greater than
   # zero. `allow_nil: true` means this specific validation is skipped
-  # entirely when threshold_price is nil — nil is already handled (or not)
+  # entirely when threshold_price is nil, nil is already handled (or not)
   # by the conditional presence validation just above.
   validates :threshold_price, numericality: {
     greater_than: 0,
@@ -60,9 +60,9 @@ class AlertRule < ApplicationRecord
   }, allow_nil: true
 
   # cooldown_minutes must be zero or a positive whole number of minutes.
-  # `0` (the column's default — see the migration
+  # `0` (the column's default, see the migration
   # db/migrate/20260803000000_add_cooldown_minutes_to_alert_rules.rb) means
-  # "no cooldown, fire every time the trigger condition matches" — today's
+  # "no cooldown, fire every time the trigger condition matches", today's
   # original behavior. `greater_than_or_equal_to: 0` allows exactly 0 as
   # well as any positive number; `only_integer: true` rejects fractional
   # minutes like 1.5.
@@ -98,7 +98,7 @@ class AlertRule < ApplicationRecord
   # ---------------------------------------------------------------------------
   # INSTANCE METHODS
   # ---------------------------------------------------------------------------
-  # Everything below (until `private`) is a regular Ruby instance method —
+  # Everything below (until `private`) is a regular Ruby instance method,
   # callable on one particular AlertRule record, e.g. `some_rule.matches_unit?(...)`.
 
   # Check if this alert rule matches a given unit at its price
@@ -106,14 +106,14 @@ class AlertRule < ApplicationRecord
   #
   # `def matches_unit?(unit, previous_price: nil)` defines a method named
   # `matches_unit?` (the trailing `?` is just a Ruby naming convention
-  # meaning "this method returns true/false" — it has no special behavior).
+  # meaning "this method returns true/false", it has no special behavior).
   # `unit` is a required positional argument. `previous_price: nil` is a
-  # "keyword argument" with a default value — callers can either omit it
+  # "keyword argument" with a default value, callers can either omit it
   # (it defaults to nil) or pass it explicitly like
   # `matches_unit?(some_unit, previous_price: 79.00)`.
   def matches_unit?(unit, previous_price: nil)
     # First check if the unit matches any company/size filters on this rule
-    # `return false if ...` is Ruby's inline conditional "modifier" form —
+    # `return false if ...` is Ruby's inline conditional "modifier" form,
     # equivalent to `if ...; return false; end` but on one line. It exits
     # the method immediately, returning false, when the condition is true.
     # `.present?` is a Rails helper meaning "not nil and not blank/empty."
@@ -132,11 +132,11 @@ class AlertRule < ApplicationRecord
     when "price_threshold"
       # Fire if the unit's price is at or below the threshold
       # `unit.best_price` calls the best_price method defined on Unit (see
-      # app/models/unit.rb) — the price actually being compared/displayed.
+      # app/models/unit.rb), the price actually being compared/displayed.
       # `&&` is Ruby's "and": both sides must be true for the whole
       # expression to be true. This is also the return value of this
       # `when` branch (and thus of the whole `case` expression, and thus of
-      # the method), since it's the last thing evaluated on this branch —
+      # the method), since it's the last thing evaluated on this branch,
       # Ruby methods return whatever their last expression evaluates to.
       unit.best_price.present? && unit.best_price <= threshold_price
 
@@ -144,7 +144,7 @@ class AlertRule < ApplicationRecord
       # Fire if the price dropped compared to last crawl
       # Requires a previous price to compare against
       # Bails out early (returning false) if we don't have enough data to
-      # compare — either no previous price was supplied, or this unit has
+      # compare, either no previous price was supplied, or this unit has
       # no current best_price at all.
       return false if previous_price.nil? || unit.best_price.nil?
       # If we got past the guard above, compare: true only if the current
@@ -154,7 +154,7 @@ class AlertRule < ApplicationRecord
     else
       # Any trigger_type other than the two handled above (shouldn't
       # normally happen thanks to the inclusion validation, but this is a
-      # safe fallback) — never fires.
+      # safe fallback), never fires.
       false
     end
     # `end` closes the `case trigger_type` block that started above.
@@ -182,13 +182,13 @@ class AlertRule < ApplicationRecord
     # `end` closes the `case trigger_type` block above.
 
     # Appends a size-filter note only if a size filter is actually set.
-    # `if unit_size_filter.present?` is the inline modifier form again —
+    # `if unit_size_filter.present?` is the inline modifier form again,
     # the `parts <<` line only runs when the condition after `if` is true.
     parts << "for #{unit_size_filter}" if unit_size_filter.present?
     # Same idea, appending a company-filter note only if one is set.
     parts << "at #{company_filter}"    if company_filter.present?
     # Same idea again, noting the cooldown window only when one is actually
-    # configured (cooldown_minutes > 0) — most rules have no cooldown, so
+    # configured (cooldown_minutes > 0), most rules have no cooldown, so
     # this stays silent for them.
     parts << "(at most once per #{cooldown_minutes}min)" if cooldown_minutes.to_i > 0
 
@@ -196,7 +196,7 @@ class AlertRule < ApplicationRecord
     # channels this rule uses (Email/Discord/SMS).
     delivery = []
     # `email_enabled?` is an automatically-generated Rails "boolean query
-    # method" — for any database column whose name ends in `?`-suitable
+    # method", for any database column whose name ends in `?`-suitable
     # boolean semantics (here, an `email_enabled` boolean column), Rails
     # generates a `email_enabled?` method that returns true/false.
     delivery << "Email"   if email_enabled?
@@ -222,7 +222,7 @@ class AlertRule < ApplicationRecord
   # crawl. Called by AlertCheckerJob#check_rule before sending a new alert.
   #
   # `cooldown_minutes.to_i <= 0` treats a nil/zero/negative cooldown as "no
-  # cooldown configured" — this rule can always fire again immediately.
+  # cooldown configured", this rule can always fire again immediately.
   # `last_triggered_at.nil?` handles a rule that has never fired before
   # (nothing to cool down from yet).
   def in_cooldown?
@@ -242,10 +242,10 @@ class AlertRule < ApplicationRecord
   def record_triggered!
     # The trailing `!` in the method name is a Ruby convention signaling
     # "this is the more dangerous/side-effecting variant" (here: it writes
-    # to the database) — it has no special language meaning, just a hint
+    # to the database), it has no special language meaning, just a hint
     # to readers. `update_column` is a Rails method that updates a single
     # database column directly, WITHOUT running validations or callbacks
-    # (unlike the normal `update`/`save` methods) — useful for bookkeeping
+    # (unlike the normal `update`/`save` methods), useful for bookkeeping
     # fields like this timestamp where you don't want validation rules to
     # possibly block the write. `Time.current` returns the current time,
     # respecting the application's configured time zone (preferred over
@@ -258,7 +258,7 @@ class AlertRule < ApplicationRecord
   # PRIVATE METHODS
   # ---------------------------------------------------------------------------
   # The `private` keyword below marks everything after it (until the class
-  # ends) as private — meaning these methods can only be called from inside
+  # ends) as private, meaning these methods can only be called from inside
   # this class itself (e.g. by Rails' validation machinery), not from
   # outside code like controllers or views. It's a way of hiding
   # implementation details that aren't meant to be part of this model's
@@ -277,7 +277,7 @@ class AlertRule < ApplicationRecord
       # `errors.add(:base, "...")` records a validation failure on this
       # record. `:base` is a special symbol meaning "this error isn't tied
       # to one specific field" (as opposed to `errors.add(:name, "...")`,
-      # which would attach the error to the `name` field specifically) —
+      # which would attach the error to the `name` field specifically),
       # appropriate here since the rule spans three different fields.
       errors.add(:base, "At least one delivery method (Email, Discord, or SMS) must be enabled")
     end

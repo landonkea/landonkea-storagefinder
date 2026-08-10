@@ -5,13 +5,13 @@
 require "test_helper"
 
 # CrawlJob's core loop launches a real Playwright browser and drives real
-# company-parser network calls — not something to fake convincingly in a
+# company-parser network calls, not something to fake convincingly in a
 # unit test without a browser test double, which is a bigger undertaking
 # than this pass covers. This tests the guard clauses and error paths that
 # run before Playwright is ever launched: duplicate-run protection,
 # geocoding failure, and "Playwright CLI not found."
 #
-# `class CrawlJobTest < ActiveJob::TestCase` — this inherits from
+# `class CrawlJobTest < ActiveJob::TestCase`, this inherits from
 # ActiveJob::TestCase rather than plain ActiveSupport::TestCase. It's a
 # Rails-provided base class specifically for testing ActiveJob jobs: it
 # still gives you fixtures and standard assertions (via its own
@@ -22,24 +22,24 @@ require "test_helper"
 class CrawlJobTest < ActiveJob::TestCase
   test "refuses to run a second time if the crawl is already running" do
     # `crawl_runs(:running_crawl)` looks up the CrawlRun fixture named
-    # "running_crawl" (see test/fixtures/crawl_runs.yml) — a crawl that's
+    # "running_crawl" (see test/fixtures/crawl_runs.yml), a crawl that's
     # already mid-run according to its `status` column.
     crawl_run = crawl_runs(:running_crawl)
 
-    # Should return immediately without raising or re-starting anything —
+    # Should return immediately without raising or re-starting anything,
     # started_at should stay exactly as the fixture set it.
     # Saves the fixture's original `started_at` timestamp before running the
     # job, so it can be compared against afterward.
     original_started_at = crawl_run.started_at
     # `CrawlJob.perform_now(...)` runs the job synchronously right here,
     # rather than merely enqueuing it. `options: {}` matches CrawlJob#perform's
-    # required keyword argument (see app/jobs/crawl_job.rb) — an empty hash
+    # required keyword argument (see app/jobs/crawl_job.rb), an empty hash
     # here means "no company/filter options," which is fine since this test
     # expects the job to bail out before it would ever use them.
     CrawlJob.perform_now(crawl_run_id: crawl_run.id, options: {})
 
     # `.to_i` converts each Time to an integer (Unix timestamp, seconds
-    # since epoch) before comparing — this avoids spurious test failures
+    # since epoch) before comparing, this avoids spurious test failures
     # from sub-second precision differences between how the value was
     # originally stored versus how it's read back from the database.
     # `crawl_run.reload` re-fetches the row from the database so this
@@ -57,8 +57,8 @@ class CrawlJobTest < ActiveJob::TestCase
     # won't short-circuit this test.
     crawl_run = CrawlRun.create!(search_city: "Nowhere At All Zzzz", search_radius_miles: 25, status: "pending")
 
-    # `Geocoder::Lookup::Test.set_default_stub([])` overrides — just for
-    # this test — the fake geocoding result test_helper.rb configured at
+    # `Geocoder::Lookup::Test.set_default_stub([])` overrides, just for
+    # this test, the fake geocoding result test_helper.rb configured at
     # boot, replacing it with an EMPTY array. An empty array is exactly
     # what Geocoder returns when a real lookup finds no matching location,
     # so this simulates "the search city couldn't be found" without
@@ -73,14 +73,14 @@ class CrawlJobTest < ActiveJob::TestCase
     assert_equal "failed", crawl_run.status
     # `assert_match(/Could not find coordinates/, crawl_run.error_message)`
     # checks that the saved error message CONTAINS this text, using a Ruby
-    # Regexp literal (the `/.../ ` slashes mark a regular expression — a
+    # Regexp literal (the `/.../ ` slashes mark a regular expression, a
     # pattern-matching search, here just matching literal text with no
     # special pattern characters) rather than requiring an exact string
-    # match — useful because the full message also includes the city name
+    # match, useful because the full message also includes the city name
     # and a suggestion, which this test doesn't care about checking.
     assert_match(/Could not find coordinates/, crawl_run.error_message)
   # `ensure` runs this cleanup no matter how the test above finished
-  # (pass, fail, or raise) — without it, the empty-array stub set above
+  # (pass, fail, or raise), without it, the empty-array stub set above
   # would leak into every test that runs after this one in the same
   # process, breaking Facility's auto-geocode-on-save in totally unrelated
   # tests.
@@ -105,21 +105,21 @@ class CrawlJobTest < ActiveJob::TestCase
     # backtick method (written here as the Symbol `:\``, i.e. the method
     # literally named backtick) on EVERY instance of CrawlJob. In Ruby,
     # backtick-quoted text like `` `some shell command` `` is actually
-    # calling a real method named backtick — CrawlJob uses it to shell out
+    # calling a real method named backtick, CrawlJob uses it to shell out
     # and look for the Playwright CLI (see app/jobs/crawl_job.rb). The fake
     # implementation `->(*) { "" }` is a lambda that accepts ANY arguments
     # (the `*` "splat" means "ignore however many args come in") and always
-    # returns an empty string — simulating "the shell command found
+    # returns an empty string, simulating "the shell command found
     # nothing," i.e. Playwright isn't installed, without actually running
     # any real shell command or depending on whether Playwright happens to
     # be installed on the machine running this test.
     stub_any_instance(CrawlJob, :`, ->(*) { "" }) do
-      # This is the block yielded to by stub_any_instance — the actual test
+      # This is the block yielded to by stub_any_instance, the actual test
       # code that runs WHILE the backtick method is faked. CrawlJob.perform_now
       # runs here, and every internal backtick call it makes returns "".
       CrawlJob.perform_now(crawl_run_id: crawl_run.id, options: {})
     end
-    # `end` closes the `stub_any_instance(...) do ... end` block above —
+    # `end` closes the `stub_any_instance(...) do ... end` block above,
     # once this line runs, CrawlJob's real backtick method has already been
     # restored (stub_any_instance's `ensure` guarantees that).
 
@@ -139,7 +139,7 @@ class CrawlJobTest < ActiveJob::TestCase
     # any CrawlRun rows when given an ID that doesn't exist.
     assert_no_difference "CrawlRun.count" do
       # `crawl_run_id: 999_999` is a made-up ID that (almost certainly)
-      # doesn't correspond to any real row — the underscore in `999_999`
+      # doesn't correspond to any real row, the underscore in `999_999`
       # is just a Ruby readability separator for large numbers and has no
       # effect on the value, exactly like a comma in "999,999". This
       # exercises CrawlJob's `rescue ActiveRecord::RecordNotFound` branch

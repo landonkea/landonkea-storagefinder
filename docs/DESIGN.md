@@ -1,4 +1,4 @@
-# landonkea-storagefinder — Design & Workflow
+# landonkea-storagefinder - Design & Workflow
 
 ## High-Level Overview
 

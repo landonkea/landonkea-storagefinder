@@ -23,17 +23,17 @@ class AlertRulesControllerTest < ActionDispatch::IntegrationTest
   # afterward, so tests can't leak state into each other.
   test "index lists alert rules" do
     # `get` simulates a browser sending an HTTP GET request to the given
-    # path — no real network call happens, Rails just runs the request
+    # path, no real network call happens, Rails just runs the request
     # straight through its router and controller code in-process. Note:
     # test_helper.rb overrides this `get` method for the whole test suite so
     # it automatically attaches valid HTTP Basic Auth credentials to every
     # request (this app requires them); that happens invisibly here.
     # `alert_rules_path` is a route helper Rails auto-generates from
-    # `config/routes.rb` — it returns the URL string for the alert rules
+    # `config/routes.rb`, it returns the URL string for the alert rules
     # index page (e.g. "/alert_rules") without hardcoding it.
     get alert_rules_path
     # `assert_response :success` checks that the HTTP response status code
-    # was in the 2xx range (200 OK, etc.) — i.e. the request didn't error
+    # was in the 2xx range (200 OK, etc.), i.e. the request didn't error
     # out or redirect. `:success` is a Ruby Symbol, a lightweight named
     # constant often used (as here) as a label/enum value rather than
     # holding arbitrary data like a string would.
@@ -61,13 +61,13 @@ class AlertRulesControllerTest < ActionDispatch::IntegrationTest
     get alert_rule_path(id: 999_999)
     # `assert_redirected_to` checks two things at once: that the response
     # was an HTTP redirect (3xx status), AND that the redirect's target URL
-    # matches the given path. `alert_rules_path` here is the index page —
+    # matches the given path. `alert_rules_path` here is the index page,
     # i.e. we expect to be bounced back to the list instead of shown a
     # missing record.
     assert_redirected_to alert_rules_path
     # `flash` is Rails' mechanism for passing a one-time message across a
     # redirect (it survives exactly one subsequent request, then clears
-    # itself) — commonly used for messages like "Item not found" or "Saved
+    # itself), commonly used for messages like "Item not found" or "Saved
     # successfully" shown after the browser follows the redirect.
     # `flash[:alert]` reads the message stored under the `:alert` key, and
     # `assert_equal` checks it exactly matches the given string.
@@ -88,11 +88,11 @@ class AlertRulesControllerTest < ActionDispatch::IntegrationTest
     # given expression's value changed by exactly the given amount between
     # before and after. Here it evaluates "AlertRule.count" (as a string,
     # which Rails evaluates in the test's context) both before and after the
-    # block runs, and asserts it went up by exactly 1 — proving the create
+    # block runs, and asserts it went up by exactly 1, proving the create
     # action actually persisted a new row rather than, say, silently failing
     # validation.
     assert_difference "AlertRule.count", 1 do
-      # `post` simulates an HTTP POST request — the verb browsers use when
+      # `post` simulates an HTTP POST request, the verb browsers use when
       # submitting a form to create something new (as opposed to `get`,
       # which only fetches/reads data and shouldn't have side effects).
       # `params:` is a keyword argument that supplies the request's
@@ -102,7 +102,7 @@ class AlertRulesControllerTest < ActionDispatch::IntegrationTest
       # `alert_rule` param (mirroring how Rails form builders name inputs
       # like `alert_rule[name]`), and the inner hash holds the actual field
       # values (all passed as strings, since real HTTP form fields are
-      # always strings — the controller/model layer is responsible for
+      # always strings, the controller/model layer is responsible for
       # converting types like `threshold_price` to a number).
       post alert_rules_path, params: {
         alert_rule: {
@@ -111,7 +111,7 @@ class AlertRulesControllerTest < ActionDispatch::IntegrationTest
         }
       }
     end
-    # `end` closes the `assert_difference "AlertRule.count", 1 do` block —
+    # `end` closes the `assert_difference "AlertRule.count", 1 do` block,
     # everything above between `do` and here is what gets measured for the
     # count change.
 
@@ -125,7 +125,7 @@ class AlertRulesControllerTest < ActionDispatch::IntegrationTest
   test "create re-renders the form with errors for an invalid rule" do
     # `assert_no_difference` is the opposite of `assert_difference` above:
     # it asserts the given expression's value is UNCHANGED after the block
-    # runs — here, proving that an invalid submission does NOT create a new
+    # runs, here, proving that an invalid submission does NOT create a new
     # database row.
     assert_no_difference "AlertRule.count" do
       # Submits a rule with a blank `name` (invalid, since the model
@@ -137,7 +137,7 @@ class AlertRulesControllerTest < ActionDispatch::IntegrationTest
     # `end` closes the `assert_no_difference "AlertRule.count" do` block.
 
     # HTTP 422 ("Unprocessable Content/Entity") is the conventional status
-    # Rails uses when re-rendering a form because validation failed — as
+    # Rails uses when re-rendering a form because validation failed, as
     # opposed to :success (200), which would mean it saved, or a redirect,
     # which would mean it moved on to another page.
     assert_response :unprocessable_content
@@ -159,7 +159,7 @@ class AlertRulesControllerTest < ActionDispatch::IntegrationTest
     # after the update.
     rule = alert_rules(:price_drop_rule)
 
-    # `patch` simulates an HTTP PATCH request — the verb conventionally used
+    # `patch` simulates an HTTP PATCH request, the verb conventionally used
     # for partial updates to an existing resource (as opposed to `post` for
     # creating something new). Only the `name` field is sent, so this
     # exercises updating just one attribute while leaving the rest alone.
@@ -199,7 +199,7 @@ class AlertRulesControllerTest < ActionDispatch::IntegrationTest
     # the `1` used for create above) as a result of the delete request
     # inside this block.
     assert_difference "AlertRule.count", -1 do
-      # `delete` simulates an HTTP DELETE request — the verb conventionally
+      # `delete` simulates an HTTP DELETE request, the verb conventionally
       # used to destroy a resource.
       delete alert_rule_path(rule)
     end

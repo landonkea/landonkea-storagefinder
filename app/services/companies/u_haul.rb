@@ -3,11 +3,11 @@
 # =============================================================================
 # Crawls uhaul.com to find facilities and unit pricing.
 #
-# Website behavior notes (verified by driving the live site — see recon/ for
+# Website behavior notes (verified by driving the live site, see recon/ for
 # saved HTML/screenshots, and /tmp/uhaul_* scratch files used during
 # development):
 #   - There is no lat/lng or radius query-param search endpoint (the stub's
-#     guess of ?lat=&lng=&radius= 404s — see recon/uhaul_*_screenshot.png).
+#     guess of ?lat=&lng=&radius= 404s, see recon/uhaul_*_screenshot.png).
 #     The real search box (#movingFromInput on https://www.uhaul.com/Storage/)
 #     takes free-text "City, State", and on submit redirects the browser to a
 #     path-based URL: /Storage/<City>-<State>/Results/ (spaces in the city
@@ -15,12 +15,12 @@
 #     That path also works when navigated to directly, so we reverse-geocode
 #     the lat/lng we're given (Geocoder gem) into city/state and build the
 #     URL ourselves, same pattern as Companies::PublicStorage.
-#   - The results page has no radius filter/param — it just lists facilities
+#   - The results page has no radius filter/param, it just lists facilities
 #     sorted by distance from the searched city (with "Nearby Cities" links
 #     if the immediate area is sparse). We don't attempt to enforce
 #     radius_miles client-side; the same limitation applies to the working
 #     Public Storage parser.
-#   - Facility cards render server-side in #storageResults > li.divider —
+#   - Facility cards render server-side in #storageResults > li.divider,
 #     unlike some other sites there's no hidden "no results" element to trip
 #     over; an empty city legitimately renders zero <li> cards.
 #   - Each facility card's name link (h3 a) is also the URL to that
@@ -30,10 +30,10 @@
 #     category, e.g. "small_IndoorStorage_RoomList" or
 #     "medium_DriveUpStorage_RoomList". So parse_units re-navigates (via the
 #     base class's normal per-location page visit) to that same detail URL
-#     that parse_locations discovered — no special-casing needed in
+#     that parse_locations discovered, no special-casing needed in
 #     BaseParser#run.
 #   - No bot-detection / CAPTCHA / "press and hold" challenge was encountered
-#     at any point (search page, results page, or facility detail pages) —
+#     at any point (search page, results page, or facility detail pages),
 #     real facility and unit data rendered directly in the HTML every time.
 #
 # If the site layout changes, run the recon tool:
@@ -42,14 +42,14 @@
 
 # NOVICE PRIMER: `class Companies::UHaul < Companies::BaseParser` makes this
 # class a SUBCLASS ("child class") of `Companies::BaseParser` (see
-# app/services/companies/base_parser.rb) — it INHERITS every method
+# app/services/companies/base_parser.rb), it INHERITS every method
 # BaseParser defines (`run`, `safe_text`, `safe_attr`, `safe_all_text`,
 # `parse_price`, `parse_size`, `log_info`, `log_warning`, `log_error`,
 # `take_error_screenshot`, etc.) and only needs to implement the 4 methods
 # unique to U-Haul's own website. "Playwright" is the browser-automation
 # library: a `page` object represents one open, invisible ("headless")
 # browser tab, and CSS-selector strings (like "#storageResults li.divider")
-# are the same mini-language stylesheets use to target HTML elements — a
+# are the same mini-language stylesheets use to target HTML elements, a
 # leading `#` means "match this element ID"; see base_parser.rb's opening
 # comment for a fuller explanation of selectors and Ruby's
 # `protected`/`private` keywords, both used here too.
@@ -58,21 +58,21 @@ class Companies::UHaul < Companies::BaseParser
   # below (implicitly, via string interpolation) when building absolute URLs.
   BASE_URL = "https://www.uhaul.com"
 
-  # Overrides BaseParser's abstract `company_name` — required display name
+  # Overrides BaseParser's abstract `company_name`, required display name
   # shown in the UI/exports for this company.
   def company_name
     "U-Haul Self-Storage"
   end
   # `end` closes `def company_name`.
 
-  # Overrides BaseParser's abstract `company_slug` — short id used in log
+  # Overrides BaseParser's abstract `company_slug`, short id used in log
   # lines and screenshot filenames.
   def company_slug
     "uhaul"
   end
   # `end` closes `def company_slug`.
 
-  # Overrides BaseParser's abstract `search_url` — builds the URL for
+  # Overrides BaseParser's abstract `search_url`, builds the URL for
   # U-Haul's search-results page given GPS coordinates (radius_miles is
   # accepted for interface compatibility with BaseParser#run, but this site
   # has no radius parameter to pass it through to).
@@ -85,7 +85,7 @@ class Companies::UHaul < Companies::BaseParser
     # String interpolation joins city and state with a literal hyphen (e.g.
     # "San Tan Valley-AZ"), then `.gsub(/\s+/, "-")` globally replaces every
     # run of one-or-more whitespace characters (`\s+`) with a single hyphen
-    # — turning "San Tan Valley-AZ" into "San-Tan-Valley-AZ", matching the
+    #, turning "San Tan Valley-AZ" into "San-Tan-Valley-AZ", matching the
     # hyphenated path segment U-Haul's own search box produces.
     "#{BASE_URL}/Storage/#{ERB::Util.url_encode(slug)}/Results/"
     # Builds the final URL. `ERB::Util.url_encode` percent-encodes the slug
@@ -96,14 +96,14 @@ class Companies::UHaul < Companies::BaseParser
   end
   # `end` closes `def search_url`.
 
-  # Overrides BaseParser's abstract `parse_locations` — reads the list of
+  # Overrides BaseParser's abstract `parse_locations`, reads the list of
   # nearby U-Haul facilities off the search-results page.
   def parse_locations(page)
     locations = []
     # An empty Array that will collect one Hash per facility found.
 
     begin
-      # `begin ... rescue ... end` is Ruby's exception-handling block — code
+      # `begin ... rescue ... end` is Ruby's exception-handling block, code
       # inside `begin` runs normally; an error jumps to the matching
       # `rescue` clause instead of crashing this method.
       page.wait_for_selector("#storageResults li.divider", timeout: 15_000) rescue nil
@@ -113,12 +113,12 @@ class Companies::UHaul < Companies::BaseParser
       # to appear. The trailing `rescue nil` is Ruby's one-line rescue
       # modifier: any error here (most likely a timeout, if this city has
       # zero U-Haul facilities) is swallowed and the whole expression
-      # becomes `nil` — execution simply continues to the next line, where
+      # becomes `nil`, execution simply continues to the next line, where
       # `query_selector_all` will find zero cards and the "empty" branch
       # below handles that cleanly.
 
       cards = page.query_selector_all("#storageResults li.divider")
-      # Finds every facility-card element on the page — returns an empty
+      # Finds every facility-card element on the page, returns an empty
       # Array, never nil, if none match.
 
       if cards.empty?
@@ -127,16 +127,16 @@ class Companies::UHaul < Companies::BaseParser
           "No facility cards found on U-Haul search results page " \
           "(selector: '#storageResults li.divider'). This may mean the searched " \
           "city/state genuinely has no nearby U-Haul locations, or the page " \
-          "layout changed — run ReconService to check."
+          "layout changed, run ReconService to check."
         )
         # The trailing `\` at each line's end continues the string literal
-        # onto the next source line without a real newline — the pieces
+        # onto the next source line without a real newline, the pieces
         # concatenate into one message.
         take_error_screenshot(page, "no_cards")
         # Inherited helper: saves a screenshot of the current page to logs/,
         # tagged with this label, for later debugging.
         return []
-        # Exits `parse_locations` immediately — nothing left to parse.
+        # Exits `parse_locations` immediately, nothing left to parse.
       end
       # `end` closes the `if cards.empty?` block.
 
@@ -151,7 +151,7 @@ class Companies::UHaul < Companies::BaseParser
           # Inner begin/rescue: an error parsing ONE card shouldn't stop the
           # rest of the cards from being processed.
           name_link = card.query_selector("h3 a")
-          # Finds the `<a>` link inside this card's `<h3>` heading — a
+          # Finds the `<a>` link inside this card's `<h3>` heading, a
           # descendant selector, "any `<a>` inside an `<h3>`".
           name      = name_link&.text_content&.strip
           # `&.` chains safe navigation: only reads `.text_content` (the
@@ -164,7 +164,7 @@ class Companies::UHaul < Companies::BaseParser
           next if name.blank? || url.blank?
           # `.blank?` (Rails helper) is true for `nil`/empty/whitespace-only.
           # `next` skips the rest of THIS block iteration (this one card)
-          # and moves to the next card — reached when we couldn't get a
+          # and moves to the next card, reached when we couldn't get a
           # usable facility name OR URL (unlike some sibling parsers, this
           # check happens BEFORE parsing the address, since without a name
           # or URL there's nothing worth continuing to parse for this card).
@@ -172,10 +172,10 @@ class Companies::UHaul < Companies::BaseParser
           external_id = url[/\/(\d+)\/?\z/, 1]
           # `[...]` with a regex and capture-group index is Ruby's
           # "String#[]" pattern-match form: it searches `url` for
-          # `/\/(\d+)\/?\z/` — a literal "/", a captured group of
+          # `/\/(\d+)\/?\z/`, a literal "/", a captured group of
           # one-or-more digits, an OPTIONAL trailing "/" (the `?` makes the
           # preceding "/" optional), anchored to the absolute end of the
-          # string (`\z`) — and returns just the text captured by that
+          # string (`\z`), and returns just the text captured by that
           # group (the trailing numeric facility ID), or `nil` if it
           # doesn't match.
 
@@ -195,15 +195,15 @@ class Companies::UHaul < Companies::BaseParser
 
           if address_raw.present?
             # `.present?` (Rails helper) is true for non-nil/non-blank
-            # values — only attempt to parse the address if we actually got
+            # values, only attempt to parse the address if we actually got
             # some raw text back.
-            # Format: "2557 S Gilbert Rd  Gilbert,AZ 85295" — street and
+            # Format: "2557 S Gilbert Rd  Gilbert,AZ 85295", street and
             # "City,State Zip" are separated by 2+ spaces, city/state by a
             # comma with no space.
             street_part, city_state_zip = address_raw.split(/\s{2,}/, 2)
             # "Multiple assignment" again: `.split(/\s{2,}/, 2)` splits the
             # raw text at the first run of 2-or-more whitespace characters
-            # (`\s{2,}` — the `{2,}` quantifier means "2 or more, no upper
+            # (`\s{2,}`, the `{2,}` quantifier means "2 or more, no upper
             # bound"), limited to at most 2 pieces (the trailing `2`
             # argument) so any extra double-spaces later in the string don't
             # cause additional splits.
@@ -245,17 +245,17 @@ class Companies::UHaul < Companies::BaseParser
             # `||` falls back to an empty string if `city` came back `nil`.
             state:       state || "AZ",
             # Falls back to the literal string "AZ" if no state was
-            # scraped — see the "flag but don't fix" notes at the end of
+            # scraped, see the "flag but don't fix" notes at the end of
             # this review regarding this hardcoded regional default.
             zip:         zip || "",
             phone:       nil,
             # No phone number is exposed on U-Haul's search-results cards in
-            # what we scrape — left `nil`.
+            # what we scrape, left `nil`.
             url:         url,
             external_id: external_id
           }
 
-          log_info("  ✓ #{name} — #{street}, #{city}, #{state}")
+          log_info("  ✓ #{name}, #{street}, #{city}, #{state}")
           # A checkmark-prefixed info log line for each successfully parsed
           # location, useful for eyeballing crawl progress in the logs.
 
@@ -276,8 +276,8 @@ class Companies::UHaul < Companies::BaseParser
       log_error("Timeout waiting for U-Haul search results. Error: #{e.message}")
       take_error_screenshot(page, "search_timeout")
     rescue => e
-      # This bare rescue must come AFTER the more specific one — Ruby checks
-      # `rescue` clauses top-to-bottom and uses the first match — so this is
+      # This bare rescue must come AFTER the more specific one, Ruby checks
+      # `rescue` clauses top-to-bottom and uses the first match, so this is
       # the catch-all for anything else unexpected.
       log_error("Unexpected error parsing U-Haul locations: #{e.class}: #{e.message}")
       take_error_screenshot(page, "parse_locations_error")
@@ -285,14 +285,14 @@ class Companies::UHaul < Companies::BaseParser
     # `end` closes the outer `begin ... rescue ... rescue ... end` block.
 
     locations
-    # The last expression evaluated — the `locations` Array built above —
+    # The last expression evaluated, the `locations` Array built above,
     # becomes `parse_locations`'s return value.
   end
   # `end` closes `def parse_locations`.
 
-  # Overrides BaseParser's abstract `parse_units` — reads unit sizes/prices
+  # Overrides BaseParser's abstract `parse_units`, reads unit sizes/prices
   # off one facility's own detail page (the same URL parse_locations
-  # discovered, re-visited by BaseParser#run's normal per-location flow —
+  # discovered, re-visited by BaseParser#run's normal per-location flow,
   # see the header comment above).
   def parse_units(page, facility)
     units = []
@@ -301,14 +301,14 @@ class Companies::UHaul < Companies::BaseParser
     begin
       page.wait_for_selector("ul.uhjs-unit-list", timeout: 15_000)
       # Waits up to 15 seconds for at least one unit-list container to
-      # render. No trailing `rescue nil` here — a timeout on a facility's
+      # render. No trailing `rescue nil` here, a timeout on a facility's
       # own detail page (which we already know exists) is treated as a real
       # error, handled by the `rescue Playwright::TimeoutError` clause
       # further down.
 
       room_lists = page.query_selector_all("ul.uhjs-unit-list")
       # Finds every unit-category container (`<ul class="uhjs-unit-list">`)
-      # on this facility's detail page — each one groups units of one room
+      # on this facility's detail page, each one groups units of one room
       # category together (e.g. all "Small Indoor" units in one list).
 
       if room_lists.empty?
@@ -318,15 +318,15 @@ class Companies::UHaul < Companies::BaseParser
         )
         take_error_screenshot(page, "no_units_#{facility.id}")
         return []
-        # Exits early with an empty array — nothing more to parse.
+        # Exits early with an empty array, nothing more to parse.
       end
       # `end` closes the `if room_lists.empty?` block.
 
       # The facility-wide "no admin fee" callout applies to every unit on
-      # the page (U-Haul doesn't show a per-unit admin fee) — grab it once.
+      # the page (U-Haul doesn't show a per-unit admin fee), grab it once.
       admin_fee = page.content.include?("$0.00 Admin Fee") ? 0.0 : nil
       # `page.content` returns the ENTIRE raw HTML of the current page as
-      # one big String (not scoped to any element) — a broad approach
+      # one big String (not scoped to any element), a broad approach
       # compared to the targeted `query_selector` calls used everywhere
       # else in this file; see the "flag but don't fix" notes at the end of
       # this review. `.include?` checks whether that literal text appears
@@ -337,11 +337,11 @@ class Companies::UHaul < Companies::BaseParser
 
       idx = 0
       # A plain counter (not tied to any one `.each_with_index`, since units
-      # are nested two loops deep below — one over room_lists, one over each
+      # are nested two loops deep below, one over room_lists, one over each
       # list's own `<li>` items) used purely for numbering log messages.
 
       room_lists.each do |room_list|
-        # `.each do |element| ... end` — no index needed here since `idx` is
+        # `.each do |element| ... end`, no index needed here since `idx` is
         # tracked manually across BOTH loop levels instead.
         list_id    = room_list.get_attribute("id").to_s.downcase
         # Reads this list's `id` attribute (e.g.
@@ -354,7 +354,7 @@ class Companies::UHaul < Companies::BaseParser
         vehicleish = list_id.match?(/vehicle|rv|boat|parking|outdoor/)
         # `.match?(regex)` returns `true`/`false` (unlike `.match`, which
         # returns a MatchData-or-nil) for whether the pattern matches
-        # anywhere in the string. `|` inside a regex means "or" — matches if
+        # anywhere in the string. `|` inside a regex means "or", matches if
         # the id contains any of these five words.
         indoor     = list_id.include?("indoor")
 
@@ -371,7 +371,7 @@ class Companies::UHaul < Companies::BaseParser
             # `if ... then ... elsif ... then ... else ... end` written on
             # one line per branch using the `then` keyword (optional, but
             # required here since each condition and its result share a
-            # line) — checks each vehicle-ish keyword in order and picks
+            # line), checks each vehicle-ish keyword in order and picks
             # the first one that matches; falls back to "outdoor" if the id
             # matched the broader `vehicleish` regex but none of these more
             # specific keywords individually.
@@ -388,7 +388,7 @@ class Companies::UHaul < Companies::BaseParser
           # Within this one room_list, finds every `<li>` (one per
           # individual unit) and loops over them.
           idx += 1
-          # `+=` is shorthand for `idx = idx + 1` — increments the shared
+          # `+=` is shorthand for `idx = idx + 1`, increments the shared
           # counter for every unit across every room_list, giving each a
           # unique, ever-increasing number for log messages.
 
@@ -408,7 +408,7 @@ class Companies::UHaul < Companies::BaseParser
 
             price_texts   = safe_all_text(el, "dd b")
             # Inherited helper: an Array of trimmed text for every `<b>`
-            # inside a `<dd>` element within this unit — U-Haul's markup may
+            # inside a `<dd>` element within this unit, U-Haul's markup may
             # list more than one bolded price-like value here.
             monthly_price = price_texts.map { |t| parse_price(t) }.compact.first
             # `.map { |t| ... }` runs `parse_price` on every text piece,
@@ -433,14 +433,14 @@ class Companies::UHaul < Companies::BaseParser
               size:               size,
               monthly_price:      monthly_price,
               web_special_price:  nil,
-              # Not exposed on U-Haul's unit markup in what we scrape — left
+              # Not exposed on U-Haul's unit markup in what we scrape, left
               # `nil`.
               web_special_note:   nil,
               admin_fee:          admin_fee,
               # The facility-wide value computed once, above, before this
               # loop started.
               insurance_note:     nil,
-              # Not exposed on U-Haul's unit markup in what we scrape — left
+              # Not exposed on U-Haul's unit markup in what we scrape, left
               # `nil`.
               climate_controlled: climate_controlled,
               available:          true,
@@ -455,7 +455,7 @@ class Companies::UHaul < Companies::BaseParser
               unit_type:          unit_type,
               booking_url:        facility.facility_url
               # U-Haul's unit markup doesn't carry a per-unit reservation
-              # link — every unit just points back at the general facility
+              # link, every unit just points back at the general facility
               # detail page.
             }
 
@@ -472,7 +472,7 @@ class Companies::UHaul < Companies::BaseParser
 
       if units.empty?
         # After both loops finish, check whether we ended up with zero
-        # units overall even though the room-list CONTAINERS were present —
+        # units overall even though the room-list CONTAINERS were present,
         # a different failure mode than `room_lists.empty?` above (that
         # earlier check meant no containers at all; this one means
         # containers existed but no individual `<li>` units inside them
@@ -483,7 +483,7 @@ class Companies::UHaul < Companies::BaseParser
         )
         take_error_screenshot(page, "no_units_#{facility.id}")
       else
-        # `else` here pairs with the `if units.empty?` above — runs when at
+        # `else` here pairs with the `if units.empty?` above, runs when at
         # least one unit WAS successfully parsed.
         log_info("Found #{units.length} units at #{facility.name}")
       end
@@ -506,10 +506,10 @@ class Companies::UHaul < Companies::BaseParser
   private
   # Ruby's `private` keyword: everything below this line can only be called
   # from inside this class's own methods (implicit receiver only), never
-  # from outside code — these are internal implementation details.
+  # from outside code, these are internal implementation details.
 
   # U-Haul's search box takes a free-text "City, State" query, not
-  # coordinates — reverse-geocode what we were given back into that form.
+  # coordinates, reverse-geocode what we were given back into that form.
   # The URL also works fine with the full state name (e.g. "Gilbert-Arizona")
   # but we prefer the 2-letter abbreviation when Nominatim's ISO code is
   # available, to match what the site's own search box produces.
@@ -517,7 +517,7 @@ class Companies::UHaul < Companies::BaseParser
     result = Geocoder.search([ lat, lng ]).first
     # `Geocoder` is a third-party Ruby gem providing geocoding (address <->
     # coordinates lookups). `.search([lat, lng])` performs a "reverse
-    # geocode" — coordinates in, real-world address out — returning an
+    # geocode", coordinates in, real-world address out, returning an
     # Array of matches; `.first` takes the best one, which may be `nil`.
     if result&.city.present?
       # `&.` safely reads `.city` only if `result` isn't `nil`; `.present?`
@@ -525,7 +525,7 @@ class Companies::UHaul < Companies::BaseParser
       iso = result.data.dig("address", "ISO3166-2-lvl4")
       # `result.data` is the raw geocoding-service response as a nested Ruby
       # Hash. `.dig("address", "ISO3166-2-lvl4")` safely reaches two levels
-      # deep — first the "address" key, then "ISO3166-2-lvl4" inside THAT —
+      # deep, first the "address" key, then "ISO3166-2-lvl4" inside THAT,
       # returning `nil` at any point along the way if a key doesn't exist,
       # rather than raising an error the way chained `["address"]["ISO..."]`
       # bracket access would if "address" were missing. "ISO3166-2-lvl4" is
@@ -537,7 +537,7 @@ class Companies::UHaul < Companies::BaseParser
       # to `nil`, and `||` then falls back to `result.state` (which may be a
       # full state name like "Arizona" rather than an abbreviation).
       [ result.city, state_abbr ]
-      # Builds and returns a 2-element Array — this is the last expression
+      # Builds and returns a 2-element Array, this is the last expression
       # of this `if` branch, and (since the whole if/else is the method's
       # last expression) becomes the method's return value on success.
     else
@@ -551,7 +551,7 @@ class Companies::UHaul < Companies::BaseParser
     # `end` closes the `if result&.city.present? ... else ... end` branch.
   rescue => e
     # A method-level rescue (attached directly to `def`, no separate
-    # `begin` needed) — catches any error from the geocoding call (e.g. a
+    # `begin` needed), catches any error from the geocoding call (e.g. a
     # network failure).
     log_warning("Reverse geocoding failed for #{lat},#{lng}: #{e.message}")
     [ lat.to_s, lng.to_s ]

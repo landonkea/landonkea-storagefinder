@@ -61,12 +61,12 @@ class Facility < ApplicationRecord
   # Mirrors Companies::BaseParser#upsert_facility's dedup logic (matching by
   # external_id when present, otherwise by address+city+state), backed by a
   # real unique index in the database (see the add_facility_uniqueness_indexes
-  # migration) — these validations just turn a raw constraint violation into
+  # migration), these validations just turn a raw constraint violation into
   # a readable error message instead of an ActiveRecord::RecordNotUnique.
   #
   # `uniqueness:` validates that no OTHER existing row already has this same
   # value (or combination of values, via `scope:`). `scope: :company` means
-  # external_id only has to be unique WITHIN rows sharing the same company —
+  # external_id only has to be unique WITHIN rows sharing the same company,
   # two different companies could reuse the same external_id without
   # conflict. `allow_nil: true` skips this check when external_id is nil.
   validates :external_id, uniqueness: {
@@ -74,10 +74,10 @@ class Facility < ApplicationRecord
     message: "already has a facility with this external ID for this company"
   }, allow_nil: true
   # Similarly, `address` must be unique within the combination of
-  # `[:company, :city, :state]` — `scope:` accepts an array here to scope
+  # `[:company, :city, :state]`, `scope:` accepts an array here to scope
   # uniqueness across multiple columns at once. `if: -> { external_id.blank? }`
   # is a conditional lambda (see app/models/alert_rule.rb for more on `if:`
-  # lambdas) — this address-uniqueness check only runs when there's no
+  # lambdas), this address-uniqueness check only runs when there's no
   # external_id to rely on instead.
   validates :address, uniqueness: {
     scope:   [ :company, :city, :state ],
@@ -94,24 +94,24 @@ class Facility < ApplicationRecord
   # this app depends on for turning street addresses into GPS coordinates).
   # It tells the gem to call the `geocodable_address` instance method
   # (defined further down this file) to get the address string to look up,
-  # and — by convention — to store the resulting latitude/longitude into
+  # and, by convention, to store the resulting latitude/longitude into
   # this model's `latitude`/`longitude` columns.
   geocoded_by :geocodable_address     # The method to call to get the address string
-  # `after_validation` is a Rails "callback" — a hook that runs a method
+  # `after_validation` is a Rails "callback", a hook that runs a method
   # automatically at a specific point in a record's lifecycle (here, right
   # after validations run but before the record is saved). `:geocode` is
   # a method the geocoder gem adds to this model, which performs the actual
   # network lookup and fills in latitude/longitude.
   after_validation :geocode,          # After validating, automatically look up coordinates
     # Re-geocode when the address changes, or retry when a previous attempt
-    # never got coordinates (e.g. a transient Nominatim failure) — otherwise
+    # never got coordinates (e.g. a transient Nominatim failure), otherwise
     # a facility whose first geocode call failed would stay "Unknown"
     # forever, since re-crawls save the same, unchanged address.
     #
     # `if:` (same conditional-lambda pattern as in AlertRule/Facility's
     # validations above) means the geocode callback only actually runs when
     # this lambda returns true. `address_changed?` is an automatically
-    # generated Rails "dirty tracking" method — true if the `address`
+    # generated Rails "dirty tracking" method, true if the `address`
     # attribute has been modified since the record was loaded/last saved.
     if: -> { address_changed? || latitude.nil? }
 
@@ -128,22 +128,22 @@ class Facility < ApplicationRecord
   # `->(lat, lng) { ... }` is a lambda taking two positional arguments.
   scope :nearest_to, ->(lat, lng) {
     # `where.not(latitude: nil, longitude: nil)` excludes any facility
-    # missing coordinates — you can't sort by distance without them.
+    # missing coordinates, you can't sort by distance without them.
     where.not(latitude: nil, longitude: nil)
       # `.order(...)` sorts the query results; here it's given a raw SQL
       # expression (see below) instead of a simple column name, so the
       # database itself computes a distance value per row and sorts by it.
       .order(
-        # Haversine formula — calculates great-circle distance between two GPS points
+        # Haversine formula, calculates great-circle distance between two GPS points
         # This SQL runs inside SQLite and returns distance in miles
         # `Arel.sql(...)` wraps a raw SQL string so Rails will insert it
         # into the query literally instead of trying to treat it as an
-        # unsafe, escapable value — necessary here because we're building a
+        # unsafe, escapable value, necessary here because we're building a
         # full mathematical SQL expression, not just a plain column/value.
         Arel.sql(
           # `#{lat.to_f}` / `#{lng.to_f}` interpolate the lambda's `lat`/`lng`
           # arguments directly into the SQL string as plain numbers
-          # (`.to_f` converts to a float) — the `\` at the end of each
+          # (`.to_f` converts to a float), the `\` at the end of each
           # string line is Ruby's line-continuation syntax, joining these
           # three lines into one long SQL string with no added newlines.
           "((acos(sin(#{lat.to_f} * pi() / 180) * sin(latitude * pi() / 180) + " \
@@ -182,7 +182,7 @@ class Facility < ApplicationRecord
 
   # Address string used for geocoding only. Suite/unit numbers (e.g. "Ste 100",
   # "Suite B", "#4") make Nominatim return no match at all even though the
-  # base street address geocodes fine — strip them here. full_address (with
+  # base street address geocodes fine, strip them here. full_address (with
   # the suite number) is still what's shown to users and used for map links.
   def geocodable_address
     # `address.to_s` ensures we have a string even if address were
@@ -192,7 +192,7 @@ class Facility < ApplicationRecord
     # `/\s*(?:ste|suite|unit|#)\.?\s*[\w-]+\s*$/i` matches, at the END of
     # the address (`$`): optional whitespace, then one of the words
     # "ste"/"suite"/"unit" or a literal "#" (the `(?:...)` is a
-    # "non-capturing group" — it groups alternatives with `|` for "or"
+    # "non-capturing group", it groups alternatives with `|` for "or"
     # without creating a numbered capture), an optional period, more
     # optional whitespace, then a run of word-characters/hyphens (the
     # actual suite number/letter), then trailing whitespace. The `i` flag
@@ -252,7 +252,7 @@ class Facility < ApplicationRecord
   # Returns true if this facility has any climate-controlled units
   def has_climate_control?
     # `.exists?` runs an efficient SQL existence check (like `any_running?`
-    # in CrawlRun) — it returns true/false without loading matching rows.
+    # in CrawlRun), it returns true/false without loading matching rows.
     units.where(climate_controlled: true).exists?
   end
   # `end` closes the `def has_climate_control?` method definition.
@@ -261,7 +261,7 @@ class Facility < ApplicationRecord
   def maps_url
     # `URI.encode_www_form_component(...)` is Ruby's standard-library
     # helper for URL-encoding a string so it's safe to embed in a URL query
-    # parameter — e.g. spaces become "+" and special characters are
+    # parameter, e.g. spaces become "+" and special characters are
     # percent-escaped, since raw addresses often contain spaces and commas
     # that aren't valid unescaped in a URL.
     encoded_address = URI.encode_www_form_component(full_address)
@@ -273,13 +273,13 @@ class Facility < ApplicationRecord
   # Falls back to raw phone if it can't be formatted
   def formatted_phone
     # `.blank?` is a Rails helper meaning nil, empty string, or
-    # whitespace-only — the opposite of `.present?`. Returns nil early if
+    # whitespace-only, the opposite of `.present?`. Returns nil early if
     # there's no phone number to format at all.
     return nil if phone.blank?
 
     # Strip everything except digits
     # `.gsub(/\D/, "")` replaces every character matched by `\D` ("any
-    # character that is NOT a digit") with nothing — i.e. deletes all
+    # character that is NOT a digit") with nothing, i.e. deletes all
     # non-digit characters, leaving just the raw digits.
     digits = phone.gsub(/\D/, "")
 
@@ -287,7 +287,7 @@ class Facility < ApplicationRecord
     if digits.length == 10
       # `digits[0..2]` is Ruby's range-based string slicing: characters at
       # index 0 through 2 inclusive (the first 3 characters). Similarly
-      # `digits[3..5]` is the next 3, and `digits[6..9]` is the last 4 —
+      # `digits[3..5]` is the next 3, and `digits[6..9]` is the last 4,
       # together forming a standard US phone number layout.
       "(#{digits[0..2]}) #{digits[3..5]}-#{digits[6..9]}"
     elsif digits.length == 11 && digits[0] == "1"
@@ -306,7 +306,7 @@ class Facility < ApplicationRecord
   # ---------------------------------------------------------------------------
   # CLASS METHODS
   # ---------------------------------------------------------------------------
-  # `def self.method_name` defines a CLASS method — called on the class
+  # `def self.method_name` defines a CLASS method, called on the class
   # itself (e.g. `Facility.all_companies`) rather than on one record.
 
   # Returns an array of all unique company names in the database
@@ -332,7 +332,7 @@ class Facility < ApplicationRecord
   def self.calculate_distances_from(origin_lat, origin_lng)
     # Make sure we have valid coordinates to calculate from
     if origin_lat.nil? || origin_lng.nil?
-      Rails.logger.error("[Facility] Cannot calculate distances — origin coordinates are nil")
+      Rails.logger.error("[Facility] Cannot calculate distances, origin coordinates are nil")
       # A bare `return` with no value exits the method early, doing
       # nothing further, when the origin coordinates are missing.
       return
@@ -344,7 +344,7 @@ class Facility < ApplicationRecord
     # over a LARGE number of records in memory-efficient batches (loading
     # them a chunk at a time from the database instead of all at once),
     # rather than plain `.each` which would load every matching record
-    # into memory simultaneously. `do |facility| ... end` is a Ruby block —
+    # into memory simultaneously. `do |facility| ... end` is a Ruby block,
     # a chunk of code passed to `find_each`, run once per record, with that
     # record available inside the block as the local variable `facility`.
     geocoded.find_each do |facility|
@@ -368,7 +368,7 @@ class Facility < ApplicationRecord
 
         # Round to 1 decimal place and save
         # `update_column` (like in AlertRule#record_triggered!) writes
-        # directly to the database column, skipping validations/callbacks —
+        # directly to the database column, skipping validations/callbacks,
         # appropriate here since this is a simple derived/calculated value,
         # not user input that needs validating.
         facility.update_column(:distance_miles, distance.round(1))
@@ -376,7 +376,7 @@ class Facility < ApplicationRecord
       # `rescue => e` catches any standard error raised inside the `begin`
       # block above and stores it in the local variable `e`.
       rescue => e
-        # Log the error but keep going — one bad facility shouldn't stop everything
+        # Log the error but keep going, one bad facility shouldn't stop everything
         # `e.message` reads the human-readable description of what went
         # wrong from the caught exception object.
         Rails.logger.warn(

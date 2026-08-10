@@ -1,7 +1,7 @@
 # An "importmap" is Rails' way of using JavaScript in the browser WITHOUT a
 # build step (no webpack/esbuild bundling, no npm install into node_modules).
 # Instead, this file tells the browser exactly which JavaScript file to fetch
-# whenever your code writes `import "something"` — the browser's native
+# whenever your code writes `import "something"`, the browser's native
 # ES module `import` system reads a generated map of names -> file URLs.
 # `pin` is a method (defined by the importmap-rails gem) that adds one entry
 # to that map. Running `./bin/importmap` (mentioned below) can update this
@@ -15,11 +15,11 @@
 pin "application"
 
 # Pins the Turbo library (part of Hotwire) under the name
-# "@hotwired/turbo-rails" — this is what your code (and Rails' own
+# "@hotwired/turbo-rails", this is what your code (and Rails' own
 # generated HTML) imports to get Turbo Drive/Frames/Streams behavior
 # (fast page navigation and partial page updates without full JS
 # frameworks). `to:` overrides the default filename lookup and instead
-# points this import name at "turbo.min.js" — a specific vendored/minified
+# points this import name at "turbo.min.js", a specific vendored/minified
 # JS file (found under app/assets/vendor or similar, wherever importmap
 # looks for pinned assets) rather than a file matching the pin's own name.
 pin "@hotwired/turbo-rails", to: "turbo.min.js"
@@ -29,14 +29,14 @@ pin "@hotwired/turbo-rails", to: "turbo.min.js"
 # `to:` pattern as the line above.
 pin "@hotwired/stimulus", to: "stimulus.min.js"
 
-# Pins Stimulus's "loading" helper — used internally by Rails to lazily
+# Pins Stimulus's "loading" helper, used internally by Rails to lazily
 # load and register Stimulus controllers found under
 # app/javascript/controllers (see the next line) without you having to
 # manually import each one.
 pin "@hotwired/stimulus-loading", to: "stimulus-loading.js"
 
 # `pin_all_from` (unlike `pin`, which adds a single name) scans an entire
-# directory and pins EVERY file inside it in one go — here, every file in
+# directory and pins EVERY file inside it in one go, here, every file in
 # app/javascript/controllers/ (your app's Stimulus controllers) gets pinned
 # automatically, so you don't need one `pin` line per controller file.
 # `under: "controllers"` means each file is importable as
@@ -52,8 +52,8 @@ pin "consumer", to: "consumer.js"
 # `rails new`) from this app's own additions below, which have their own
 # explanatory comment.
 
-# Chartkick — renders the price trend chart on the dashboard. Served from the
-# gem's vendored assets (offline-friendly, no CDN — matters for a LAN app).
+# Chartkick, renders the price trend chart on the dashboard. Served from the
+# gem's vendored assets (offline-friendly, no CDN, matters for a LAN app).
 # (Comment above is original/pre-existing; kept as-is since it already
 # explains the WHY clearly: this app runs on a local network with no
 # internet access, so JS must ship with the gem rather than being fetched
@@ -74,20 +74,20 @@ pin "chartkick", to: "chartkick.js"
 # package name "@rails/actioncable", pointing at the vendored file
 # "@rails--actioncable.js" (the double-dash is just how the slash in the
 # package name got encoded into a safe filename). The trailing `# @8.1.300`
-# is a plain Ruby end-of-line comment — by convention for importmap-rails,
+# is a plain Ruby end-of-line comment, by convention for importmap-rails,
 # this records which version of the package this vendored file corresponds
 # to, so future upgrades know what they're replacing.
 pin "@rails/actioncable", to: "@rails--actioncable.js" # @8.1.300
 
-# Leaflet — powers the facility map on the dashboard (see
+# Leaflet, powers the facility map on the dashboard (see
 # app/javascript/controllers/facility_map_controller.js). Vendored under
 # vendor/javascript/leaflet.js for the same offline-friendly reason as
 # Chartkick above (this app runs on a LAN with no guaranteed internet
-# access) — its matching CSS lives at app/assets/stylesheets/leaflet.css,
+# access), its matching CSS lives at app/assets/stylesheets/leaflet.css,
 # linked in the layout via stylesheet_link_tag. Note the map TILES
 # themselves (the actual street imagery) still come from OpenStreetMap's
-# tile servers over the network at render time in the browser — same as
-# how the geocoder gem already calls out to Nominatim during a crawl — so
+# tile servers over the network at render time in the browser, same as
+# how the geocoder gem already calls out to Nominatim during a crawl, so
 # the map's pins/legend/popups work fully offline, but the background
 # imagery only loads with internet access.
 pin "leaflet", to: "leaflet.js" # @1.9.4

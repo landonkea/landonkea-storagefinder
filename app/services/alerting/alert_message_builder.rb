@@ -4,17 +4,17 @@
 # Builds the message content for alert notifications in different formats.
 #
 # Lives in its own file (not alongside AlertDeliveryService, even though this
-# directory is Zeitwerk-collapsed — see the "storagefinder.autoload_collapse"
+# directory is Zeitwerk-collapsed, see the "storagefinder.autoload_collapse"
 # initializer in config/application.rb) because Zeitwerk only autoloads one
 # constant per file, matched to the filename. AlertCheckerJob#send_alerts
 # references AlertMessageBuilder before AlertDeliveryService, so if this
 # class isn't independently autoloadable, that reference raises
 # "uninitialized constant AlertMessageBuilder" the first time it runs in a
-# fresh process — silently caught by AlertCheckerJob's own rescue, so no
+# fresh process, silently caught by AlertCheckerJob's own rescue, so no
 # alert ever gets sent and nothing visibly errors.
 # =============================================================================
 
-# This is a "service object" — a plain Ruby class that isn't a database
+# This is a "service object", a plain Ruby class that isn't a database
 # model or a web controller, used to hold one focused piece of logic (here:
 # turning "a triggered alert rule + the units that triggered it" into
 # actual message text in several formats). See
@@ -22,7 +22,7 @@
 # service object is and why apps use them.
 #
 # "Zeitwerk" (mentioned in the header comment above) is Rails' code-loading
-# system — it automatically finds and loads Ruby files based on their file
+# system, it automatically finds and loads Ruby files based on their file
 # path and file name, without needing explicit `require` statements
 # scattered everywhere. That's why this file doesn't need a `require` line
 # to be usable elsewhere in the app: naming this file
@@ -41,7 +41,7 @@ class AlertMessageBuilder
   end
   # `end` closes the `def self.build` class method definition above.
 
-  # `initialize` is Ruby's special constructor method name — it
+  # `initialize` is Ruby's special constructor method name, it
   # automatically runs whenever `.new` is called on this class, and
   # whatever arguments are passed to `.new` are passed straight through to
   # `initialize`.
@@ -58,11 +58,11 @@ class AlertMessageBuilder
   end
   # `end` closes the `def initialize` method definition above.
 
-  # `build` is the main public instance method — called as
+  # `build` is the main public instance method, called as
   # `some_builder_instance.build` (which is exactly what `self.build`
   # above does for you). It assembles all four message formats at once.
   def build
-    # A Ruby Hash literal is returned here — since this is the last
+    # A Ruby Hash literal is returned here, since this is the last
     # expression evaluated in the method, it's automatically the method's
     # return value (no explicit `return` keyword needed). Each key names
     # one message format, and each value is produced by calling one of the
@@ -76,14 +76,14 @@ class AlertMessageBuilder
   end
   # `end` closes the `def build` method definition above.
 
-  # `private` marks every method below as internal-only — meant to be
+  # `private` marks every method below as internal-only, meant to be
   # called only from other methods within this same class (like `build`
   # above), not from outside code.
   private
 
   def build_subject
     # `.length` on an Array (here, @triggered_units) returns how many
-    # elements it has — i.e., how many units triggered this alert.
+    # elements it has, i.e., how many units triggered this alert.
     count = @triggered_units.length
     # `case @rule.trigger_type when ... when ... end` is Ruby's
     # multi-branch conditional (similar to switch/case in other
@@ -96,8 +96,8 @@ class AlertMessageBuilder
       # the interpolation: if there's more than one (or zero) units, it
       # adds a pluralizing "s"; if count is exactly 1, the modifier-if's
       # condition is false, so it evaluates to `nil`, which interpolates
-      # as an empty string — giving "1 unit dropped" vs "2 units dropped."
-      "Price drop detected — #{count} unit#{"s" if count != 1} dropped in price"
+      # as an empty string, giving "1 unit dropped" vs "2 units dropped."
+      "Price drop detected, #{count} unit#{"s" if count != 1} dropped in price"
     when "price_threshold"
       "#{count} unit#{"s" if count != 1} below $#{@rule.threshold_price}"
     end
@@ -114,7 +114,7 @@ class AlertMessageBuilder
     lines = [ "Alert rule: #{@rule.name}", "" ]
 
     # `.first(10)` returns (at most) the first 10 elements of the
-    # triggered_units array — this caps how many units get individually
+    # triggered_units array, this caps how many units get individually
     # listed in the message body, so a rule that matches hundreds of units
     # doesn't produce an enormous email/notification.
     @triggered_units.first(10).each do |item|
@@ -128,7 +128,7 @@ class AlertMessageBuilder
 
       # `lines <<` appends each formatted line onto the lines array, one
       # per piece of information about this triggered unit.
-      lines << "#{facility.company} — #{facility.name}"
+      lines << "#{facility.company}, #{facility.name}"
       lines << "  Address: #{facility.full_address}"
       lines << "  Size: #{unit.size}"
       lines << "  Price: #{unit.formatted_price}"
@@ -138,7 +138,7 @@ class AlertMessageBuilder
       # unit, or on the very first crawl).
       if item[:previous_price]
         # `unit.best_price - item[:previous_price]` computes the price
-        # difference (current best price minus what it used to be) — a
+        # difference (current best price minus what it used to be), a
         # negative number means the price dropped, positive means it rose.
         change = unit.best_price - item[:previous_price]
         lines << "  Previous price: $#{item[:previous_price]}"
@@ -170,7 +170,7 @@ class AlertMessageBuilder
 
     # `.join("\n")` combines every element of the lines array into one
     # single String, inserting a newline character (`\n`) between each
-    # element — turning our array-of-lines into an actual multi-line block
+    # element, turning our array-of-lines into an actual multi-line block
     # of text suitable for an email body.
     lines.join("\n")
   end
@@ -192,7 +192,7 @@ class AlertMessageBuilder
       # otherwise `change` stays nil.
       change   = item[:previous_price] ? (unit.best_price - item[:previous_price]).round(2) : nil
 
-      # `<<~HTML ... HTML` is a Ruby "squiggly heredoc" — a way of writing
+      # `<<~HTML ... HTML` is a Ruby "squiggly heredoc", a way of writing
       # a multi-line String literal directly in the source code. `<<~`
       # (versus plain `<<`) also strips the common leading indentation
       # from every line, so the HTML doesn't come out with extra spaces
@@ -245,13 +245,13 @@ class AlertMessageBuilder
     #
     # `@triggered_units.first` returns just the single first element of
     # the array (not wrapped in an array, unlike `.first(1)` which would
-    # return a one-element array) — SMS messages are short, so only the
+    # return a one-element array), SMS messages are short, so only the
     # single most relevant unit is described, unlike the text/HTML bodies
     # which list up to 10.
     unit     = @triggered_units.first[:unit]
     facility = unit.facility
     # A single interpolated String summarizing the company, unit size,
-    # price, city, and a link — kept intentionally terse since SMS
+    # price, city, and a link, kept intentionally terse since SMS
     # messages have character-length/cost constraints.
     "StorageFinder: #{facility.company} #{unit.size} #{unit.formatted_price} at #{facility.city}. #{unit.booking_url}"
   end

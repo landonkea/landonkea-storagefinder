@@ -1,4 +1,4 @@
-# `require "test_helper"` loads the shared test setup — including the
+# `require "test_helper"` loads the shared test setup, including the
 # global HTTP Basic Auth header injection described in test_helper.rb, and
 # the fixtures loaded from test/fixtures/*.yml (facilities.yml, units.yml).
 require "test_helper"
@@ -8,7 +8,7 @@ require "test_helper"
 # controller in this app, which test_helper.rb auto-authenticates). Every
 # test below that wants to prove "no auth needed" does so explicitly by
 # overriding the auto-injected header with `headers: { "HTTP_AUTHORIZATION" => nil }`
-# — the same pattern test/controllers/authentication_test.rb uses to prove
+#, the same pattern test/controllers/authentication_test.rb uses to prove
 # the OPPOSITE (that the admin gate rejects unauthenticated requests).
 class PublicSearchControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
@@ -20,8 +20,8 @@ class PublicSearchControllerTest < ActionDispatch::IntegrationTest
     assert_select "title", /StorageFinder/
   end
 
-  test "index rejects nothing — even explicitly WRONG credentials still succeed (no auth gate at all)" do
-    # Proves this isn't merely tolerant of a missing header — it truly
+  test "index rejects nothing, even explicitly WRONG credentials still succeed (no auth gate at all)" do
+    # Proves this isn't merely tolerant of a missing header, it truly
     # doesn't check credentials at all, unlike ApplicationController's gate.
     get public_search_path, headers: {
       "HTTP_AUTHORIZATION" => ActionController::HttpAuthentication::Basic.encode_credentials("wrong", "wrong")
@@ -38,7 +38,7 @@ class PublicSearchControllerTest < ActionDispatch::IntegrationTest
     get public_search_path, headers: { "HTTP_AUTHORIZATION" => nil }
     assert_response :success
     # The admin nav (layouts/application.html.erb) links to these by exact
-    # text — confirming they're absent here proves the public layout really
+    # text, confirming they're absent here proves the public layout really
     # is a separate template, not just the admin layout re-themed.
     assert_no_match "Alert Rules", response.body
     assert_no_match "Settings", response.body
@@ -55,7 +55,7 @@ class PublicSearchControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "index excludes facilities with no available units at all" do
-    # no_external_id_facility has no Unit fixtures pointing at it — it
+    # no_external_id_facility has no Unit fixtures pointing at it, it
     # should never appear in default (unfiltered) results.
     get public_search_path
     assert_response :success
@@ -71,7 +71,7 @@ class PublicSearchControllerTest < ActionDispatch::IntegrationTest
 
   test "index filters by unit size" do
     # Only mesa_extra_space has any 10x15 units (see test/fixtures/units.yml)
-    # — gilbert_public_storage only has 10x10s.
+    #, gilbert_public_storage only has 10x10s.
     get public_search_path, params: { sizes: [ "10x15" ] }
     assert_response :success
     assert_match facilities(:mesa_extra_space).name, response.body
@@ -80,7 +80,7 @@ class PublicSearchControllerTest < ActionDispatch::IntegrationTest
 
   test "index filters by price range" do
     # current_gilbert_10x10 is $120 (available). Everything else available
-    # is either $90 (mesa) or $150/$200 (the "previous" crawl prices) —
+    # is either $90 (mesa) or $150/$200 (the "previous" crawl prices),
     # a 100..130 range should isolate just the gilbert facility.
     get public_search_path, params: { min_price: 100, max_price: 130 }
     assert_response :success
@@ -91,7 +91,7 @@ class PublicSearchControllerTest < ActionDispatch::IntegrationTest
   test "index sorts by price ascending by default" do
     get public_search_path
     assert_response :success
-    mesa_position    = response.body.index(facilities(:mesa_extra_space).name)     # $90 — cheapest
+    mesa_position    = response.body.index(facilities(:mesa_extra_space).name)     # $90, cheapest
     gilbert_position = response.body.index(facilities(:gilbert_public_storage).name) # $120
     assert mesa_position < gilbert_position, "expected the cheaper facility (mesa, $90) to be listed before the pricier one (gilbert, $120)"
   end
@@ -106,7 +106,7 @@ class PublicSearchControllerTest < ActionDispatch::IntegrationTest
 
   test "index sorts by distance when an origin point is given" do
     # Origin coordinates match gilbert_public_storage's own location almost
-    # exactly (see test/fixtures/facilities.yml) — much closer than
+    # exactly (see test/fixtures/facilities.yml), much closer than
     # mesa_extra_space, so gilbert should sort first.
     get public_search_path, params: { sort: "distance", lat: 33.3528, lng: -111.7890 }
     assert_response :success

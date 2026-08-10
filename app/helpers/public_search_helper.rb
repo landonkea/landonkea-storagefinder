@@ -10,7 +10,7 @@ module PublicSearchHelper
   # live via the geocoder gem's own distance calculation (the same one
   # Facility.calculate_distances_from uses in app/models/facility.rb) rather
   # than reading Facility#distance_miles, which only reflects the LAST
-  # crawl's fixed search origin — a customer's search location here is
+  # crawl's fixed search origin, a customer's search location here is
   # different every request.
   def distance_from_origin(facility, origin)
     return nil if origin.nil? || facility.latitude.nil? || facility.longitude.nil?
@@ -29,7 +29,7 @@ module PublicSearchHelper
   # detail page. Since booking_url in particular is third-party-scraped
   # text rather than something this app fully controls, this guard makes
   # sure only an ordinary http(s) link is ever rendered as a clickable
-  # href — never something like a "javascript:" URI a broken/malicious
+  # href, never something like a "javascript:" URI a broken/malicious
   # scrape could otherwise sneak through.
   def safe_external_url?(url)
     url.present? && url.match?(%r{\Ahttps?://}i)

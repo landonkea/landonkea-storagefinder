@@ -10,14 +10,14 @@
 
 # `class CreateAllTables < ActiveRecord::Migration[7.1]` defines a new Ruby
 # class named CreateAllTables. The `<` means this class INHERITS from
-# `ActiveRecord::Migration[7.1]` — it reuses all the migration machinery
+# `ActiveRecord::Migration[7.1]`, it reuses all the migration machinery
 # (running, rolling back, tracking "have I already run?" in the database)
 # that Rails provides, versioned to behave like Rails 7.1 so future Rails
 # upgrades don't silently change how this specific migration executes.
 # Every migration file defines one class like this. The `end` at the very
 # bottom of the file closes this class definition.
 class CreateAllTables < ActiveRecord::Migration[7.1]
-  # `def change` defines a single method named "change" — this is the
+  # `def change` defines a single method named "change", this is the
   # standard entry point Rails looks for in a migration. Because every
   # statement inside it (create_table, add_index, etc.) is one Rails already
   # knows how to reverse automatically, Rails can run this same method
@@ -30,19 +30,19 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
     # FACILITIES TABLE
     # -------------------------------------------------------------------------
     # `create_table :facilities` creates a new database table (think: a
-    # spreadsheet with named columns) named "facilities" — this will hold
+    # spreadsheet with named columns) named "facilities", this will hold
     # one row per physical self-storage location. `:facilities` is a Ruby
     # SYMBOL (a lightweight, immutable name/label, written with a leading
-    # colon) — Rails methods like this commonly accept symbols for table and
+    # colon), Rails methods like this commonly accept symbols for table and
     # column names instead of plain strings. `do |t|` opens a block where
     # `t` is a table-definition helper object; every `t.something` line
     # below adds one column to the table. The matching `end` a few lines
     # down closes this `create_table` call.
     create_table :facilities do |t|
       # `t.string  :company` adds a text column named "company" (holds
-      # short text, like a name) — the storage company operating this
+      # short text, like a name), the storage company operating this
       # facility (e.g. "Public Storage"). `null: false` means the database
-      # will reject any row that doesn't supply a value — this column is
+      # will reject any row that doesn't supply a value, this column is
       # required. The extra spaces before `:company` are just manual
       # alignment so the column names line up visually; they have no effect
       # on the code.
@@ -58,25 +58,25 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # Text column for the ZIP/postal code, required.
       t.string  :zip,           null: false
       # Text column for a contact phone number. No `null: false` here, so
-      # this column is OPTIONAL — rows can be saved with this left blank
+      # this column is OPTIONAL, rows can be saved with this left blank
       # (nil), unlike the required columns above.
       t.string  :phone
       # `t.float` adds a column that stores a floating-point (decimal)
-      # number — used here for the facility's geographic latitude
+      # number, used here for the facility's geographic latitude
       # coordinate. Optional (no null: false).
       t.float   :latitude
       # Floating-point column for the facility's geographic longitude
       # coordinate. Optional.
       t.float   :longitude
       # Floating-point column recording how far this facility is (in miles)
-      # from whatever location was searched. Optional — only meaningful
+      # from whatever location was searched. Optional, only meaningful
       # after a distance calculation has run.
       t.float   :distance_miles
       # Text column for the URL of this facility's page on the storage
       # company's website. Optional.
       t.string  :facility_url
       # Text column for an identifier the storage company itself uses for
-      # this facility (e.g. a store number from their own system) — used
+      # this facility (e.g. a store number from their own system), used
       # later (see the 2026 migration) to detect duplicate facilities.
       # Optional, since not every company's site exposes one.
       t.string  :external_id
@@ -84,14 +84,14 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # `t.timestamps` is a Rails shortcut that adds TWO columns in one
       # line: "created_at" and "updated_at", both datetime columns that
       # Rails automatically fills in and keeps up to date whenever a row is
-      # inserted or changed — you never set these yourself.
+      # inserted or changed, you never set these yourself.
       t.timestamps  # Adds created_at and updated_at automatically
     end
-    # This `end` closes the `create_table :facilities do |t|` block above —
+    # This `end` closes the `create_table :facilities do |t|` block above,
     # every column for the facilities table has now been described.
 
     # Indexes for facility lookups
-    # `add_index` creates a database INDEX on an existing table — a lookup
+    # `add_index` creates a database INDEX on an existing table, a lookup
     # structure similar to a book's index, letting queries jump straight to
     # matching rows instead of scanning the whole table. This one speeds up
     # lookups/filters by "company".
@@ -100,7 +100,7 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
     add_index :facilities, :city
     # Index speeding up lookups/filters by "zip".
     add_index :facilities, :zip
-    # A single index built across TWO columns at once — `[ :latitude,
+    # A single index built across TWO columns at once, `[ :latitude,
     # :longitude ]` is a Ruby array literal (a list) naming both columns.
     # This speeds up queries that filter/sort using both coordinates
     # together, such as "find facilities within this bounding box."
@@ -110,11 +110,11 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
     # CRAWL RUNS TABLE
     # -------------------------------------------------------------------------
     # Must be created BEFORE units because units reference crawl_runs
-    # Starts a new table, "crawl_runs" — one row per time the app ran a
+    # Starts a new table, "crawl_runs", one row per time the app ran a
     # crawl (an automated search across storage company websites).
     create_table :crawl_runs do |t|
       # Text column recording the city name that was searched. Optional (no
-      # null: false) — for example it might not be set until the crawl
+      # null: false), for example it might not be set until the crawl
       # actually starts.
       t.string   :search_city
       # Floating-point column for the latitude of the searched location.
@@ -129,7 +129,7 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # in "pending" automatically.
       t.string   :status,            default: "pending"
       # `t.text` adds a column for longer free-form text than `t.string`
-      # typically allows — used here to store an error message if the crawl
+      # typically allows, used here to store an error message if the crawl
       # failed. Optional.
       t.text     :error_message
       # Whole-number column counting how many facilities this crawl found.
@@ -145,20 +145,20 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # defaulting to 0.
       t.integer  :companies_failed,  default: 0
       # `t.json` adds a column that stores structured JSON data (lists/
-      # objects) directly, rather than one plain string — used here to
+      # objects) directly, rather than one plain string, used here to
       # record which companies were included in this crawl run. Optional.
       t.json     :companies_included
       # JSON column recording whatever filter options were applied for this
       # crawl (e.g. size/price filters). Optional.
       t.json     :filter_options
       # Datetime column recording when the crawl actually started running.
-      # Optional — nil until the crawl begins.
+      # Optional, nil until the crawl begins.
       t.datetime :started_at
-      # Datetime column recording when the crawl finished. Optional — nil
+      # Datetime column recording when the crawl finished. Optional, nil
       # until the crawl completes.
       t.datetime :completed_at
       # Floating-point column recording how long the crawl took, in
-      # seconds. Optional — only set once the crawl finishes.
+      # seconds. Optional, only set once the crawl finishes.
       t.float    :duration_seconds
 
       # Adds the automatic created_at/updated_at timestamp columns, same as
@@ -177,14 +177,14 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
     # -------------------------------------------------------------------------
     # UNITS TABLE
     # -------------------------------------------------------------------------
-    # Starts a new table, "units" — one row per individual storage unit
+    # Starts a new table, "units", one row per individual storage unit
     # (e.g. a specific 10x10 unit) found at a facility during a crawl.
     create_table :units do |t|
       # `t.references :facility` is a Rails shortcut that adds a
       # "facility_id" whole-number column, linking each unit row back to
       # the one row in the "facilities" table it belongs to. `null: false`
       # means every unit MUST belong to a facility. `foreign_key: true`
-      # tells the DATABASE ITSELF (not just Rails) to enforce this link — a
+      # tells the DATABASE ITSELF (not just Rails) to enforce this link, a
       # FOREIGN KEY is a database-level rule that a value in one table's
       # column must match an existing row's id in another table; it blocks
       # inserting a unit that points at a facility_id that doesn't actually
@@ -193,7 +193,7 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # concisely.
       t.references :facility,    null: false, foreign_key: true   # facility_id column + foreign key
       # Same pattern as above, but linking each unit to the "crawl_runs"
-      # table via a new "crawl_run_id" column — records which crawl run
+      # table via a new "crawl_run_id" column, records which crawl run
       # discovered this unit. Also required and foreign-key-enforced.
       t.references :crawl_run,   null: false, foreign_key: true   # crawl_run_id column + foreign key
       # Text column for the unit's size label (e.g. "10x10"), required.
@@ -205,7 +205,7 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # Whole-number column for the unit's total square footage. Optional.
       t.integer  :sqft
       # `t.decimal` adds a column that stores an EXACT decimal number
-      # (unlike `t.float`, which can introduce tiny rounding errors) — the
+      # (unlike `t.float`, which can introduce tiny rounding errors), the
       # right choice for money values. `precision: 8, scale: 2` means up to
       # 8 total digits, with 2 of them after the decimal point (so values
       # up to 999999.99). Used here for the regular monthly rental price.
@@ -226,7 +226,7 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # as false unless explicitly set otherwise.
       t.boolean  :climate_controlled, default: false
       # Boolean column recording whether the unit is currently available to
-      # rent. `default: true` — units are assumed available unless marked
+      # rent. `default: true`, units are assumed available unless marked
       # otherwise.
       t.boolean  :available,          default: true
       # Boolean column recording whether the unit has drive-up access,
@@ -242,7 +242,7 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # Optional.
       t.string   :booking_url
       # Datetime column recording exactly when this unit's data was
-      # collected/scraped. `null: false` means this is always required —
+      # collected/scraped. `null: false` means this is always required,
       # every unit row must record when its information was gathered.
       t.datetime :collected_at,  null: false
 
@@ -267,7 +267,7 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
     # -------------------------------------------------------------------------
     # CRAWL LOG ENTRIES TABLE
     # -------------------------------------------------------------------------
-    # Starts a new table, "crawl_log_entries" — one row per log message
+    # Starts a new table, "crawl_log_entries", one row per log message
     # produced while a crawl runs, useful for debugging failed crawls.
     create_table :crawl_log_entries do |t|
       # Links each log entry to the crawl run it belongs to, via a
@@ -285,7 +285,7 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # marked otherwise.
       t.string   :level,       default: "info"
       # Longer free-form text column holding the actual log message.
-      # Required — every log entry must have a message.
+      # Required, every log entry must have a message.
       t.text     :message,     null: false
       # Whole-number column counting how many times this action was
       # retried, defaulting to 0.
@@ -306,7 +306,7 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
     # -------------------------------------------------------------------------
     # ALERT RULES TABLE
     # -------------------------------------------------------------------------
-    # Starts a new table, "alert_rules" — one row per user-defined rule for
+    # Starts a new table, "alert_rules", one row per user-defined rule for
     # when to send a notification (e.g. "alert me if a 10x10 unit drops
     # below $80/month").
     create_table :alert_rules do |t|
@@ -316,7 +316,7 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # (e.g. "price_drop", "new_unit"). Required.
       t.string   :trigger_type,        null: false
       # Decimal column (money-safe, see explanation on units table above)
-      # for the price threshold that triggers this rule. Optional — not
+      # for the price threshold that triggers this rule. Optional, not
       # every trigger type needs a price.
       t.decimal  :threshold_price,     precision: 8, scale: 2
       # Text column optionally restricting this rule to a specific unit
@@ -341,23 +341,23 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
       # Text column for the phone number to text. Optional.
       t.string   :sms_phone_number
       # Boolean column: whether this rule is currently active/enabled at
-      # all. Defaults to true — new rules start turned on.
+      # all. Defaults to true, new rules start turned on.
       t.boolean  :active,              default: true
       # Datetime column recording the last time this rule actually fired.
-      # Optional — nil until it triggers for the first time.
+      # Optional, nil until it triggers for the first time.
       t.datetime :last_triggered_at
 
       # Adds the automatic created_at/updated_at timestamp columns.
       t.timestamps
     end
     # Closes the `create_table :alert_rules do |t|` block above. Note there
-    # are no `add_index` calls for this table — no extra lookup indexes
+    # are no `add_index` calls for this table, no extra lookup indexes
     # were considered necessary for alert rules.
 
     # -------------------------------------------------------------------------
     # SETTINGS TABLE
     # -------------------------------------------------------------------------
-    # Starts a new table, "settings" — one row per configurable application
+    # Starts a new table, "settings", one row per configurable application
     # setting shown on the Settings page (see db/seeds.rb, which populates
     # this table with the actual default settings).
     create_table :settings do |t|
@@ -385,15 +385,15 @@ class CreateAllTables < ActiveRecord::Migration[7.1]
     end
     # Closes the `create_table :settings do |t|` block above.
 
-    # Key must be unique — prevents duplicate settings entries
+    # Key must be unique, prevents duplicate settings entries
     # `add_index :settings, :key, unique: true` builds an index on "key",
-    # and `unique: true` makes it a UNIQUE INDEX — the database itself will
+    # and `unique: true` makes it a UNIQUE INDEX, the database itself will
     # reject any attempt to insert a second row with a "key" value that
     # already exists, guaranteeing every setting name appears at most once.
     add_index :settings, :key, unique: true
   end
   # This `end` closes the `def change` method opened near the top of the
-  # file — every table this migration creates has now been fully described.
+  # file, every table this migration creates has now been fully described.
 end
 # This final `end` closes the `class CreateAllTables < ActiveRecord::Migration[7.1]`
 # class definition opened at the top of the file.

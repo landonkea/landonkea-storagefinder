@@ -3,16 +3,16 @@
 # =============================================================================
 # Crawls publicstorage.com to find facilities and unit pricing.
 #
-# Website behavior notes (verified by driving the live site — see recon/ for
+# Website behavior notes (verified by driving the live site, see recon/ for
 # saved HTML/screenshots):
 #   - There is no lat/lng search endpoint. The search page takes a free-text
 #     `location` query param: /self-storage-search?location=<City, State>.
 #     We reverse-geocode the lat/lng we're given into a city/state via the
 #     Geocoder gem (already configured for forward geocoding elsewhere).
 #   - Search results AND facility detail pages both render facility/unit data
-#     server-side under `.store-container` / `.unit-list-item` — no separate
+#     server-side under `.store-container` / `.unit-list-item`, no separate
 #     JSON API call needed.
-#   - "$1 first month" / "Online price" deals are common — captured as
+#   - "$1 first month" / "Online price" deals are common, captured as
 #     web_special_price.
 #
 # If the site layout changes, run the recon tool:
@@ -21,7 +21,7 @@
 
 # NOVICE PRIMER: `class Companies::PublicStorage < Companies::BaseParser`
 # makes this class a SUBCLASS ("child class") of `Companies::BaseParser`
-# (see app/services/companies/base_parser.rb) — it INHERITS every method
+# (see app/services/companies/base_parser.rb), it INHERITS every method
 # BaseParser defines (`run`, `safe_text`, `safe_attr`, `parse_price`,
 # `parse_size`, `log_info`, `log_warning`, `log_error`,
 # `take_error_screenshot`, etc.) and only needs to implement the 4 methods
@@ -29,7 +29,7 @@
 # browser-automation library: a `page` object represents one open, invisible
 # ("headless") browser tab, and CSS-selector strings (like
 # ".store-container") are the same mini-language stylesheets use to target
-# HTML elements — see base_parser.rb's opening comment for a fuller
+# HTML elements, see base_parser.rb's opening comment for a fuller
 # explanation of selectors and Ruby's `protected`/`private` keywords, both
 # used here too.
 class Companies::PublicStorage < Companies::BaseParser
@@ -37,28 +37,28 @@ class Companies::PublicStorage < Companies::BaseParser
   # reused below when building absolute URLs from relative "/foo" links.
   BASE_URL = "https://www.publicstorage.com"
 
-  # Overrides BaseParser's abstract `company_name` — required display name
+  # Overrides BaseParser's abstract `company_name`, required display name
   # shown in the UI/exports for this company.
   def company_name
     "Public Storage"
   end
   # `end` closes `def company_name`.
 
-  # Overrides BaseParser's abstract `company_slug` — short id used in log
+  # Overrides BaseParser's abstract `company_slug`, short id used in log
   # lines and screenshot filenames.
   def company_slug
     "public_storage"
   end
   # `end` closes `def company_slug`.
 
-  # Overrides BaseParser's abstract `search_url` — builds the URL for
+  # Overrides BaseParser's abstract `search_url`, builds the URL for
   # Public Storage's search-results page given GPS coordinates (radius_miles
   # is accepted for interface compatibility with BaseParser#run, but this
   # site has no radius parameter to pass it through to).
   def search_url(lat, lng, radius_miles)
     location_query = reverse_geocode_city_state(lat, lng)
     # Calls the private helper (near the bottom of this file) that turns raw
-    # GPS coordinates into a "City, State" string — this site's search box
+    # GPS coordinates into a "City, State" string, this site's search box
     # takes free text, not coordinates.
     "#{BASE_URL}/self-storage-search?location=#{ERB::Util.url_encode(location_query)}"
     # String interpolation builds the URL. `ERB::Util.url_encode`
@@ -68,31 +68,31 @@ class Companies::PublicStorage < Companies::BaseParser
   end
   # `end` closes `def search_url`.
 
-  # Overrides BaseParser's abstract `parse_locations` — reads the list of
+  # Overrides BaseParser's abstract `parse_locations`, reads the list of
   # nearby Public Storage facilities off the search-results page.
   def parse_locations(page)
     locations = []
     # An empty Array that will collect one Hash per facility found.
 
     begin
-      # `begin ... rescue ... end` is Ruby's exception-handling block — code
+      # `begin ... rescue ... end` is Ruby's exception-handling block, code
       # inside `begin` runs normally; an error jumps to the matching
       # `rescue` clause instead of crashing this method.
       # NOTE: .no-stores-results-content is present in the DOM on every page
       # load (just hidden via CSS when there are results), so it can't be
-      # used as a presence check — .store-container count is the real
+      # used as a presence check, .store-container count is the real
       # signal.
       page.wait_for_selector(".store-container", timeout: 15_000) rescue nil
       # Waits up to 15 seconds (15,000ms) for at least one facility card to
       # appear. The trailing `rescue nil` is Ruby's one-line rescue
       # modifier: any error here (most likely a timeout, if this search area
       # has zero results) is swallowed and the whole expression becomes
-      # `nil` — execution simply continues to the next line, where
+      # `nil`, execution simply continues to the next line, where
       # `query_selector_all` will find zero cards and the "empty" branch
       # below handles that cleanly.
 
       cards = page.query_selector_all(".store-container")
-      # Finds every facility-card element on the page — returns an empty
+      # Finds every facility-card element on the page, returns an empty
       # Array, never nil, if none match.
 
       if cards.empty?
@@ -102,14 +102,14 @@ class Companies::PublicStorage < Companies::BaseParser
           "Run ReconService to check current page structure."
         )
         # The trailing `\` continues the string literal onto the next
-        # source line without a real newline — purely for keeping source
+        # source line without a real newline, purely for keeping source
         # lines from getting too long; the pieces concatenate into one
         # message.
         take_error_screenshot(page, "no_cards")
         # Inherited helper: saves a screenshot of the current page to logs/,
         # tagged with this label, for later debugging.
         return []
-        # Exits `parse_locations` immediately — nothing left to parse.
+        # Exits `parse_locations` immediately, nothing left to parse.
       end
       # `end` closes the `if cards.empty?` block.
 
@@ -136,7 +136,7 @@ class Companies::PublicStorage < Companies::BaseParser
           address_lines = safe_text(card, ".store-address")&.split(",")&.map(&:strip)&.reject(&:blank?) || []
           # A chain of `&.` (safe navigation) calls: `safe_text(...)` may
           # return `nil` if no address element was found, so every step
-          # after it uses `&.` to avoid crashing on `nil` — `.split(",")`
+          # after it uses `&.` to avoid crashing on `nil`, `.split(",")`
           # breaks the address text on commas, `.map(&:strip)` trims
           # whitespace off each piece (`&:strip` is shorthand for
           # `{ |s| s.strip }`), `.reject(&:blank?)` drops any resulting
@@ -157,13 +157,13 @@ class Companies::PublicStorage < Companies::BaseParser
 
           external_id = card.get_attribute("data-storeid")
           # Reads Public Storage's own internal store ID off a custom
-          # `data-storeid` HTML attribute — the most reliable way to
+          # `data-storeid` HTML attribute, the most reliable way to
           # recognize "this is the same facility we saw before."
 
           next if street.blank?
           # `.blank?` (Rails helper) is true for `nil`/empty/whitespace-only.
           # `next` skips the rest of THIS block iteration (this one card)
-          # and moves to the next card — reached when we couldn't even get a
+          # and moves to the next card, reached when we couldn't even get a
           # usable street address.
 
           locations << {
@@ -178,17 +178,17 @@ class Companies::PublicStorage < Companies::BaseParser
             # `||` falls back to an empty string if `city` came back `nil`.
             state:       state || "AZ",
             # Falls back to the literal string "AZ" if no state was
-            # scraped — see the "flag but don't fix" notes at the end of
+            # scraped, see the "flag but don't fix" notes at the end of
             # this review regarding this hardcoded regional default.
             zip:         zip || "",
             phone:       nil,
             # No phone number is exposed on Public Storage's search-results
-            # cards in what we scrape — left `nil`.
+            # cards in what we scrape, left `nil`.
             url:         url,
             external_id: external_id
           }
 
-          log_info("  ✓ #{street} — #{city}, #{state}")
+          log_info("  ✓ #{street}, #{city}, #{state}")
           # A checkmark-prefixed info log line for each successfully parsed
           # location, useful for eyeballing crawl progress in the logs.
 
@@ -209,8 +209,8 @@ class Companies::PublicStorage < Companies::BaseParser
       log_error("Timeout waiting for Public Storage search results. Error: #{e.message}")
       take_error_screenshot(page, "search_timeout")
     rescue => e
-      # This bare rescue must come AFTER the more specific one — Ruby checks
-      # `rescue` clauses top-to-bottom and uses the first one that matches —
+      # This bare rescue must come AFTER the more specific one, Ruby checks
+      # `rescue` clauses top-to-bottom and uses the first one that matches,
       # so this is the catch-all for anything else unexpected.
       log_error("Unexpected error parsing Public Storage locations: #{e.class}: #{e.message}")
       take_error_screenshot(page, "parse_locations_error")
@@ -218,12 +218,12 @@ class Companies::PublicStorage < Companies::BaseParser
     # `end` closes the outer `begin ... rescue ... rescue ... end` block.
 
     locations
-    # The last expression evaluated — the `locations` Array built above —
+    # The last expression evaluated, the `locations` Array built above,
     # becomes `parse_locations`'s return value.
   end
   # `end` closes `def parse_locations`.
 
-  # Overrides BaseParser's abstract `parse_units` — reads unit sizes/prices
+  # Overrides BaseParser's abstract `parse_units`, reads unit sizes/prices
   # off one facility's own detail page.
   def parse_units(page, facility)
     units = []
@@ -232,7 +232,7 @@ class Companies::PublicStorage < Companies::BaseParser
     begin
       page.wait_for_selector(".unit-list-item", timeout: 15_000)
       # Waits up to 15 seconds for at least one unit row to render. No
-      # trailing `rescue nil` here — a timeout on a facility's own detail
+      # trailing `rescue nil` here, a timeout on a facility's own detail
       # page (which we already know exists) is treated as a real error,
       # handled by the `rescue Playwright::TimeoutError` clause further
       # down.
@@ -247,7 +247,7 @@ class Companies::PublicStorage < Companies::BaseParser
         )
         take_error_screenshot(page, "no_units_#{facility.id}")
         return []
-        # Exits early with an empty array — nothing more to parse.
+        # Exits early with an empty array, nothing more to parse.
       end
       # `end` closes the `if unit_els.empty?` block.
 
@@ -263,20 +263,20 @@ class Companies::PublicStorage < Companies::BaseParser
           next if size.blank?
           # Skip this unit if we couldn't determine a usable size.
 
-          # The real numeric price lives in a data attribute — more
+          # The real numeric price lives in a data attribute, more
           # reliable than parsing the "$26" text nodes.
           price_el      = el.query_selector(".unit-price[data-pricebook-price]")
           # `[data-pricebook-price]` (with no `=value`) is an attribute
           # selector meaning "has this attribute at all, regardless of its
-          # value" — matches a ".unit-price" element that carries a
+          # value", matches a ".unit-price" element that carries a
           # "data-pricebook-price" attribute.
           monthly_price = price_el&.get_attribute("data-pricebook-price")&.to_f
           # `&.` chains safely handle `price_el` being `nil` (no such
-          # element found) — if it exists, reads the attribute's raw string
+          # element found), if it exists, reads the attribute's raw string
           # value and converts it to a Float with `.to_f`.
           monthly_price = nil if monthly_price.blank? || monthly_price <= 0
           # Treats a missing, blank, zero, or negative price as "no real
-          # price" by resetting it to `nil` — a price that low doesn't make
+          # price" by resetting it to `nil`, a price that low doesn't make
           # sense for a storage unit.
 
           list_price = price_el&.get_attribute("data-list-price")&.to_f
@@ -298,7 +298,7 @@ class Companies::PublicStorage < Companies::BaseParser
             monthly_price     = list_price
             # Re-assign `monthly_price` to the higher list price, so it
             # represents the "regular" price and `web_special_price` holds
-            # the discount — matching the convention used by sibling
+            # the discount, matching the convention used by sibling
             # parsers in this folder.
           end
           # `end` closes the `if list_price.present? && ...` block.
@@ -339,7 +339,7 @@ class Companies::PublicStorage < Companies::BaseParser
             unit_type:          unit_type,
             booking_url:        facility.facility_url
             # Public Storage's unit markup doesn't carry a per-unit
-            # reservation link — every unit just points back at the general
+            # reservation link, every unit just points back at the general
             # facility detail page.
           }
 
@@ -368,21 +368,21 @@ class Companies::PublicStorage < Companies::BaseParser
   private
   # Ruby's `private` keyword: everything below this line can only be called
   # from inside this class's own methods (implicit receiver only), never
-  # from outside code — these are internal implementation details.
+  # from outside code, these are internal implementation details.
 
   # Public Storage's search box takes a free-text "City, State" query, not
-  # coordinates — reverse-geocode what we were given back into that form.
+  # coordinates, reverse-geocode what we were given back into that form.
   def reverse_geocode_city_state(lat, lng)
     result = Geocoder.search([ lat, lng ]).first
     # `Geocoder` is a third-party Ruby gem providing geocoding (address <->
     # coordinates lookups). `.search([lat, lng])` performs a "reverse
-    # geocode" — coordinates in, real-world address out — returning an
+    # geocode", coordinates in, real-world address out, returning an
     # Array of matches; `.first` takes the best one, which may be `nil`.
     if result&.city.present?
       # `&.` safely reads `.city` only if `result` isn't `nil`; `.present?`
       # is then true if that city string is real/non-blank.
       "#{result.city}, #{result.state}"
-      # Builds a "City, State" string, e.g. "Gilbert, Arizona" — this is the
+      # Builds a "City, State" string, e.g. "Gilbert, Arizona", this is the
       # last expression of this branch, and (since the whole if/else is the
       # method's last expression) the method's return value on success.
     else
@@ -394,7 +394,7 @@ class Companies::PublicStorage < Companies::BaseParser
     # `end` closes the `if result&.city.present? ... else ... end` branch.
   rescue => e
     # A method-level rescue (attached directly to `def`, no separate
-    # `begin` needed) — catches any error from the geocoding call (e.g. a
+    # `begin` needed), catches any error from the geocoding call (e.g. a
     # network failure).
     log_warning("Reverse geocoding failed for #{lat},#{lng}: #{e.message}")
     "#{lat},#{lng}"

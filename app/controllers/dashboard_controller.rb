@@ -8,17 +8,17 @@
 #   - View price history graphs
 # =============================================================================
 
-# `class DashboardController < ApplicationController` — see
+# `class DashboardController < ApplicationController`, see
 # app/controllers/application_controller.rb for what "controller" and
 # "inherits from" mean.
 class DashboardController < ApplicationController
   # ---------------------------------------------------------------------------
-  # INDEX — the main dashboard page
+  # INDEX, the main dashboard page
   # ---------------------------------------------------------------------------
   # `index` is the conventional action name for a resource's main/landing
-  # page — here, the whole app's home page (GET /).
+  # page, here, the whole app's home page (GET /).
   def index
-    @page_title = "Dashboard — StorageFinder"
+    @page_title = "Dashboard, StorageFinder"
 
     # -------------------------------------------------------------------------
     # Load the most recent crawl run (if any)
@@ -42,7 +42,7 @@ class DashboardController < ApplicationController
     # Build the results query from the latest crawl
     # -------------------------------------------------------------------------
     # Only attempt to build a results query if a crawl has actually
-    # completed at least once — otherwise there's nothing to query.
+    # completed at least once, otherwise there's nothing to query.
     if @latest_crawl
       # Delegates to the private `build_results_query` method below, which
       # applies all the filter/sort params to construct the query.
@@ -50,9 +50,9 @@ class DashboardController < ApplicationController
     else
       # `Unit.none` is ActiveRecord's way of representing "an empty result
       # set that behaves like a real query" (as opposed to just `nil` or
-      # `[]`) — so views can still safely call query methods like `.each`
+      # `[]`), so views can still safely call query methods like `.each`
       # or `.count` on it without special-casing "no crawl yet."
-      @units = Unit.none  # Empty — no crawl has been run yet
+      @units = Unit.none  # Empty, no crawl has been run yet
     end
     # `end` closes the `if @latest_crawl ... else ... end` block above.
 
@@ -67,7 +67,7 @@ class DashboardController < ApplicationController
     @available_sizes     = Unit::DEFAULT_SIZES
     # `Unit.all_sizes` is a custom model method returning every DISTINCT
     # size value actually present in the units table (as opposed to
-    # DEFAULT_SIZES, which is a fixed, hardcoded list) — used so the UI can
+    # DEFAULT_SIZES, which is a fixed, hardcoded list), used so the UI can
     # offer filters for sizes that genuinely exist in the data.
     @all_sizes_in_db     = Unit.all_sizes  # Sizes actually found in the database
 
@@ -75,7 +75,7 @@ class DashboardController < ApplicationController
     # `params[:sizes]` would arrive here as a comma-separated string (e.g.
     # "5x5,10x10") when navigating via a URL query string (contrast with
     # CrawlsController#create, where sizes[] arrives as a real array from
-    # checkboxes in a form POST — these are two different code paths).
+    # checkboxes in a form POST, these are two different code paths).
     # `&.split(",")` (safe navigation, see CrawlsController for what `&.`
     # does) splits that string into an array, or evaluates to nil if
     # params[:sizes] itself is nil; `||` then falls back to the default
@@ -86,29 +86,29 @@ class DashboardController < ApplicationController
     @climate_only        = params[:climate_only] != "false"   # Default: true
     @selected_companies  = params[:companies]&.split(",") || @available_companies
     # `||` provides fallback default values when no sort params were given
-    # in the URL — defaulting to sorting by price, ascending (cheapest
+    # in the URL, defaulting to sorting by price, ascending (cheapest
     # first).
     @sort_by             = params[:sort] || "monthly_price"
     @sort_dir             = params[:dir] || "asc"
 
     # -------------------------------------------------------------------------
-    # Nearest facilities — a compact "quick view" list, independent of the
+    # Nearest facilities, a compact "quick view" list, independent of the
     # filtered/sorted main results table above.
     # -------------------------------------------------------------------------
-    # Wires up `Facility.nearest_to` (see app/models/facility.rb) — a
+    # Wires up `Facility.nearest_to` (see app/models/facility.rb), a
     # Haversine-distance SQL scope that, before this feature, was fully
     # written but never actually called anywhere in the app. Unlike the
     # "Nearest first" option in the sort dropdown (which orders by the
     # `facilities.distance_miles` column, a value only populated AFTER a
     # successful `Facility.calculate_distances_from` run at the end of a
-    # crawl — see app/jobs/crawl_job.rb), this panel computes distance FRESH
+    # crawl, see app/jobs/crawl_job.rb), this panel computes distance FRESH
     # at query time directly from the crawl's own search origin, so it stays
     # correct even for a facility whose distance_miles happens to be
     # missing/stale for any reason.
     @nearest_facilities = build_nearest_facilities
 
     # -------------------------------------------------------------------------
-    # Map pin data for the Leaflet map — one entry per facility with
+    # Map pin data for the Leaflet map, one entry per facility with
     # coordinates, built from the same filtered/sorted @units used by the
     # results table above (so the map always matches what's in the table).
     # -------------------------------------------------------------------------
@@ -121,7 +121,7 @@ class DashboardController < ApplicationController
 
     # -------------------------------------------------------------------------
     # Average price by company, unit availability by size, and crawl
-    # success/failure rate — data for the extra dashboard charts.
+    # success/failure rate, data for the extra dashboard charts.
     # -------------------------------------------------------------------------
     @avg_price_by_company    = build_avg_price_by_company
     @unit_availability_by_size = build_unit_availability_by_size
@@ -145,11 +145,11 @@ class DashboardController < ApplicationController
     # row in the history table (see app/views/dashboard/_crawl_history.html.erb).
     # Built as ONE grouped COUNT query across every row in @crawl_history,
     # rather than looping and calling `crawl.crawl_log_entries.warnings.count`
-    # once per row in the view — that per-row approach would fire a separate
+    # once per row in the view, that per-row approach would fire a separate
     # SQL query for every visible crawl (an "N+1 query" problem), where this
     # single query returns every count needed up front. `.group(:crawl_run_id,
     # :level).count` produces a Hash keyed by `[crawl_run_id, level]` pairs,
-    # e.g. `{ [5, "warning"] => 3, [5, "error"] => 1 }` — see
+    # e.g. `{ [5, "warning"] => 3, [5, "error"] => 1 }`, see
     # ApplicationHelper#crawl_log_issue_count for how each row's cell reads
     # out of it.
     @crawl_log_counts = CrawlLogEntry
@@ -160,7 +160,7 @@ class DashboardController < ApplicationController
   # `end` closes the `def index` action definition opened above.
 
   # ---------------------------------------------------------------------------
-  # STATUS — JSON endpoint for live crawl status polling
+  # STATUS, JSON endpoint for live crawl status polling
   # The JavaScript on the dashboard calls this to check if a crawl is still running
   # ---------------------------------------------------------------------------
   # `status` is a custom action (needs an explicit route) returning a small
@@ -171,13 +171,13 @@ class DashboardController < ApplicationController
 
     render json: {
       crawl_running:    running,
-      # `&.id` — safe navigation again: if no crawl is running,
+      # `&.id`, safe navigation again: if no crawl is running,
       # `CrawlRun.running.first` is nil, and `nil&.id` evaluates to nil
       # rather than raising an error, so this key becomes JSON `null`.
       running_crawl_id: CrawlRun.running.first&.id,
       latest_crawl: {
         # Every field below uses `&.` because `latest` itself may be nil
-        # (no crawl has ever completed) — each lookup safely becomes nil/
+        # (no crawl has ever completed), each lookup safely becomes nil/
         # JSON `null` in that case instead of crashing the whole response.
         id:               latest&.id,
         status:           latest&.status,
@@ -186,7 +186,7 @@ class DashboardController < ApplicationController
         # `&.completed_at&.iso8601` chains TWO safe-navigation calls: first
         # in case `latest` is nil, second in case `completed_at` itself is
         # nil (e.g. a crawl that's marked latest but hasn't technically
-        # finished) — `.iso8601` formats a Ruby Time as a standard
+        # finished), `.iso8601` formats a Ruby Time as a standard
         # ISO 8601 string (e.g. "2026-07-18T10:30:00-05:00") for JSON/
         # JavaScript to parse easily.
         completed_at:     latest&.completed_at&.iso8601
@@ -198,7 +198,7 @@ class DashboardController < ApplicationController
   # `end` closes the `def status` action definition opened above.
 
   # ---------------------------------------------------------------------------
-  # RESULTS — JSON endpoint that returns the filtered unit results table
+  # RESULTS, JSON endpoint that returns the filtered unit results table
   # Called via AJAX when filters change or a crawl finishes
   # ---------------------------------------------------------------------------
   # `results` is another custom JSON-only action, returning the actual unit
@@ -207,7 +207,7 @@ class DashboardController < ApplicationController
     latest_crawl = CrawlRun.latest_completed
 
     # `unless latest_crawl` runs its block only when `latest_crawl` is nil/
-    # false — i.e. no crawl has ever completed.
+    # false, i.e. no crawl has ever completed.
     unless latest_crawl
       render json: { units: [], message: "No crawl data yet. Run a crawl to see results." }
       return
@@ -217,11 +217,11 @@ class DashboardController < ApplicationController
     units = build_results_query(latest_crawl)
 
     # Build a simple array of unit data for the JSON response
-    # `.includes(:facility)` is ActiveRecord "eager loading" — it fetches
+    # `.includes(:facility)` is ActiveRecord "eager loading", it fetches
     # every unit's associated Facility record in one extra batch query up
     # front, instead of running a separate database query for
     # `unit.facility` inside the `.map` block below for EVERY unit (which
-    # would otherwise cause a slow "N+1 query" problem — one query per
+    # would otherwise cause a slow "N+1 query" problem, one query per
     # unit, on top of the one query for the units themselves).
     unit_data = units.includes(:facility).map do |unit|
       {
@@ -252,14 +252,14 @@ class DashboardController < ApplicationController
         available:          unit.available?,
         booking_url:        unit.booking_url,
         maps_url:           unit.facility.maps_url,
-        # `&.strftime(...)` — safe navigation again, since `collected_at`
+        # `&.strftime(...)`, safe navigation again, since `collected_at`
         # could be nil if this unit's price was never actually scraped
         # successfully; formats as e.g. "Jul 18 at 03:45 PM" for display.
         collected_at:       unit.collected_at&.strftime("%b %d at %I:%M %p")
       }
     end
     # `end` closes the `units.includes(:facility).map do |unit| ... end`
-    # block above — its return value (the array of hashes built by each
+    # block above, its return value (the array of hashes built by each
     # iteration) is stored in `unit_data`.
 
     render json: { units: unit_data, total: unit_data.length }
@@ -269,7 +269,7 @@ class DashboardController < ApplicationController
   # ---------------------------------------------------------------------------
   # PRIVATE HELPERS
   # ---------------------------------------------------------------------------
-  # `private` marks every method below as internal-only — not reachable as
+  # `private` marks every method below as internal-only, not reachable as
   # a URL/action, just implementation details supporting the public actions
   # above.
   private
@@ -282,9 +282,9 @@ class DashboardController < ApplicationController
     # `crawl_run.units` is the association of Unit records belonging to
     # this crawl; `.includes(:facility)` eager-loads each unit's Facility
     # (see the `results` action above for why that matters). Note:
-    # ActiveRecord queries are "lazy" — none of this actually hits the
+    # ActiveRecord queries are "lazy", none of this actually hits the
     # database until the query is used (e.g. iterated, counted, or
-    # rendered) — each `.where(...)` below just adds another condition to
+    # rendered), each `.where(...)` below just adds another condition to
     # the query being built up, without running it yet.
     query = crawl_run.units.includes(:facility)
 
@@ -304,7 +304,7 @@ class DashboardController < ApplicationController
     if params[:sizes].present?
       selected_sizes = params[:sizes].split(",")
       # `.where(size: selected_sizes)` with an ARRAY value generates a SQL
-      # "IN" condition — matching any unit whose size is one of the listed
+      # "IN" condition, matching any unit whose size is one of the listed
       # values.
       query = query.where(size: selected_sizes)
     else
@@ -318,24 +318,24 @@ class DashboardController < ApplicationController
       # `.joins(:facility)` adds a SQL JOIN to the facilities table (needed
       # because "company" is a column on Facility, not on Unit itself), so
       # the following `.where(facilities: { company: ... })` can filter by
-      # it — the hash-of-a-hash syntax `facilities: { company: ... }` tells
+      # it, the hash-of-a-hash syntax `facilities: { company: ... }` tells
       # ActiveRecord to scope the `company` condition to the joined
       # `facilities` table specifically, avoiding ambiguity if `units` had
       # its own `company` column too.
       query = query.joins(:facility).where(facilities: { company: selected_companies })
     end
     # `end` closes the `if params[:companies].present?` block above (there's
-    # no `else` — if no companies were specified, the query is left
+    # no `else`, if no companies were specified, the query is left
     # unfiltered by company, matching every company).
 
     # Exclude non-standard unit types
-    # `.where.not(...)` is ActiveRecord's negated WHERE — generates a SQL
+    # `.where.not(...)` is ActiveRecord's negated WHERE, generates a SQL
     # "NOT IN" condition here, excluding any unit whose type is in the
     # EXCLUDED_TYPES list (e.g. parking spaces, vehicle storage).
     query = query.where.not(unit_type: Unit::EXCLUDED_TYPES)
 
     # Only indoor, non-drive-up units
-    # Hardcoded, non-optional filter — always restricts results to
+    # Hardcoded, non-optional filter, always restricts results to
     # indoor, non-drive-up units regardless of what the user selected.
     query = query.where(drive_up: false, indoor: true)
 
@@ -348,7 +348,7 @@ class DashboardController < ApplicationController
     # Apply sorting
     # `sanitize_sort_column` (defined below) validates the requested sort
     # column against an allowlist before it's used to build a raw SQL
-    # string — this matters because directly interpolating user input into
+    # string, this matters because directly interpolating user input into
     # SQL (as the `.order(...)` call below does) would otherwise be a SQL-
     # injection risk.
     sort_column = sanitize_sort_column(params[:sort] || "monthly_price")
@@ -358,12 +358,12 @@ class DashboardController < ApplicationController
     sort_dir    = params[:dir] == "desc" ? "desc" : "asc"
 
     # Applies the final sort. `"#{sort_column} #{sort_dir}"` builds a raw
-    # SQL ORDER BY fragment like "monthly_price asc" — safe here ONLY
+    # SQL ORDER BY fragment like "monthly_price asc", safe here ONLY
     # because sort_column was validated against a fixed allowlist above
     # (sort_dir is separately constrained to exactly "asc" or "desc" by the
     # ternary above), so no untrusted text reaches the SQL string.
     query.order("#{sort_column} #{sort_dir}")
-    # No explicit `return` — this is the method's last expression, so its
+    # No explicit `return`, this is the method's last expression, so its
     # value (the final, fully-filtered-and-sorted query) is what
     # `build_results_query` returns to its caller.
   end
@@ -371,7 +371,7 @@ class DashboardController < ApplicationController
 
   # Prevent SQL injection in sort column by whitelisting allowed columns
   def sanitize_sort_column(column)
-    # `%w[...]` is Ruby's "word array" literal shorthand — equivalent to
+    # `%w[...]` is Ruby's "word array" literal shorthand, equivalent to
     # writing `["monthly_price", "sqft", "facilities.distance_miles",
     # "facilities.company", "size"]`, but without needing quotes/commas
     # around each word.
@@ -379,7 +379,7 @@ class DashboardController < ApplicationController
     # `.include?(column)` checks whether `column` (the untrusted, user-
     # supplied value) exactly matches one of the allowed strings. The
     # ternary returns `column` itself if it's allowed, or the safe default
-    # "monthly_price" otherwise — this is what makes it safe to later
+    # "monthly_price" otherwise, this is what makes it safe to later
     # interpolate `sort_column` directly into a raw SQL string in
     # `build_results_query` above.
     allowed.include?(column) ? column : "monthly_price"
@@ -391,7 +391,7 @@ class DashboardController < ApplicationController
   # empty array whenever there's no crawl to anchor the search to, or that
   # crawl's search origin was never successfully geocoded.
   def build_nearest_facilities
-    # `@latest_crawl&.search_lat` — safe navigation, since @latest_crawl can
+    # `@latest_crawl&.search_lat`, safe navigation, since @latest_crawl can
     # be nil (no crawl has ever completed). Both search_lat AND search_lng
     # must be present to compute any distance at all.
     return [] unless @latest_crawl&.search_lat && @latest_crawl&.search_lng
@@ -399,7 +399,7 @@ class DashboardController < ApplicationController
     # `Facility.nearest_to(lat, lng)` orders every facility by great-circle
     # distance from the given point (nearest first); `.geocoded` (also
     # defined on Facility) additionally excludes any facility missing
-    # lat/lng entirely — belt-and-suspenders alongside nearest_to's own
+    # lat/lng entirely, belt-and-suspenders alongside nearest_to's own
     # `where.not(latitude: nil, longitude: nil)`. `.limit(8)` keeps this a
     # compact "quick view," not a second full results table.
     nearest = Facility.nearest_to(@latest_crawl.search_lat, @latest_crawl.search_lng)
@@ -407,7 +407,7 @@ class DashboardController < ApplicationController
                        .limit(8)
 
     # Pairs each facility with a freshly computed distance (via the
-    # geocoder gem's own distance helper — the same one
+    # geocoder gem's own distance helper, the same one
     # Facility.calculate_distances_from uses) and its cheapest available
     # unit, so the view can show "$89/mo, 2.1 miles" without any further
     # per-row database lookups.
@@ -420,7 +420,7 @@ class DashboardController < ApplicationController
       { facility: facility, distance_miles: distance.round(1), cheapest_unit: facility.cheapest_available_unit }
     end
   # A malformed/missing origin (e.g. a very old crawl record) shouldn't
-  # crash the whole dashboard — same defensive pattern as
+  # crash the whole dashboard, same defensive pattern as
   # build_price_history below.
   rescue => e
     Rails.logger.warn("[DashboardController] Could not build nearest facilities: #{e.message}")
@@ -435,7 +435,7 @@ class DashboardController < ApplicationController
     return [] unless @latest_crawl
 
     # Collapse the current unit list down to one entry per facility,
-    # keeping whichever unit is cheapest at that facility — a facility with
+    # keeping whichever unit is cheapest at that facility, a facility with
     # five matching unit sizes should get exactly one map pin, not five
     # overlapping ones.
     cheapest_by_facility = {}
@@ -445,7 +445,7 @@ class DashboardController < ApplicationController
 
       existing = cheapest_by_facility[facility.id]
       # Keep this unit if there's no entry yet, or this unit's price beats
-      # the one already stored — `unit.best_price` may itself be nil (no
+      # the one already stored, `unit.best_price` may itself be nil (no
       # price scraped), in which case it never replaces a priced entry.
       if existing.nil? || (unit.best_price && (existing[:unit].best_price.nil? || unit.best_price < existing[:unit].best_price))
         cheapest_by_facility[facility.id] = { facility: facility, unit: unit }
@@ -455,7 +455,7 @@ class DashboardController < ApplicationController
     # `.values` discards the facility-id keys (only needed above to dedupe),
     # leaving a plain array of { facility:, unit: } pairs. `.map` then turns
     # each pair into the plain Hash of primitive values the map's
-    # JavaScript needs (see app/javascript/controllers/facility_map_controller.js) —
+    # JavaScript needs (see app/javascript/controllers/facility_map_controller.js),
     # deliberately NOT passing whole ActiveRecord objects, since those get
     # serialized to JSON in the view via `.to_json` and only plain
     # attributes make sense on the other side of that boundary.
@@ -491,7 +491,7 @@ class DashboardController < ApplicationController
     # each line ends with a method-call dot, signaling "more to come" on
     # the next line).
     Unit.where("collected_at >= ?", months_back.months.ago)
-        # `months_back.months.ago` — `.months` is a Rails-added method on
+        # `months_back.months.ago`, `.months` is a Rails-added method on
         # Integer that turns a plain number into a duration (e.g. `6.months`
         # is "a span of 6 months"); `.ago` then converts that duration into
         # an actual Time value that far in the past from right now. Used
@@ -509,18 +509,18 @@ class DashboardController < ApplicationController
         .group_by_week(:collected_at)
         # `.average(:monthly_price)` computes the average monthly_price
         # WITHIN each weekly group (rather than one single average across
-        # everything), producing a hash of { week => average_price } —
+        # everything), producing a hash of { week => average_price },
         # this is the method's return value, since it's the last expression
         # (the whole chained query is one big expression whose result is
         # implicitly returned).
         .average(:monthly_price)
   # `rescue => e` catches ANY StandardError (the bare `rescue` with no
   # specific error class defaults to catching StandardError and its
-  # subclasses) raised anywhere in this method body — used broadly here
+  # subclasses) raised anywhere in this method body, used broadly here
   # since a chart-building failure shouldn't crash the whole dashboard page.
   rescue => e
     Rails.logger.warn("[DashboardController] Could not build price history: #{e.message}")
-    # On failure, return an empty hash instead of crashing — the trend
+    # On failure, return an empty hash instead of crashing, the trend
     # chart view can presumably handle "no data" gracefully. This is the
     # rescue block's last expression, so it becomes this method's return
     # value when the rescue path is taken.
@@ -568,7 +568,7 @@ class DashboardController < ApplicationController
 
   # Build crawl success/failure counts per day for the last 30 days.
   # CrawlRun doesn't track a per-company companies_crawled/companies_failed
-  # split by day — those two columns are just running counters on ONE crawl
+  # split by day, those two columns are just running counters on ONE crawl
   # row (see CrawlRun#increment_companies_crawled!/#increment_companies_failed!).
   # The closest "success/failure rate over time" signal at the CrawlRun
   # level is each run's own terminal `status` ("completed" vs "failed"), so

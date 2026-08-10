@@ -1,14 +1,14 @@
-# This file defines what "Continuous Integration" (CI) means for this app —
+# This file defines what "Continuous Integration" (CI) means for this app,
 # the automated checklist that should run (locally or on a server) before
 # code is trusted to merge/deploy. It's NOT loaded automatically when Rails
-# boots — it's only read when you deliberately run `bin/ci` (see comment
+# boots, it's only read when you deliberately run `bin/ci` (see comment
 # below), which is a small executable script (not shown here) that requires
 # this file and lets it drive the checks.
 # Run using bin/ci
 
 # `CI` here is a class/module provided by Rails' own "CI helper" tooling
 # (added by default to new Rails 8 apps). `.run` is a method on it that
-# takes a Ruby "block" — the `do ... end` — and runs it, giving you a small
+# takes a Ruby "block", the `do ... end`, and runs it, giving you a small
 # DSL (Domain Specific Language: custom method calls that read like plain
 # instructions, e.g. `step` and `failure` below) for declaring CI steps in
 # order. If any step fails, `CI.run` is responsible for stopping/reporting.
@@ -21,7 +21,7 @@ CI.run do
   step "Setup", "bin/setup --skip-server"
 
   # Blank line: purely visual separation between setup and the style-check
-  # step below — has no effect on behavior.
+  # step below, has no effect on behavior.
 
   # Runs RuboCop (a Ruby static-analysis/style linter) to check that all
   # Ruby code in the app follows the project's configured style rules.
@@ -51,13 +51,13 @@ CI.run do
   step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
 
   # Two blank lines here: visual separation before the optional/commented-out
-  # section below. Has no effect on behavior — just spacing in the source.
+  # section below. Has no effect on behavior, just spacing in the source.
 
 
   # Optional: set a green GitHub commit status to unblock PR merge.
   # Requires the `gh` CLI and `gh extension install basecamp/gh-signoff`.
   # (The comments above and the code below are commented OUT with `#`,
-  # meaning none of it currently runs — it's left here as an example/
+  # meaning none of it currently runs, it's left here as an example/
   # template for a team that wants to wire this up. Every line below is a
   # Ruby comment, not executable code, until someone removes the `#`.)
   # if success?
@@ -73,5 +73,5 @@ CI.run do
   # named failure message instead of running a command.
 end
 # `end` closes the `CI.run do ... end` block that started at the top of the
-# file — everything above between `do` and this `end` is the block passed
+# file, everything above between `do` and this `end` is the block passed
 # to `CI.run`.

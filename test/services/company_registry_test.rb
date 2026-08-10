@@ -2,7 +2,7 @@
 # test mode and loads the fixture data (crawl_runs) used below.
 require "test_helper"
 
-# This file tests CompanyRegistry (app/services/company_registry.rb) — the
+# This file tests CompanyRegistry (app/services/company_registry.rb), the
 # module holding the mapping of company display names (like "Public
 # Storage") to the parser CLASS (like Companies::PublicStorage) responsible
 # for crawling that company's website.
@@ -13,7 +13,7 @@ class CompanyRegistryTest < ActiveSupport::TestCase
     # name as a sorted Array of Strings.
     names = CompanyRegistry.all_company_names
     # `assert_equal names.sort, names` confirms the Array returned is
-    # ALREADY in sorted order — `names.sort` builds a freshly re-sorted
+    # ALREADY in sorted order, `names.sort` builds a freshly re-sorted
     # copy (Ruby's default String sort is alphabetical), and comparing it
     # to the original `names` only passes if they're identical, i.e.
     # `all_company_names` didn't need any re-sorting itself.
@@ -23,8 +23,8 @@ class CompanyRegistryTest < ActiveSupport::TestCase
     # (Minitest's assert_includes checks Array/Enumerable membership).
     assert_includes names, "Public Storage"
     # Confirms the "StorAmerica" stub entry (registered but its parser
-    # logic is incomplete — see the COMPANIES hash in company_registry.rb)
-    # is ALSO listed here — all_company_names doesn't distinguish complete
+    # logic is incomplete, see the COMPANIES hash in company_registry.rb)
+    # is ALSO listed here, all_company_names doesn't distinguish complete
     # parsers from stubs, it just lists every registered key.
     assert_includes names, "StorAmerica"
   end
@@ -32,12 +32,12 @@ class CompanyRegistryTest < ActiveSupport::TestCase
   # sorted" test block above.
 
   test "registered? is true for known companies and false for unknown ones" do
-    # `assert CompanyRegistry.registered?("Public Storage")` — `assert`
+    # `assert CompanyRegistry.registered?("Public Storage")`, `assert`
     # alone just requires its argument to be truthy. `registered?` (see
     # company_registry.rb) returns true/false depending on whether the
     # given name exists as a key in the COMPANIES hash.
     assert CompanyRegistry.registered?("Public Storage")
-    # `refute` is Minitest's negative counterpart to `assert` — it passes
+    # `refute` is Minitest's negative counterpart to `assert`, it passes
     # only if its argument is FALSY (false or nil). Confirms a made-up
     # company name correctly returns false rather than true or raising.
     refute CompanyRegistry.registered?("Not A Real Storage Company")
@@ -48,7 +48,7 @@ class CompanyRegistryTest < ActiveSupport::TestCase
     # `assert_equal Companies::PublicStorage, CompanyRegistry.parser_for("Public Storage")`
     # compares two CLASS OBJECTS for equality (in Ruby, classes themselves
     # are objects, and `==` between two class references checks they're
-    # literally the exact same class) — confirming parser_for looks up and
+    # literally the exact same class), confirming parser_for looks up and
     # returns the correct class from the registry, not just something with
     # a matching name.
     assert_equal Companies::PublicStorage, CompanyRegistry.parser_for("Public Storage")
@@ -57,7 +57,7 @@ class CompanyRegistryTest < ActiveSupport::TestCase
   # company" test block above.
 
   test "parser_for raises a clear error for an unknown company" do
-    # `assert_raises(ArgumentError) { ... }` — same idea as `assert_raises(RuntimeError) do ... end`
+    # `assert_raises(ArgumentError) { ... }`, same idea as `assert_raises(RuntimeError) do ... end`
     # used elsewhere in this app's tests, but here using Ruby's curly-brace
     # block syntax `{ ... }` instead of `do...end` (both are valid Ruby
     # block syntax; curly braces are common for short, one-line blocks like
@@ -75,7 +75,7 @@ class CompanyRegistryTest < ActiveSupport::TestCase
   test "build_parser instantiates a parser with the given dependencies" do
     # `crawl_run = crawl_runs(:current_completed)` looks up a CrawlRun
     # fixture; `browser = Object.new` creates a plain, generic Ruby object
-    # to stand in for a real Playwright browser — fine here since
+    # to stand in for a real Playwright browser, fine here since
     # build_parser only needs to PASS this value along to the parser's
     # constructor, it never actually calls browser-specific methods on it
     # itself.
@@ -91,7 +91,7 @@ class CompanyRegistryTest < ActiveSupport::TestCase
     # `assert_instance_of Companies::PublicStorage, parser` confirms the
     # returned object is specifically an INSTANCE of that exact class
     # (as opposed to `assert_kind_of`, which would also accept instances of
-    # a subclass) — proving build_parser both found the right class AND
+    # a subclass), proving build_parser both found the right class AND
     # successfully called `.new` on it.
     assert_instance_of Companies::PublicStorage, parser
   end
@@ -101,7 +101,7 @@ class CompanyRegistryTest < ActiveSupport::TestCase
   test "build_parser wraps errors with context about which company failed" do
     error = assert_raises(RuntimeError) do
       # Passing an unregistered company name means the internal call to
-      # `parser_for` (inside build_parser) will raise ArgumentError first —
+      # `parser_for` (inside build_parser) will raise ArgumentError first,
       # but build_parser's own `rescue => e` clause (see company_registry.rb)
       # catches THAT and re-raises a NEW, generic RuntimeError wrapping the
       # original error's class and message. `crawl_run: nil, browser: nil`
@@ -120,7 +120,7 @@ class CompanyRegistryTest < ActiveSupport::TestCase
   test "stubbed? is true for StorAmerica and false for a fully implemented company" do
     # `CompanyRegistry.stubbed?` (see company_registry.rb's STUBBED_COMPANIES
     # constant) is what drives the dashboard disabling StorAmerica's
-    # checkbox and labeling it "(not yet supported)" — see
+    # checkbox and labeling it "(not yet supported)", see
     # test/controllers/dashboard_controller_test.rb for that view-level
     # assertion.
     assert CompanyRegistry.stubbed?("StorAmerica")

@@ -168,7 +168,7 @@ var templateRe = /\{ *([\w_ -]+) *\}/g;
 // Simple templating facility, accepts a template string of the form `'Hello {a}, {b}'`
 // and a data object like `{a: 'foo', b: 'bar'}`, returns evaluated string
 // `('Hello foo, bar')`. You can also specify functions instead of strings for
-// data values — they will be evaluated passing `data` as an argument.
+// data values, they will be evaluated passing `data` as an argument.
 function template(str, data) {
 	return str.replace(templateRe, function (str, key) {
 		var value = data[key];
@@ -575,7 +575,7 @@ var Events = {
 
 	// @method fire(type: String, data?: Object, propagate?: Boolean): this
 	// Fires an event of the specified type. You can optionally provide a data
-	// object — the first argument of the listener function will contain its
+	// object, the first argument of the listener function will contain its
 	// properties. The event can optionally be propagated to event parents.
 	fire: function (type, data, propagate) {
 		if (!this.listens(type, propagate)) { return this; }
@@ -1740,7 +1740,7 @@ var Earth = extend({}, CRS, {
  * @namespace Projection
  * @projection L.Projection.SphericalMercator
  *
- * Spherical Mercator projection — the most common projection for online maps,
+ * Spherical Mercator projection, the most common projection for online maps,
  * used by almost all free and commercial tile providers. Assumes that Earth is
  * a sphere. Used by the `EPSG:3857` CRS.
  */
@@ -3122,7 +3122,7 @@ var PosAnimation = Evented.extend({
  * @aka L.Map
  * @inherits Evented
  *
- * The central class of the API — it is used to create a map on a page and manipulate it.
+ * The central class of the API, it is used to create a map on a page and manipulate it.
  *
  * @example
  *
@@ -3649,7 +3649,7 @@ var Map = Evented.extend({
 	},
 
 	// @method invalidateSize(options: Zoom/pan options): this
-	// Checks if the map container size changed and updates the map if so —
+	// Checks if the map container size changed and updates the map if so,
 	// call it after you've changed the map size dynamically, also animating
 	// pan by default. If `options.pan` is `false`, panning will not occur.
 	// If `options.debounceMoveend` is `true`, it will delay `moveend` event so
@@ -3658,7 +3658,7 @@ var Map = Evented.extend({
 
 	// @alternative
 	// @method invalidateSize(animate: Boolean): this
-	// Checks if the map container size changed and updates the map if so —
+	// Checks if the map container size changed and updates the map if so,
 	// call it after you've changed the map size dynamically, also animating
 	// pan by default.
 	invalidateSize: function (options) {
@@ -6611,7 +6611,7 @@ var LineUtil = {
  *
  * @projection L.Projection.LonLat
  *
- * Equirectangular, or Plate Carree projection — the most simple projection,
+ * Equirectangular, or Plate Carree projection, the most simple projection,
  * mostly used by GIS enthusiasts. Directly maps `x` as longitude, and `y` as
  * latitude. Also suitable for flat worlds, e.g. game maps. Used by the
  * `EPSG:4326` and `Simple` CRS.
@@ -6633,7 +6633,7 @@ var LonLat = {
  * @namespace Projection
  * @projection L.Projection.Mercator
  *
- * Elliptical Mercator projection — more complex than Spherical Mercator. Assumes that Earth is an ellipsoid. Used by the EPSG:3395 CRS.
+ * Elliptical Mercator projection, more complex than Spherical Mercator. Assumes that Earth is an ellipsoid. Used by the EPSG:3395 CRS.
  */
 
 var Mercator = {
@@ -8753,7 +8753,7 @@ Polyline._flat = _flat;
  *
  * A class for drawing polygon overlays on a map. Extends `Polyline`.
  *
- * Note that points you pass when creating a polygon shouldn't have an additional last point equal to the first one — it's better to filter out such points.
+ * Note that points you pass when creating a polygon shouldn't have an additional last point equal to the first one, it's better to filter out such points.
  *
  *
  * @example
@@ -12039,7 +12039,7 @@ function gridLayer(options) {
  * 'https://{s}.somedomain.com/blabla/{z}/{x}/{y}{r}.png'
  * ```
  *
- * `{s}` means one of the available subdomains (used sequentially to help with browser parallel requests per domain limitation; subdomain values are specified in options; `a`, `b` or `c` by default, can be omitted), `{z}` — zoom level, `{x}` and `{y}` — tile coordinates. `{r}` can be used to add "&commat;2x" to the URL to load retina tiles.
+ * `{s}` means one of the available subdomains (used sequentially to help with browser parallel requests per domain limitation; subdomain values are specified in options; `a`, `b` or `c` by default, can be omitted), `{z}`, zoom level, `{x}` and `{y}`, tile coordinates. `{r}` can be used to add "&commat;2x" to the URL to load retina tiles.
  *
  * You can use custom keys in the template, which will be [evaluated](#util-template) from TileLayer options, like this:
  *

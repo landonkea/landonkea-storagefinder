@@ -8,19 +8,19 @@
 # It uses find_or_create_by so running seeds twice doesn't create duplicates.
 # =============================================================================
 
-# `puts` prints a line of text to the terminal/console — this just prints a
+# `puts` prints a line of text to the terminal/console, this just prints a
 # status message so whoever runs `rails db:seed` sees the script is working.
 puts "Seeding default settings..."
 
 # Helper method to create a setting if it doesn't already exist
 # `def seed_setting(key:, value: nil, category:, label:, input_type: "text")`
 # defines a new Ruby method named `seed_setting`. Every parameter here uses
-# KEYWORD ARGUMENTS (the `name:` syntax) rather than plain positional ones —
+# KEYWORD ARGUMENTS (the `name:` syntax) rather than plain positional ones,
 # meaning every call below must pass arguments as `key: "...", category:
 # "..."` etc. by name, in any order, instead of relying on position. `key:`,
-# `category:`, and `label:` have no default given, so they are REQUIRED —
+# `category:`, and `label:` have no default given, so they are REQUIRED,
 # Ruby raises an error if a caller omits them. `value: nil` and `input_type:
-# "text"` provide DEFAULT values, making those two arguments optional — if a
+# "text"` provide DEFAULT values, making those two arguments optional, if a
 # caller doesn't pass them, `value` becomes `nil` and `input_type` becomes
 # the string `"text"` automatically. The matching `end` a few lines down
 # closes this method definition.
@@ -53,7 +53,7 @@ def seed_setting(key:, value: nil, category:, label:, input_type: "text")
   # block above.
   # Prints a confirmation line to the console for this one setting, so the
   # person running `rails db:seed` can see progress. `#{key}` is Ruby STRING
-  # INTERPOLATION — inside a double-quoted string, `#{...}` is replaced with
+  # INTERPOLATION, inside a double-quoted string, `#{...}` is replaced with
   # the result of evaluating the Ruby expression inside it (here, just the
   # `key` argument's value) before printing.
   puts "  ✓ Setting: #{key}"
@@ -89,13 +89,13 @@ seed_setting(
 )
 
 # Setting controlling the delay (in milliseconds) between requests during a
-# crawl — a larger delay is gentler on slower hardware/network connections.
+# crawl, a larger delay is gentler on slower hardware/network connections.
 # Shown as a number input.
 seed_setting(
   key:        "crawl_delay_between_requests_ms",
   value:      "2000",
   category:   "crawl",
-  label:      "Delay between requests (milliseconds) — increase on slow hardware",
+  label:      "Delay between requests (milliseconds), increase on slow hardware",
   input_type: "number"
 )
 
@@ -111,7 +111,7 @@ seed_setting(
 )
 
 # Setting controlling how many storage companies can be crawled at the same
-# time — lowering this reduces CPU/RAM usage at the cost of a slower overall
+# time, lowering this reduces CPU/RAM usage at the cost of a slower overall
 # crawl. Shown as a number input.
 seed_setting(
   key:        "crawl_parallel_companies",
@@ -125,7 +125,7 @@ seed_setting(
 # SCHEDULE SETTINGS
 # -------------------------------------------------------------------------
 # Setting controlling whether automatic scheduled crawls are turned on at
-# all. Shown as a boolean input, and defaults to "false" (off) — a novice
+# all. Shown as a boolean input, and defaults to "false" (off), a novice
 # installing this app for the first time won't have crawls running
 # automatically until they explicitly opt in.
 seed_setting(
@@ -136,26 +136,26 @@ seed_setting(
   input_type: "boolean"
 )
 
-# Setting holding the schedule itself, written in "cron format" — a
+# Setting holding the schedule itself, written in "cron format", a
 # standard, compact way of expressing recurring times used by many
 # scheduling tools (five space-separated fields for minute, hour, day-of-
 # month, month, and day-of-week; `*` means "every"). The default value
-# "0 6 * * *" means "at minute 0 of hour 6, every day" — i.e. 6:00 AM daily.
+# "0 6 * * *" means "at minute 0 of hour 6, every day", i.e. 6:00 AM daily.
 # Shown as a plain text input.
 seed_setting(
   key:        "schedule_cron",
   value:      "0 6 * * *",
   category:   "schedule",
-  label:      "Schedule (cron format) — default is every day at 6:00 AM",
+  label:      "Schedule (cron format), default is every day at 6:00 AM",
   input_type: "text"
 )
 # NOTE: unlike most other settings here, this one's `value:` is a literal
-# cron expression rather than a simple number/boolean/blank string — worth
+# cron expression rather than a simple number/boolean/blank string, worth
 # knowing if you're adding a UI to edit it later, since it needs validating
 # as valid cron syntax rather than treated as free text.
 
 # Setting holding which city to search on a scheduled crawl. `value: ""` is
-# an empty string, meaning it starts blank — the label explains that a
+# an empty string, meaning it starts blank, the label explains that a
 # blank value falls back to whatever city was last searched manually.
 # Shown as a plain text input.
 seed_setting(
@@ -189,8 +189,8 @@ seed_setting(
   input_type: "boolean"
 )
 
-# Setting holding the outgoing mail server hostname to connect to (SMTP —
-# Simple Mail Transfer Protocol — is the standard protocol used to send
+# Setting holding the outgoing mail server hostname to connect to (SMTP,
+# Simple Mail Transfer Protocol, is the standard protocol used to send
 # email). Defaults to Gmail's server. Shown as a plain text input.
 seed_setting(
   key:        "email_smtp_host",
@@ -224,7 +224,7 @@ seed_setting(
 # Setting holding the password (or app-specific password) used to log into
 # the SMTP server. Starts blank. `input_type: "password"` tells the
 # Settings page to render this as a masked password field rather than
-# plain text, so it isn't shown on-screen while typing — that only affects
+# plain text, so it isn't shown on-screen while typing, that only affects
 # how the HTML input LOOKS, it doesn't encrypt anything by itself. The
 # actual encryption-at-rest is handled separately, at the model level: see
 # `encrypts :value` in app/models/setting.rb, which transparently encrypts
@@ -285,21 +285,21 @@ seed_setting(
 )
 
 # -------------------------------------------------------------------------
-# SMS SETTINGS (disabled — requires paid Twilio account)
+# SMS SETTINGS (disabled, requires paid Twilio account)
 # -------------------------------------------------------------------------
 # Setting controlling whether SMS text-message alerts are enabled at all.
-# Defaults to "false" (off) — the label notes this requires a paid Twilio
+# Defaults to "false" (off), the label notes this requires a paid Twilio
 # account (Twilio is a third-party service used to send text messages
 # programmatically) to actually work. Shown as a boolean input.
 seed_setting(
   key:        "sms_enabled",
   value:      "false",
   category:   "sms",
-  label:      "Enable SMS alerts (requires paid Twilio account — see docs)",
+  label:      "Enable SMS alerts (requires paid Twilio account, see docs)",
   input_type: "boolean"
 )
 
-# Setting holding the Twilio "Account SID" — Twilio's term for the unique
+# Setting holding the Twilio "Account SID", Twilio's term for the unique
 # identifier of a Twilio account (SID = "Subject Identifier"). Starts
 # blank. Shown as a plain text input.
 seed_setting(
@@ -310,7 +310,7 @@ seed_setting(
   input_type: "text"
 )
 
-# Setting holding the Twilio "Auth Token" — a secret credential used to
+# Setting holding the Twilio "Auth Token", a secret credential used to
 # authenticate API requests to Twilio. Starts blank. `input_type:
 # "password"` masks it in the UI, same caveat as email_smtp_password above:
 # it is still stored as plain text in the database.
@@ -357,7 +357,7 @@ seed_setting(
 
 # Setting controlling the default sort order applied to the results table.
 # The value "monthly_price asc" is a raw SQL-style ORDER BY fragment
-# (column name, then "asc" for ascending/lowest-first) — shown as a
+# (column name, then "asc" for ascending/lowest-first), shown as a
 # "select" input, meaning the Settings page presumably renders this as a
 # dropdown of preset sort options rather than free text.
 seed_setting(
@@ -369,7 +369,7 @@ seed_setting(
 )
 
 # Setting controlling the price (in whole dollars) below which a unit's
-# price badge is colored GREEN in the results table — see
+# price badge is colored GREEN in the results table, see
 # Unit#price_color_class in app/models/unit.rb, which reads this value
 # instead of the $100/$150 breakpoints it used to hardcode. Shown as a
 # number input.
@@ -382,14 +382,14 @@ seed_setting(
 )
 
 # Setting controlling the price (in whole dollars) below which a unit's
-# price badge is colored YELLOW rather than RED — a price strictly above
+# price badge is colored YELLOW rather than RED, a price strictly above
 # both this and display_price_green_max above shows red. Shown as a number
 # input.
 seed_setting(
   key:        "display_price_yellow_max",
   value:      "149",
   category:   "display",
-  label:      "Price badge is yellow at or below this amount ($) — above it, red",
+  label:      "Price badge is yellow at or below this amount ($), above it, red",
   input_type: "number"
 )
 
@@ -397,7 +397,7 @@ seed_setting(
 # terminal output.
 puts ""
 # Prints a summary line. `#{Setting.count}` is string interpolation (see
-# the explanation above `seed_setting`'s closing `puts` line) — it runs
+# the explanation above `seed_setting`'s closing `puts` line), it runs
 # `Setting.count`, an ActiveRecord method that asks the database how many
 # rows currently exist in the "settings" table, and inserts that number
 # into the printed string.

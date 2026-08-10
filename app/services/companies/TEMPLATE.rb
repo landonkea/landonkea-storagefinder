@@ -11,12 +11,12 @@
 #   rails runner "ReconService.run('https://www.yourcompany.com/locations/?city=gilbert&state=az')"
 # =============================================================================
 
-# NOVICE PRIMER: this file is a STARTING POINT — not a real, working parser.
+# NOVICE PRIMER: this file is a STARTING POINT, not a real, working parser.
 # It's meant to be copied and then edited (replacing the placeholder CSS
 # selectors like ".unit-list" with the real ones from the target site) to
 # create a new company parser. "CSS selector" strings (e.g. ".result-list",
 # "a[href^='tel:']") are the same mini-language stylesheets use to target
-# HTML elements — see app/services/companies/base_parser.rb's opening
+# HTML elements, see app/services/companies/base_parser.rb's opening
 # comment block for a fuller explanation, since base_parser.rb is the parent
 # class this template (and every real company file) inherits from.
 # "Playwright" is the browser-automation library driving a real, invisible
@@ -30,7 +30,7 @@
 # `Companies::BaseParser` (defined in base_parser.rb). Inheritance means this
 # class automatically gets every method BaseParser defines (like `run`,
 # `safe_text`, `parse_price`, etc.) for free, and only needs to define the
-# methods that are unique to this one company — the 4 methods stubbed out
+# methods that are unique to this one company, the 4 methods stubbed out
 # below.
 class Companies::YourCompanyName < Companies::BaseParser
   # A Ruby "constant" (ALL_CAPS names are constants by convention) holding
@@ -43,12 +43,12 @@ class Companies::YourCompanyName < Companies::BaseParser
   def company_name
     # `def method_name ... end` defines a method with no arguments (no
     # parentheses needed). The method's return value is whatever its last
-    # (here, only) line evaluates to — a plain string literal.
+    # (here, only) line evaluates to, a plain string literal.
     "Your Company Name"
   end
   # `end` closes `def company_name`.
 
-  # Short identifier for logs and file names — no spaces, snake_case
+  # Short identifier for logs and file names, no spaces, snake_case
   # Example: "cubesmart"
   def company_slug
     "your_company_name"
@@ -64,14 +64,14 @@ class Companies::YourCompanyName < Companies::BaseParser
   #   - Some companies use lat/lng, some use a zip code
   #   - Some companies need a two-step search (enter city, then wait for results)
   def search_url(lat, lng, radius_miles)
-    # This method takes 3 ordinary ("positional") arguments — unlike
+    # This method takes 3 ordinary ("positional") arguments, unlike
     # BaseParser's keyword-argument methods, callers pass these in order:
     # `search_url(33.35, -111.78, 10)`.
     # Replace this with the actual search URL pattern for this company
     # Example: "#{BASE_URL}/locations/?lat=#{lat}&lng=#{lng}&radius=#{radius_miles}"
     raise NotImplementedError, "Implement search_url for #{company_name}"
     # `raise ExceptionClass, "message"` immediately stops execution and
-    # throws an error — this line exists so that if someone copies this
+    # throws an error, this line exists so that if someone copies this
     # template and forgets to fill in a real URL, the parser fails loudly
     # (with a clear message naming the company) instead of silently
     # returning a broken/placeholder URL. `#{company_name}` interpolates the
@@ -81,17 +81,17 @@ class Companies::YourCompanyName < Companies::BaseParser
   # `end` closes `def search_url`.
 
   # Parse the list of storage locations from the search results page
-  # `page` is a Playwright page object — you can call page.query_selector, etc.
+  # `page` is a Playwright page object, you can call page.query_selector, etc.
   #
   # Must return an Array of hashes with these keys:
-  #   name:        String  — facility display name (required)
-  #   address:     String  — street address (required)
-  #   city:        String  — city name (required)
-  #   state:       String  — 2-letter state code (required)
-  #   zip:         String  — ZIP code (required)
-  #   phone:       String  — phone number (optional)
-  #   url:         String  — URL to the facility's pricing page (required)
-  #   external_id: String  — company's own ID for this location (optional, prevents duplicates)
+  #   name:        String , facility display name (required)
+  #   address:     String , street address (required)
+  #   city:        String , city name (required)
+  #   state:       String , 2-letter state code (required)
+  #   zip:         String , ZIP code (required)
+  #   phone:       String , phone number (optional)
+  #   url:         String , URL to the facility's pricing page (required)
+  #   external_id: String , company's own ID for this location (optional, prevents duplicates)
   def parse_locations(page)
     locations = []
     # Starts an empty Array that we'll fill with one Hash per facility found
@@ -106,7 +106,7 @@ class Companies::YourCompanyName < Companies::BaseParser
       # Replace ".result-list" with the actual selector from the recon report
       page.wait_for_selector(".result-list", timeout: 15_000)
       # Tells Playwright to pause here until an element matching
-      # ".result-list" appears on the page (up to 15,000ms = 15 seconds) —
+      # ".result-list" appears on the page (up to 15,000ms = 15 seconds),
       # necessary because many sites load their results via JavaScript after
       # the initial page load, so the HTML isn't there yet if we look too
       # soon. Raises `Playwright::TimeoutError` if it never shows up within
@@ -121,13 +121,13 @@ class Companies::YourCompanyName < Companies::BaseParser
       if cards.empty?
         # `.empty?` is true when the array has zero elements.
         log_warning("No location cards found. Check selectors with ReconService.")
-        # `log_warning` is inherited from BaseParser — logs a warning-level
+        # `log_warning` is inherited from BaseParser, logs a warning-level
         # message tagged with this company's name.
         take_error_screenshot(page, "no_cards")
-        # Also inherited from BaseParser — saves a screenshot of the current
+        # Also inherited from BaseParser, saves a screenshot of the current
         # page state to help debug why no cards were found.
         return []
-        # `return` immediately exits `parse_locations` with an empty array —
+        # `return` immediately exits `parse_locations` with an empty array,
         # nothing more to do if there are no cards.
       end
       # `end` closes the `if cards.empty?` block.
@@ -139,12 +139,12 @@ class Companies::YourCompanyName < Companies::BaseParser
         # the card itself as `card` and its position (starting at 0) as
         # `idx`.
         begin
-          # A second, INNER begin/rescue — so an error parsing ONE card
+          # A second, INNER begin/rescue, so an error parsing ONE card
           # doesn't stop the loop from processing the rest of the cards.
           name    = safe_text(card, ".facility-name")   # Replace with real selector
           # `safe_text` (inherited from BaseParser) finds the first element
           # inside `card` matching the given selector and returns its
-          # trimmed text, or `nil` if it's missing/empty — safer than
+          # trimmed text, or `nil` if it's missing/empty, safer than
           # calling Playwright's raw text-reading method directly, which
           # would crash on a missing element.
           address = safe_text(card, ".street-address")  # Replace with real selector
@@ -157,7 +157,7 @@ class Companies::YourCompanyName < Companies::BaseParser
           # "href" off the first `<a>` link inside `card`) safely, returning
           # nil if not found.
           url     = "#{BASE_URL}#{url}" if url&.start_with?("/")
-          # `&.` is the "safe navigation operator" — calls `.start_with?`
+          # `&.` is the "safe navigation operator", calls `.start_with?`
           # only if `url` isn't nil (avoids crashing on a missing URL). If
           # the href was a site-relative path like "/store/123" (starting
           # with "/"), prefix it with `BASE_URL` to make it a full absolute
@@ -165,13 +165,13 @@ class Companies::YourCompanyName < Companies::BaseParser
 
           next if name.blank? || address.blank?
           # `next` skips the rest of THIS block iteration and moves on to
-          # the next card — like `continue` in other languages. `.blank?`
+          # the next card, like `continue` in other languages. `.blank?`
           # (a Rails helper) is true for nil, empty string, or
           # whitespace-only string. Without a real name AND address, this
           # "location" isn't usable, so skip it.
 
           locations << {
-            # `<<` is Ruby's "append" operator for arrays — pushes the Hash
+            # `<<` is Ruby's "append" operator for arrays, pushes the Hash
             # literal that follows onto the end of the `locations` array.
             name:        name,
             address:     address,
@@ -179,14 +179,14 @@ class Companies::YourCompanyName < Companies::BaseParser
             # `||` = "or": if `city` is nil/false, use `""` (empty string)
             # instead, since the `city:` field is documented as required.
             state:       state || "AZ",
-            # Defaults to "AZ" (Arizona) if state parsing failed — a
+            # Defaults to "AZ" (Arizona) if state parsing failed, a
             # placeholder assumption specific to this template/app's market.
             zip:         zip || "",
             phone:       phone,
             url:         url,
             external_id: nil  # Add if the company exposes an ID
           }
-          # `end` (implicit) — this is a Hash literal `{ ... }`, closed by
+          # `end` (implicit), this is a Hash literal `{ ... }`, closed by
           # the `}` above; no separate `end` needed for hash literals.
 
         rescue => e
@@ -220,7 +220,7 @@ class Companies::YourCompanyName < Companies::BaseParser
 
     locations
     # The array we built (possibly empty, possibly partially filled if some
-    # cards errored) — this is the last expression evaluated in the method,
+    # cards errored), this is the last expression evaluated in the method,
     # so it's `parse_locations`'s return value.
   end
   # `end` closes `def parse_locations`.
@@ -230,21 +230,21 @@ class Companies::YourCompanyName < Companies::BaseParser
   # `facility` is the Facility ActiveRecord object for this location
   #
   # Must return an Array of hashes with these keys:
-  #   size:               String   — e.g. "10x20" (required)
-  #   monthly_price:      Float    — regular monthly rate in dollars (optional)
-  #   web_special_price:  Float    — promotional/online price (optional)
-  #   web_special_note:   String   — description of the special (optional)
-  #   admin_fee:          Float    — one-time admin fee in dollars (optional)
-  #   insurance_note:     String   — insurance requirement note (optional)
-  #   climate_controlled: Boolean  — true if climate controlled (required)
-  #   available:          Boolean  — true if unit is available (required)
-  #   drive_up:           Boolean  — true if outdoor/drive-up access (required)
-  #   indoor:             Boolean  — true if indoor unit (required)
-  #   unit_type:          String   — "standard", "locker", "parking", etc. (required)
-  #   booking_url:        String   — URL to reserve this unit (optional)
+  #   size:               String  , e.g. "10x20" (required)
+  #   monthly_price:      Float   , regular monthly rate in dollars (optional)
+  #   web_special_price:  Float   , promotional/online price (optional)
+  #   web_special_note:   String  , description of the special (optional)
+  #   admin_fee:          Float   , one-time admin fee in dollars (optional)
+  #   insurance_note:     String  , insurance requirement note (optional)
+  #   climate_controlled: Boolean , true if climate controlled (required)
+  #   available:          Boolean , true if unit is available (required)
+  #   drive_up:           Boolean , true if outdoor/drive-up access (required)
+  #   indoor:             Boolean , true if indoor unit (required)
+  #   unit_type:          String  , "standard", "locker", "parking", etc. (required)
+  #   booking_url:        String  , URL to reserve this unit (optional)
   def parse_units(page, facility)
     # `facility` is an ActiveRecord object (a database row wrapper) for the
-    # Facility this pricing page belongs to — used here just to read
+    # Facility this pricing page belongs to, used here just to read
     # `facility.name` and `facility.facility_url` for log messages.
     units = []
     # Empty Array to accumulate one Hash per unit found.
@@ -296,7 +296,7 @@ class Companies::YourCompanyName < Companies::BaseParser
           # Detect drive-up
           drive_up      = features.downcase.include?("drive-up") ||
                           features.downcase.include?("outdoor")
-          # `||` = "or" — true if EITHER phrase appears in the features
+          # `||` = "or", true if EITHER phrase appears in the features
           # text. This condition spans two lines; Ruby allows an expression
           # to continue onto the next line when it ends with an operator
           # like `||` that clearly isn't a complete statement yet.
@@ -312,7 +312,7 @@ class Companies::YourCompanyName < Companies::BaseParser
             available:          true,    # Update if the site shows availability
             drive_up:           drive_up,
             indoor:             !drive_up,
-            # `!` is Ruby's "not" operator — `indoor` is simply the opposite
+            # `!` is Ruby's "not" operator, `indoor` is simply the opposite
             # of `drive_up` in this placeholder logic (a unit is assumed
             # indoor unless it was detected as drive-up/outdoor).
             unit_type:          "standard",  # Update if you detect type from page

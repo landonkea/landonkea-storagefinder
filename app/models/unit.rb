@@ -11,8 +11,8 @@
 
 # `class Unit < ApplicationRecord` defines a Ruby class named Unit that
 # inherits from ApplicationRecord (see app/models/application_record.rb).
-# Inheriting from ApplicationRecord — which itself inherits from
-# `ActiveRecord::Base` — makes this an "ActiveRecord model": a Ruby class
+# Inheriting from ApplicationRecord, which itself inherits from
+# `ActiveRecord::Base`, makes this an "ActiveRecord model": a Ruby class
 # that represents one row of a database table (here, the "units" table,
 # inferred automatically from the class name). Because of that, every
 # column in the table (size, monthly_price, available, ...) is
@@ -26,7 +26,7 @@ class Unit < ApplicationRecord
   # `facility_id`) pointing at exactly one row in another table. It
   # generates a method (e.g. `unit.facility`) that looks up and returns
   # that related record. By default in Rails, `belongs_to` also implicitly
-  # requires the association to be present — a Unit can't be saved without
+  # requires the association to be present, a Unit can't be saved without
   # a facility_id/crawl_run_id already set.
   belongs_to :facility   # Every unit must belong to a facility
   belongs_to :crawl_run  # Every unit must be associated with the crawl that found it
@@ -46,7 +46,7 @@ class Unit < ApplicationRecord
   validates :collected_at, presence: { message: "Collection timestamp is required" }
 
   # Size must match a pattern like "10x10", "10x20", "12x30", etc.
-  # `format:` checks the value against a regular expression — a pattern for
+  # `format:` checks the value against a regular expression, a pattern for
   # matching text. `/\A\d+x\d+\z/i` reads as: `\A` = start of string,
   # `\d+` = one or more digits, a literal `x`, `\d+` = one or more digits
   # again, `\z` = end of string. The `i` flag after the closing `/` makes
@@ -62,7 +62,7 @@ class Unit < ApplicationRecord
   # `numericality:` requires the value to be a number satisfying the given
   # constraint (here, `greater_than: 0`). `allow_nil: true` means this rule
   # is skipped entirely when monthly_price is nil (e.g. a scraper couldn't
-  # find a price) — nil prices are allowed, but a price of 0 or less is not.
+  # find a price), nil prices are allowed, but a price of 0 or less is not.
   validates :monthly_price, numericality: {
     greater_than: 0,
     message:      "Monthly price must be greater than $0"
@@ -90,8 +90,8 @@ class Unit < ApplicationRecord
   # ---------------------------------------------------------------------------
   # A "scope" is Rails' way of defining a named, reusable database query
   # exposed as a class-level method, e.g. `Unit.available`. Each one below
-  # is written as a lambda — `-> { ... }` (no arguments) or `->(arg) { ... }`
-  # (with arguments) — an anonymous, reusable chunk of code that Rails calls
+  # is written as a lambda, `-> { ... }` (no arguments) or `->(arg) { ... }`
+  # (with arguments), an anonymous, reusable chunk of code that Rails calls
   # when the scope's name is invoked.
 
   # Only units that are currently available for rent
@@ -104,12 +104,12 @@ class Unit < ApplicationRecord
   scope :enclosed,           -> { where(indoor: true, drive_up: false) }
 
   # Filter by minimum size
-  # Usage: Unit.at_least_size(10, 10) — returns all units 10x10 or larger
+  # Usage: Unit.at_least_size(10, 10), returns all units 10x10 or larger
   #
   # `->(min_width, min_depth) { ... }` is a lambda taking two positional
   # arguments. `where("width_ft >= ? AND depth_ft >= ?", min_width,
   # min_depth)` builds a SQL condition with two `?` placeholders, filled in
-  # order by the two arguments that follow — Rails substitutes them safely,
+  # order by the two arguments that follow, Rails substitutes them safely,
   # avoiding SQL injection (as opposed to directly interpolating the values
   # into the string).
   scope :at_least_size, ->(min_width, min_depth) {
@@ -119,12 +119,12 @@ class Unit < ApplicationRecord
   # Filter to specific sizes (array of size strings)
   # Usage: Unit.with_sizes(["10x10", "10x20"])
   #
-  # `where(size: sizes) if sizes.present?` — the `if` here is the inline
+  # `where(size: sizes) if sizes.present?`, the `if` here is the inline
   # modifier form: the `where(...)` call only runs when `sizes` is present
   # (not nil/empty). If `sizes` is blank, this lambda's body evaluates the
   # `if` as false and the whole expression returns nil, meaning this scope
   # effectively "does nothing" (returns nil, not a query) when given no
-  # sizes — worth noting since chaining further scope calls onto nil would
+  # sizes, worth noting since chaining further scope calls onto nil would
   # raise an error rather than silently no-op.
   scope :with_sizes, ->(sizes) {
     where(size: sizes) if sizes.present?
@@ -158,7 +158,7 @@ class Unit < ApplicationRecord
     latest_run = CrawlRun.completed.order(completed_at: :desc).first
     # `return none unless latest_run` exits this lambda's block early,
     # returning `none` (a Rails method that returns an empty, chainable
-    # query — like an empty array, but still safely usable with further
+    # query, like an empty array, but still safely usable with further
     # scope chaining, unlike a bare nil) when there's no completed crawl.
     return none unless latest_run  # Return empty if no crawl has been run
     # Otherwise, filters units down to only those belonging to that one
@@ -168,7 +168,7 @@ class Unit < ApplicationRecord
 
   # Units from the last N days (for history/trend queries)
   # Note: despite the comment above, this scope actually takes a specific
-  # DATE/time value to filter from (`since`), not a number of days — see
+  # DATE/time value to filter from (`since`), not a number of days, see
   # the "flag but don't fix" notes for more on this.
   scope :since,            ->(date) { where("collected_at >= ?", date) }
 
@@ -178,13 +178,13 @@ class Unit < ApplicationRecord
   # These are the unit types we actively EXCLUDE from results by default.
   # Parser modules should tag units with these types so filters work correctly.
   # ---------------------------------------------------------------------------
-  # `EXCLUDED_TYPES = ...` defines a Ruby CONSTANT — a variable whose name
+  # `EXCLUDED_TYPES = ...` defines a Ruby CONSTANT, a variable whose name
   # starts with a capital letter, which by convention is meant to never be
   # reassigned after this point. `%w[...]` is shorthand for an array of
   # strings, one per space-separated word. `.freeze` locks the array so it
   # can't be mutated in place later (e.g. nobody can accidentally call
   # `EXCLUDED_TYPES << "boat"` somewhere else in the app and silently change
-  # this shared list) — a common safety practice for shared constants.
+  # this shared list), a common safety practice for shared constants.
   EXCLUDED_TYPES = %w[
     parking
     rv
@@ -209,24 +209,24 @@ class Unit < ApplicationRecord
   # INSTANCE METHODS
   # ---------------------------------------------------------------------------
   # Everything below (until CLASS METHODS) is a regular Ruby instance
-  # method — callable on one particular Unit record, e.g.
+  # method, callable on one particular Unit record, e.g.
   # `some_unit.best_price`.
 
-  # Returns the display price — use web special if it's lower than regular price
+  # Returns the display price, use web special if it's lower than regular price
   # This is what gets shown on the dashboard as the "best price"
   #
   # Returns the price to actually show/compare for this unit. Self-storage
   # sites often list a "web special" (a lower promo price) alongside the
-  # regular monthly price — we want whichever one is actually cheaper.
+  # regular monthly price, we want whichever one is actually cheaper.
   #
   # `def` starts a method definition; `best_price` is its name; there are no
   # parentheses because this method takes no arguments (Ruby allows omitting
   # them). The method body runs top to bottom and returns whatever its LAST
-  # expression evaluates to — Ruby methods don't need an explicit `return`.
+  # expression evaluates to, Ruby methods don't need an explicit `return`.
   def best_price
-    # Safely handle nil monthly_price — return web_special if it exists, else monthly
+    # Safely handle nil monthly_price, return web_special if it exists, else monthly
     #
-    # `.present?` is a Rails helper meaning "not nil and not empty" — it's
+    # `.present?` is a Rails helper meaning "not nil and not empty", it's
     # true for any real price, false if web_special_price was never set.
     # `&&` is "and": both sides must be true for the whole condition to be true.
     # The condition inside the outer parentheses is itself an "or" (`||`):
@@ -235,14 +235,14 @@ class Unit < ApplicationRecord
     # monthly_price to a BigDecimal so the `<` comparison is precise with
     # money, avoiding floating-point rounding errors).
     if web_special_price.present? && (monthly_price.nil? || web_special_price < monthly_price.to_d)
-      # If we got here, the web special is the better price — return it.
+      # If we got here, the web special is the better price, return it.
       # This is the method's return value because it's the last thing
       # evaluated on this branch.
       web_special_price
     else
       # Otherwise (no web special, or it's not actually cheaper), fall back
       # to the regular monthly price. `monthly_price` may itself be nil here
-      # (e.g. a scraper failed to find a price) — that's handled by callers.
+      # (e.g. a scraper failed to find a price), that's handled by callers.
       monthly_price
     end
     # `end` closes the `if/else` block that started above.
@@ -252,7 +252,7 @@ class Unit < ApplicationRecord
   # Returns true if this unit has a web special that's lower than the regular price
   def has_web_special?
     # Unlike best_price above, this comparison does NOT guard against
-    # monthly_price being nil before calling `.to_d` on it — see the "flag
+    # monthly_price being nil before calling `.to_d` on it, see the "flag
     # but don't fix" notes for why that matters.
     web_special_price.present? && web_special_price < monthly_price.to_d
   end
@@ -263,7 +263,7 @@ class Unit < ApplicationRecord
     return "Not listed" if monthly_price.nil?
     # `"%.2f" % monthly_price` uses Ruby's `%` string-formatting operator
     # (similar to C's printf): `%.2f` means "format as a floating-point
-    # number with exactly 2 digits after the decimal point" — standard for
+    # number with exactly 2 digits after the decimal point", standard for
     # displaying money. The result is spliced into the surrounding string
     # via `#{...}` interpolation.
     "$#{"%.2f" % monthly_price}"
@@ -273,7 +273,7 @@ class Unit < ApplicationRecord
   # Returns a formatted web special price like "$79.00" or nil
   def formatted_web_special
     # `return nil unless has_web_special?` is the inline modifier form of
-    # `unless` (opposite of `if`) — exits early with nil when there's no
+    # `unless` (opposite of `if`), exits early with nil when there's no
     # (cheaper) web special to show, calling the has_web_special? method
     # defined just above.
     return nil unless has_web_special?
@@ -284,7 +284,7 @@ class Unit < ApplicationRecord
   # Returns a CSS color class for the price (green/yellow/red)
   # Used in the dashboard table to color-code cells
   #
-  # The two breakpoints below used to be hardcoded ($100/$150) — they're
+  # The two breakpoints below used to be hardcoded ($100/$150), they're
   # now Setting rows (see db/seeds.rb's "display_price_green_max"/
   # "display_price_yellow_max", category "display"), configurable from the
   # Settings page like every other tunable value in this app, rather than
@@ -296,7 +296,7 @@ class Unit < ApplicationRecord
     # `Setting.get(key, default: ...)` reads the current configured
     # breakpoint, falling back to the original hardcoded values if the
     # setting row is somehow missing (e.g. an older database that hasn't
-    # run the latest db/seeds.rb yet) — see Setting.get in
+    # run the latest db/seeds.rb yet), see Setting.get in
     # app/models/setting.rb, which also casts the stored string back to a
     # number via each row's `input_type`.
     green_max  = Setting.get("display_price_green_max",  default: 99)
@@ -331,12 +331,12 @@ class Unit < ApplicationRecord
   # Returns true if this unit meets the standard filter criteria
   def matches_default_filters?
     # A single boolean expression spanning multiple lines, joined by `&&`
-    # ("and") at the end of each line — every condition must be true for
+    # ("and") at the end of each line, every condition must be true for
     # the whole expression (and thus the method) to return true.
     # `climate_controlled` and `indoor` are boolean database columns read
     # directly as attributes. `!drive_up` negates the drive_up column
-    # (true becomes false and vice versa) — this unit must NOT be a
-    # drive-up unit. `EXCLUDED_TYPES.exclude?(unit_type.to_s.downcase)` —
+    # (true becomes false and vice versa), this unit must NOT be a
+    # drive-up unit. `EXCLUDED_TYPES.exclude?(unit_type.to_s.downcase)`,
     # `.exclude?` is the opposite of `.include?`, true when the array does
     # NOT contain the given value; `unit_type.to_s.downcase` normalizes the
     # unit_type value to a lowercase string before checking it against the
@@ -355,7 +355,7 @@ class Unit < ApplicationRecord
   # ---------------------------------------------------------------------------
   # CLASS METHODS
   # ---------------------------------------------------------------------------
-  # `def self.method_name` defines a CLASS method — called directly on the
+  # `def self.method_name` defines a CLASS method, called directly on the
   # class itself, e.g. `Unit.apply_filters(...)`, rather than on one
   # particular Unit record.
 
@@ -399,7 +399,7 @@ class Unit < ApplicationRecord
 
     # Filter by minimum size
     # Both min_width AND min_depth must be present for this filter to
-    # apply — `&&` requires both `.present?` checks to be true.
+    # apply, `&&` requires both `.present?` checks to be true.
     if filter_options[:min_width].present? && filter_options[:min_depth].present?
       scope = scope.where(
         "width_ft >= ? AND depth_ft >= ?",
@@ -419,7 +419,7 @@ class Unit < ApplicationRecord
 
     # Exclude drive-up/outdoor units by default
     # `unless filter_options[:include_drive_up]` runs the block only when
-    # that key is falsy (nil, false, or simply absent from the hash) — so
+    # that key is falsy (nil, false, or simply absent from the hash), so
     # by default (when the caller doesn't explicitly ask to include
     # drive-up units), this filter is applied automatically.
     unless filter_options[:include_drive_up]
@@ -442,7 +442,7 @@ class Unit < ApplicationRecord
     # `end` closes the `unless filter_options[:include_outdoor]` block
     # above.
 
-    # The final, fully-filtered query — this is the method's return value
+    # The final, fully-filtered query, this is the method's return value
     # since it's the last expression evaluated.
     scope
   end
@@ -463,7 +463,7 @@ class Unit < ApplicationRecord
       # `s.to_s.split("x")` splits a size string like "10x20" on the
       # literal character "x", producing an array of string pieces (e.g.
       # ["10", "20"]). `.map(&:to_i)` converts EVERY element of that array
-      # to an integer — `&:to_i` is shorthand for `{ |piece| piece.to_i }`,
+      # to an integer, `&:to_i` is shorthand for `{ |piece| piece.to_i }`,
       # turning the `:to_i` method into a block via the `&` "to proc"
       # operator.
       parts = s.to_s.split("x").map(&:to_i)
@@ -484,7 +484,7 @@ class Unit < ApplicationRecord
   # ---------------------------------------------------------------------------
   # `private` marks everything below it as callable only from inside this
   # class itself (e.g. automatically by the before_save callback), not from
-  # outside code like controllers — hiding implementation details that
+  # outside code like controllers, hiding implementation details that
   # aren't meant to be part of this model's public interface.
   private
 
@@ -492,7 +492,7 @@ class Unit < ApplicationRecord
   # Called automatically before every save via the before_save callback
   def parse_dimensions
     # `return if size.blank?` exits early (doing nothing further) when
-    # there's no size string to parse — `.blank?` is a Rails helper
+    # there's no size string to parse, `.blank?` is a Rails helper
     # meaning nil, empty string, or whitespace-only.
     return if size.blank?
 
@@ -508,7 +508,7 @@ class Unit < ApplicationRecord
     if parts.length == 2 && parts[0] > 0 && parts[1] > 0
       # `self.width_ft = parts[0]` writes to this record's width_ft
       # attribute. The explicit `self.` here is necessary (not just
-      # stylistic) — without it, Ruby would treat `width_ft = ...` as
+      # stylistic), without it, Ruby would treat `width_ft = ...` as
       # creating a new plain local variable named width_ft instead of
       # calling the width_ft= setter method that actually updates the
       # database attribute.
@@ -516,9 +516,9 @@ class Unit < ApplicationRecord
       self.depth_ft = parts[1]   # Second number is depth
       self.sqft     = parts[0] * parts[1]  # Square footage = width * depth
     else
-      # Log a warning if we couldn't parse the size — this might mean the parser
+      # Log a warning if we couldn't parse the size, this might mean the parser
       # is outputting size in an unexpected format
-      # `id || 'new'` — `id` is nil for a record that hasn't been saved to
+      # `id || 'new'`, `id` is nil for a record that hasn't been saved to
       # the database yet (no primary key assigned), so `||` ("or") falls
       # back to the literal string 'new' for a clearer log message in that
       # case, rather than logging a blank/nil id.

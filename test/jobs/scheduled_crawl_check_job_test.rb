@@ -1,29 +1,29 @@
-# `require "test_helper"` loads test/test_helper.rb — see the fuller
+# `require "test_helper"` loads test/test_helper.rb, see the fuller
 # explanation of this line in test/jobs/alert_checker_job_test.rb.
 require "test_helper"
 
 # This file tests ScheduledCrawlCheckJob (app/jobs/scheduled_crawl_check_job.rb)
-# — the job that wires the schedule_enabled/schedule_cron/schedule_city/
+#, the job that wires the schedule_enabled/schedule_cron/schedule_city/
 # schedule_radius_miles Setting rows up to an actual triggered crawl. See
 # that job's own top comment for the full "why" behind how it's built.
 class ScheduledCrawlCheckJobTest < ActiveSupport::TestCase
   # `include ActiveSupport::Testing::TimeHelpers` adds `travel_to`, used
   # below to pin "the current time" to an exact, known moment for each test
-  # — without this, whether a given cron expression "matches now" would
+  #, without this, whether a given cron expression "matches now" would
   # depend on the literal wall-clock second the test happens to run, making
   # these tests flaky.
   include ActiveSupport::Testing::TimeHelpers
   # `include ActiveJob::TestHelper` adds `assert_enqueued_with` and
   # `assert_no_enqueued_jobs`, used below to check whether CrawlJob got
   # enqueued without actually running it (this test suite otherwise never
-  # needed these helpers, since AlertCheckerJob's own test file — see
-  # test/jobs/alert_checker_job_test.rb — only ever calls jobs directly,
+  # needed these helpers, since AlertCheckerJob's own test file, see
+  # test/jobs/alert_checker_job_test.rb, only ever calls jobs directly,
   # never asserts on what they enqueue).
   include ActiveJob::TestHelper
 
   setup do
     # test/fixtures/crawl_runs.yml includes one fixture with status
-    # "running" (used elsewhere to test in-progress-crawl behavior) — that
+    # "running" (used elsewhere to test in-progress-crawl behavior), that
     # would make CrawlRun.any_running? true by default here, which isn't
     # what most of these tests want to check. Reset it to "completed" so
     # each test starts from a clean "nothing running" baseline; the one
@@ -62,7 +62,7 @@ class ScheduledCrawlCheckJobTest < ActiveSupport::TestCase
     # Looked up by the distinctive city above rather than
     # `CrawlRun.order(:created_at).last`, since `travel_to` above pins the
     # job's own idea of "now" to January 2026 while fixture rows keep their
-    # real (later) created_at timestamps — ordering by created_at would
+    # real (later) created_at timestamps, ordering by created_at would
     # find a fixture, not the row this test just created.
     crawl_run = CrawlRun.find_by!(search_city: "Scottsdale, Arizona")
     assert_equal 50, crawl_run.search_radius_miles

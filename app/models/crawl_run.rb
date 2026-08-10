@@ -1,7 +1,7 @@
 # =============================================================================
 # CRAWL RUN MODEL
 # =============================================================================
-# A CrawlRun is one complete crawl session — one "press of the Run button."
+# A CrawlRun is one complete crawl session, one "press of the Run button."
 # It tracks the search parameters, progress, and outcome.
 #
 # Status flow:  pending → running → completed
@@ -25,7 +25,7 @@ class CrawlRun < ApplicationRecord
   has_many :units,             dependent: :destroy  # All units found in this crawl
   has_many :crawl_log_entries, dependent: :destroy  # Detailed log entries for this crawl
   # `dependent: :destroy` tells Rails: when a CrawlRun record is deleted,
-  # automatically delete every associated Unit/CrawlLogEntry too — this
+  # automatically delete every associated Unit/CrawlLogEntry too, this
   # prevents leaving "orphaned" rows in those tables that point at a
   # crawl_run_id which no longer exists.
 
@@ -37,7 +37,7 @@ class CrawlRun < ApplicationRecord
   # message (accessible via `record.errors`) instead of writing to the DB.
 
   # Requires `status` to be one of exactly these four strings. `%w[...]` is
-  # Ruby shorthand for an array of strings — each space-separated word
+  # Ruby shorthand for an array of strings, each space-separated word
   # becomes its own element, equivalent to
   # `["pending", "running", "completed", "failed"]`.
   validates :status, inclusion: {
@@ -85,7 +85,7 @@ class CrawlRun < ApplicationRecord
   #
   # The trailing `!` in method names like `start!`, `complete!`, `fail!` is a
   # Ruby naming convention (not special syntax) meaning "this method has an
-  # important side effect / can raise an error," as a signal to readers —
+  # important side effect / can raise an error," as a signal to readers,
   # here, each one writes to the database and can raise if validation fails.
   def start!
     # `update!` is a Rails method that sets the given attributes AND saves
@@ -97,7 +97,7 @@ class CrawlRun < ApplicationRecord
     update!(status: "running", started_at: Time.current)
     # Calls the log_info instance method (defined further down this file)
     # to record a log entry noting the crawl started. `company: "system"`
-    # is a keyword argument — log entries normally attach to one scraped
+    # is a keyword argument, log entries normally attach to one scraped
     # company, so "system" marks this as an internal/administrative entry.
     log_info("Crawl started", company: "system")
   end
@@ -119,7 +119,7 @@ class CrawlRun < ApplicationRecord
 
     # Updates three columns at once and saves. Passing a hash literal
     # across multiple lines (each `key: value,` pair) is just a readability
-    # style choice — Ruby doesn't require the line breaks or trailing commas
+    # style choice, Ruby doesn't require the line breaks or trailing commas
     # to be aligned like this, but it's common for multi-argument calls.
     update!(
       status:           "completed",
@@ -141,7 +141,7 @@ class CrawlRun < ApplicationRecord
   # `end` closes the `def complete!` method definition.
 
   # Mark this crawl as failed with an error message
-  # `def fail!(message)` — `message` is a required positional argument: the
+  # `def fail!(message)`, `message` is a required positional argument: the
   # error text describing why the crawl failed.
   def fail!(message)
     update!(
@@ -162,7 +162,7 @@ class CrawlRun < ApplicationRecord
   # with no argument still works and adds 1.
   def increment_facilities!(count = 1)
     # `increment!` is a built-in Rails method that atomically adds `count`
-    # to the given numeric column and immediately saves — "atomically"
+    # to the given numeric column and immediately saves, "atomically"
     # means the database itself performs the addition in one operation,
     # avoiding race conditions where two simultaneous crawls could both
     # read the same old value and overwrite each other's increments.
@@ -177,7 +177,7 @@ class CrawlRun < ApplicationRecord
   # `end` closes the `def increment_units!` method definition.
 
   # Increment the companies_crawled counter (thread-safe)
-  # No `count` argument here — `increment!` defaults to adding 1 when no
+  # No `count` argument here, `increment!` defaults to adding 1 when no
   # amount is given as its second argument.
   def increment_companies_crawled!
     increment!(:companies_crawled)
@@ -213,7 +213,7 @@ class CrawlRun < ApplicationRecord
   # Example: "4 minutes and 32 seconds"
   def duration_label
     # `return "..." unless duration_seconds` is the inline modifier form of
-    # `unless` (opposite of `if`) — it returns early with this string only
+    # `unless` (opposite of `if`), it returns early with this string only
     # when duration_seconds is nil/false (i.e. the crawl never finished).
     return "Not finished" unless duration_seconds
     # Similarly, returns early with a friendlier label for sub-1-second
@@ -222,10 +222,10 @@ class CrawlRun < ApplicationRecord
 
     # `(duration_seconds / 60).floor` divides total seconds by 60 to get
     # minutes, then `.floor` rounds DOWN to the nearest whole number
-    # (dropping any fractional minute) — e.g. 272 seconds / 60 = 4.53,
+    # (dropping any fractional minute), e.g. 272 seconds / 60 = 4.53,
     # floored to 4 minutes.
     minutes = (duration_seconds / 60).floor
-    # `duration_seconds % 60` is the modulo operator — the REMAINDER after
+    # `duration_seconds % 60` is the modulo operator, the REMAINDER after
     # dividing by 60, i.e. "how many seconds are left over after removing
     # whole minutes." `.round` rounds that remainder to the nearest whole
     # second for display.
@@ -237,11 +237,11 @@ class CrawlRun < ApplicationRecord
       # conditional expression: if minutes isn't exactly 1, it evaluates to
       # the string "s" (pluralizing "minute" -> "minutes"); if minutes IS 1,
       # the `if` condition is false and the expression evaluates to nil,
-      # which interpolates as an empty string — giving "1 minute" (no "s").
+      # which interpolates as an empty string, giving "1 minute" (no "s").
       # The same pattern is repeated for "second"/"seconds".
       "#{minutes} minute#{"s" if minutes != 1} and #{seconds} second#{"s" if seconds != 1}"
     else
-      # No whole minutes elapsed — just show the seconds, still pluralized
+      # No whole minutes elapsed, just show the seconds, still pluralized
       # correctly using the same technique as above.
       "#{seconds} second#{"s" if seconds != 1}"
     end
@@ -254,10 +254,10 @@ class CrawlRun < ApplicationRecord
   def summary
     case status
     when "completed"
-      "#{facilities_found} facilities, #{units_found} units — #{duration_label}"
+      "#{facilities_found} facilities, #{units_found} units, #{duration_label}"
     when "failed"
       # `error_message&.truncate(100)` uses Ruby's "safe navigation"
-      # operator `&.` — it calls `.truncate(100)` only if error_message is
+      # operator `&.`, it calls `.truncate(100)` only if error_message is
       # NOT nil; if error_message IS nil, the whole expression short-
       # circuits to nil instead of raising a NoMethodError. `.truncate(100)`
       # is a Rails String helper that shortens the string to at most 100
@@ -269,7 +269,7 @@ class CrawlRun < ApplicationRecord
       "Waiting to start"
     end
     # `end` closes the `case status` block above. Note there is no `else`
-    # branch here — if `status` somehow held a value outside the four
+    # branch here, if `status` somehow held a value outside the four
     # allowed by this model's inclusion validation, this method would
     # return nil (Ruby's `case` returns nil when nothing matches and there
     # is no `else`).
@@ -284,7 +284,7 @@ class CrawlRun < ApplicationRecord
   # ---------------------------------------------------------------------------
 
   # `company:` (required keyword argument, no default) and `url: nil`
-  # (optional keyword argument, defaults to nil) — keyword arguments must be
+  # (optional keyword argument, defaults to nil), keyword arguments must be
   # called by name, e.g. `log_info("text", company: "Acme")`, which makes
   # call sites self-documenting compared to plain positional arguments.
   def log_info(message, company:, url: nil)
@@ -307,12 +307,12 @@ class CrawlRun < ApplicationRecord
   def log_success(message, company:, url: nil)
     # Creates an info-level log entry first, capturing the created
     # CrawlLogEntry record in the local variable `entry` (write_log returns
-    # the record it created — see the bottom of this file).
+    # the record it created, see the bottom of this file).
     entry = write_log(level: "info", message: message, company: company, url: url)
-    # Then marks that specific entry's `success` column as true — a second,
+    # Then marks that specific entry's `success` column as true, a second,
     # separate database write after the first `create!` inside write_log.
     entry.update!(success: true)
-    # Returns the (now-updated) entry to the caller — the last expression
+    # Returns the (now-updated) entry to the caller, the last expression
     # evaluated in the method is its return value.
     entry
   end
@@ -322,14 +322,14 @@ class CrawlRun < ApplicationRecord
   # CLASS METHODS
   # ---------------------------------------------------------------------------
   # `def self.method_name` (as opposed to plain `def method_name`) defines a
-  # CLASS method — called on the class itself, e.g. `CrawlRun.any_running?`,
+  # CLASS method, called on the class itself, e.g. `CrawlRun.any_running?`,
   # rather than on one particular record like `some_run.running?`. This is
   # the standard Ruby way to define "static"/class-level methods.
 
   # Is any crawl currently running?
   def self.any_running?
     # `running` here calls the `running` SCOPE defined earlier in this file
-    # (not the `running?` instance method — different names, `running` vs
+    # (not the `running?` instance method, different names, `running` vs
     # `running?`), which returns a query for all CrawlRun rows with
     # status "running". `.exists?` runs an efficient SQL check for whether
     # that query would return any rows at all, without loading them.
@@ -378,7 +378,7 @@ class CrawlRun < ApplicationRecord
   def write_log(level:, message:, company:, url: nil, retry_count: 0)
     # Write to database log entry
     # `crawl_log_entries` here calls the `has_many :crawl_log_entries`
-    # association defined near the top of this file — calling `.create!`
+    # association defined near the top of this file, calling `.create!`
     # on it builds a new CrawlLogEntry that is automatically linked to THIS
     # CrawlRun (its crawl_run_id is set for you), saves it, and raises if
     # validation fails (the `!` variant, same convention as update!).
@@ -396,13 +396,13 @@ class CrawlRun < ApplicationRecord
     # primary key (its database row ID).
     log_line = "[CrawlRun ##{id}][#{company}] #{message}"
     # `+=` appends to and reassigns `log_line` (shorthand for
-    # `log_line = log_line + "..."`) — only runs when `url` is present
+    # `log_line = log_line + "..."`), only runs when `url` is present
     # (truthy; note this doesn't use `.present?` here, just Ruby's plain
     # truthiness where anything except `nil`/`false` counts as true).
     log_line += " URL: #{url}" if url
     log_line += " (retry #{retry_count})" if retry_count > 0
 
-    # Chooses which Rails.logger method to call based on the log level —
+    # Chooses which Rails.logger method to call based on the log level,
     # Rails.logger writes to the environment's log file (e.g.
     # log/development.log) at the given severity, which affects how it's
     # filtered/displayed by log-viewing tools.

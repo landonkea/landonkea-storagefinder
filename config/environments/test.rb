@@ -2,20 +2,20 @@
 # test suite. You never need to work with it otherwise. Remember that
 # your test database is "scratch space" for the test suite and is wiped
 # and recreated between test runs. Don't rely on the data there!
-# (Kept as-is — Rails' own generated explanation of what this file is for.
+# (Kept as-is, Rails' own generated explanation of what this file is for.
 # Background for a novice: Rails apps run in one of several "environments"
-# at a time — development (what you use while coding locally), test (used
+# at a time, development (what you use while coding locally), test (used
 # only while running automated tests), and production (the real, live
 # version users actually use). Each environment gets its own settings file
 # here in config/environments/, because you often want very different
-# behavior — e.g. real emails should never send while running tests. Which
+# behavior, e.g. real emails should never send while running tests. Which
 # environment is active is controlled by the RAILS_ENV environment
 # variable; Rails' own test runner sets it to "test" automatically.)
 
 # `Rails.application.configure do ... end` opens a block where `config` (a
 # special object holding every setting for the whole app) can be modified.
 # Rails runs this block automatically, but ONLY when the app is booted with
-# RAILS_ENV=test — this whole file is skipped otherwise. Anything set on
+# RAILS_ENV=test, this whole file is skipped otherwise. Anything set on
 # `config` here overrides whatever config/application.rb set for the same
 # option, but only while running in the test environment.
 Rails.application.configure do
@@ -31,7 +31,7 @@ Rails.application.configure do
 
   # `config.active_job.queue_adapter = :test` tells ActiveJob (Rails'
   # background-job framework) to use its special :test adapter, which
-  # doesn't actually run jobs — the block comment above explains it records
+  # doesn't actually run jobs, the block comment above explains it records
   # them in memory instead, so test assertions like
   # `assert_enqueued_with`/`perform_enqueued_jobs` (used to check "was a
   # job scheduled?" or "run the scheduled jobs now, inside the test") work
@@ -47,7 +47,7 @@ Rails.application.configure do
   # (load every single app file up front at boot, rather than lazily as
   # needed) based on whether a CI environment variable is set at all.
   # `ENV["CI"]` reads that variable (nil if unset); `.present?` is a Rails
-  # helper meaning "not nil and not blank" — true only when some CI system
+  # helper meaning "not nil and not blank", true only when some CI system
   # (like GitHub Actions) has set that variable, which it conventionally
   # does automatically. So: eager loading is skipped for fast local single-
   # test runs, but turned on automatically when running in CI, to catch
@@ -62,7 +62,7 @@ Rails.application.configure do
   # Rails adds when serving static files directly (e.g. images/CSS) out of
   # the public/ folder during tests. `{ "cache-control" => "public,
   # max-age=3600" }` is a Ruby Hash literal (curly braces containing
-  # key/value pairs) — here it tells browsers/test HTTP clients they may
+  # key/value pairs), here it tells browsers/test HTTP clients they may
   # cache the file for up to 3600 seconds (1 hour), which speeds up test
   # runs that repeatedly fetch the same static assets.
   # Configure public file server for tests with cache-control for performance.
@@ -70,13 +70,13 @@ Rails.application.configure do
 
   # `config.consider_all_requests_local = true` makes Rails show its full,
   # detailed debug error page (with backtrace, local variables, etc.)
-  # whenever an unhandled error occurs, instead of a generic error page —
+  # whenever an unhandled error occurs, instead of a generic error page,
   # useful because test failures should show maximum detail.
   # Show full error reports.
   config.consider_all_requests_local = true
   # `config.cache_store = :null_store` disables caching entirely (the
   # `:null_store` adapter accepts writes but never actually stores or
-  # returns anything) — ensures tests never see stale cached data from a
+  # returns anything), ensures tests never see stale cached data from a
   # previous test accidentally leaking into a later one.
   config.cache_store = :null_store
 
@@ -91,7 +91,7 @@ Rails.application.configure do
   config.action_dispatch.show_exceptions = :rescuable
 
   # `config.action_controller.allow_forgery_protection = false` turns off
-  # Rails' CSRF (Cross-Site Request Forgery) protection — the mechanism
+  # Rails' CSRF (Cross-Site Request Forgery) protection, the mechanism
   # that normally rejects form submissions missing a valid security token,
   # to stop malicious other-site forms from submitting on a user's behalf.
   # It's disabled in tests because tests routinely submit forms
@@ -103,7 +103,7 @@ Rails.application.configure do
 
   # `config.active_storage.service = :test` tells Active Storage (Rails'
   # file-upload framework) to use the storage service configuration named
-  # "test" from config/storage.yml — typically a temporary local directory
+  # "test" from config/storage.yml, typically a temporary local directory
   # that can be freely wiped between test runs, keeping uploaded test
   # fixture files out of your real development uploads.
   # Store uploaded files on the local file system in a temporary directory.
@@ -111,7 +111,7 @@ Rails.application.configure do
 
   # `config.action_mailer.delivery_method = :test` tells Action Mailer
   # (Rails' email-sending framework) to use its :test delivery method,
-  # which — as the comment below explains — never contacts a real mail
+  # which, as the comment below explains, never contacts a real mail
   # server; it just appends each attempted email to an in-memory array so
   # tests can assert on what WOULD have been sent.
   # Tell Action Mailer not to deliver emails to the real world.
@@ -121,7 +121,7 @@ Rails.application.configure do
 
   # `config.action_mailer.default_url_options = { host: "example.com" }`
   # sets the hostname Action Mailer uses when generating full URLs inside
-  # email bodies (e.g. a link back to the app) — mailers can't infer a host
+  # email bodies (e.g. a link back to the app), mailers can't infer a host
   # from an incoming web request the way controllers can, since sending an
   # email isn't triggered by a browser visiting a URL, so this has to be
   # configured explicitly. "example.com" is a placeholder-safe domain
@@ -139,7 +139,7 @@ Rails.application.configure do
   config.active_support.deprecation = :stderr
 
   # This line is commented out (starts with `#`, so it's inert
-  # documentation, not active code) — if uncommented, it would make Rails
+  # documentation, not active code), if uncommented, it would make Rails
   # raise an error whenever an I18n (internationalization/translation)
   # lookup can't find a translation, instead of silently rendering a
   # "translation missing" placeholder string.
@@ -148,7 +148,7 @@ Rails.application.configure do
 
   # Also commented out: if enabled, this would annotate every rendered
   # view's HTML output with an HTML comment naming which template file
-  # produced it — handy for debugging which partial rendered what, left
+  # produced it, handy for debugging which partial rendered what, left
   # off by default in tests to keep rendered output exactly matching what
   # tests expect to assert against.
   # Annotate rendered view with file names.
@@ -157,7 +157,7 @@ Rails.application.configure do
   # `config.action_controller.raise_on_missing_callback_actions = true`
   # makes Rails raise an error if a controller's `before_action`/
   # `after_action` callback specifies `only:`/`except:` options that name
-  # an action which doesn't actually exist on that controller — catching a
+  # an action which doesn't actually exist on that controller, catching a
   # typo (e.g. referencing a renamed or deleted action) as a loud failure
   # instead of the callback silently never running.
   # Raise error when a before_action's only/except options reference missing actions.
@@ -168,20 +168,20 @@ Rails.application.configure do
   # comment.
 
   # Setting#value uses `encrypts` (see app/models/setting.rb). Fixtures insert
-  # rows via raw SQL, bypassing that — this tells Rails to encrypt fixture
+  # rows via raw SQL, bypassing that, this tells Rails to encrypt fixture
   # values for encrypted attributes at load time so test/fixtures/settings.yml
   # can just list plaintext values like everything else.
   # (Comment above is original/pre-existing and already explains the WHY.
   # Mechanically: `encrypts` is Rails' Active Record attribute encryption
-  # feature — it transparently encrypts a column's value before saving and
+  # feature, it transparently encrypts a column's value before saving and
   # decrypts it when read, when going through normal Active Record
   # methods. Test "fixtures" (test/fixtures/*.yml files) are loaded by
   # inserting rows directly into the test database via raw SQL for speed,
-  # which skips that automatic encryption — so without this setting, a
+  # which skips that automatic encryption, so without this setting, a
   # fixture's plaintext value would end up stored un-encrypted, breaking
   # any code that expects to decrypt it later.)
   config.active_record.encryption.encrypt_fixtures = true
 end
 # `end` closes the `Rails.application.configure do` block opened at the
-# top of the file — every setting above only applies inside the test
+# top of the file, every setting above only applies inside the test
 # environment.

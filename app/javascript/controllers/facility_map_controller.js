@@ -9,14 +9,14 @@
 // The pin data itself comes from DashboardController#build_map_facilities,
 // passed in via the "facilities" Stimulus value (a JSON-serialized array of
 // plain { id, name, company, lat, lng, price, price_color, size, distance,
-// address, maps_url } hashes — see the data-facility-map-facilities-value
+// address, maps_url } hashes, see the data-facility-map-facilities-value
 // attribute on the #facility-map div in the dashboard view).
 // =============================================================================
 
 import { Controller } from "@hotwired/stimulus"
 // Leaflet's vendored ESM build (vendor/javascript/leaflet.js, built from
 // leaflet's own dist/leaflet-src.esm.js) only exports NAMED exports (map,
-// marker, tileLayer, divIcon, Util, etc.) — it has no `export default`. So
+// marker, tileLayer, divIcon, Util, etc.), it has no `export default`. So
 // this is a "namespace import" (`import * as L`), not a default import,
 // even though the resulting `L.map(...)` / `L.marker(...)` call style
 // looks identical to Leaflet's classic global-`L` usage.
@@ -24,7 +24,7 @@ import * as L from "leaflet"
 
 // Maps each of the app's price-color CSS class names to a real color for
 // the map pins (Leaflet's divIcon needs an actual color, not a CSS class
-// applied to elsewhere-styled text) — picked to match the emerald/yellow/
+// applied to elsewhere-styled text), picked to match the emerald/yellow/
 // red shades already used by those classes in app/assets/tailwind/application.css.
 const PIN_COLORS = {
   "price-green":   "#34d399",
@@ -42,7 +42,7 @@ export default class extends Controller {
   static values = { facilities: Array }
 
   connect() {
-    // Nothing to draw if there are no geocoded facilities to show —
+    // Nothing to draw if there are no geocoded facilities to show,
     // avoids initializing an empty, blank map.
     if (!this.facilitiesValue || this.facilitiesValue.length === 0) return
 
@@ -50,7 +50,7 @@ export default class extends Controller {
     // controller's own element (the div with data-controller="facility-map").
     this.map = L.map(this.element)
 
-    // OpenStreetMap's free tile server — no API key required. Only the
+    // OpenStreetMap's free tile server, no API key required. Only the
     // background imagery needs network access; the pins/popups themselves
     // are drawn from data already in the page (see the importmap.rb
     // comment on the "leaflet" pin for more on this app's offline posture).
@@ -115,7 +115,7 @@ export default class extends Controller {
     }
   }
 
-  // Stimulus lifecycle callback — called automatically when this
+  // Stimulus lifecycle callback, called automatically when this
   // controller's element is removed from the page (e.g. Turbo navigating
   // away). Leaflet doesn't clean up its own event listeners/DOM on its
   // own, so `remove()` here avoids leaking a map instance (and its tile

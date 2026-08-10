@@ -17,13 +17,13 @@
 #   9. Marks the crawl as complete (or failed if something went wrong)
 #
 # REFACTORING NOTE: `perform` below used to be a single ~700-line method
-# containing all 8 numbered steps inline — every other file in this app
+# containing all 8 numbered steps inline, every other file in this app
 # uses small, single-purpose private methods (see e.g.
 # app/services/company_registry.rb), and a spot-check comment/refactor audit
 # flagged this method as the one real outlier in that regard. It's been
 # split into one private method per STEP (plus two further splits inside
 # STEP 4, since the thread-pool orchestration and the per-company crawl
-# logic are each substantial enough to deserve their own method) — `perform`
+# logic are each substantial enough to deserve their own method), `perform`
 # itself is now a short, readable sequence of calls that reads almost
 # exactly like the numbered list above. No behavior changed in this split:
 # every private method below does EXACTLY what its corresponding inline
@@ -35,7 +35,7 @@
 # throughout that a newcomer to Ruby wouldn't already know:
 #
 # ACTIVEJOB / BACKGROUND JOBS: A "job" is a chunk of work Rails can run
-# OUTSIDE of a normal web request — e.g. triggered by a button click, then
+# OUTSIDE of a normal web request, e.g. triggered by a button click, then
 # executed separately so the user's browser isn't stuck waiting. See
 # app/jobs/application_job.rb for more on this. `perform_later(...)` (used
 # elsewhere in this app to start this job) QUEUES the job to run soon,
@@ -46,7 +46,7 @@
 # THREADS: Normally, Ruby code runs one instruction at a time, top to
 # bottom, in a single "thread" of execution. A `Thread` is a way to run a
 # SECOND (or third, fourth...) independent stream of code AT THE SAME TIME
-# as the rest of your program — e.g. so this job can crawl 2+ storage
+# as the rest of your program, e.g. so this job can crawl 2+ storage
 # companies' websites simultaneously instead of one after another, cutting
 # total crawl time. `Thread.new do ... end` starts a new thread running the
 # code in the block; the calling code continues immediately without waiting
@@ -56,7 +56,7 @@
 # MUTEX (MUTUAL EXCLUSION LOCK): When multiple threads run at the same
 # time, if two of them try to read-and-update the SAME shared piece of data
 # at the exact same moment, the update can get corrupted (a "race
-# condition") — e.g. two threads both read a counter as 5, both add 1, and
+# condition"), e.g. two threads both read a counter as 5, both add 1, and
 # both write back 6, when the correct final value should have been 7. A
 # `Mutex` is a lock that only one thread can be holding at a time.
 # `mutex.synchronize do ... end` says "wait until no other thread is inside
@@ -66,7 +66,7 @@
 # TIMEOUT: `Timeout.timeout(seconds) do ... end` (from Ruby's standard
 # library, loaded via `require "timeout"` below) runs the given block, but
 # if it hasn't finished within `seconds` seconds, Ruby forcibly interrupts
-# it by raising an exception inside that code — used here so one slow
+# it by raising an exception inside that code, used here so one slow
 # website can't stall the whole crawl indefinitely.
 # =============================================================================
 
@@ -77,12 +77,12 @@
 # required before use.
 require "timeout"
 
-# `class CrawlJob < ApplicationJob` — this job inherits from ApplicationJob
+# `class CrawlJob < ApplicationJob`, this job inherits from ApplicationJob
 # (see app/jobs/application_job.rb), picking up its shared retry
 # configuration automatically.
 class CrawlJob < ApplicationJob
   # Raised when a single company's crawl (or the crawl as a whole) blows past
-  # its time budget. Caught internally — it never bubbles up to ActiveJob, so it
+  # its time budget. Caught internally, it never bubbles up to ActiveJob, so it
   # does not trigger the retry_on StandardError below.
   #
   # `class CompanyTimeoutError < StandardError; end` defines a brand new,
@@ -93,51 +93,51 @@ class CrawlJob < ApplicationJob
   # below `rescue CompanyTimeoutError` specifically, distinguishing "this
   # company timed out" from any other kind of failure. The `; end` on the
   # same line is just a compact one-line way of writing an otherwise-empty
-  # class body — equivalent to writing `class CompanyTimeoutError <
+  # class body, equivalent to writing `class CompanyTimeoutError <
   # StandardError` then `end` on the next line.
   class CompanyTimeoutError < StandardError; end
 
-  # Use the "crawl" queue — ActiveJob's async adapter will process jobs from this queue
+  # Use the "crawl" queue, ActiveJob's async adapter will process jobs from this queue
   #
   # Assigns this job to the queue named "crawl" (see AlertCheckerJob for
-  # the same pattern with a different queue name) — `:crawl` is a Ruby
+  # the same pattern with a different queue name), `:crawl` is a Ruby
   # symbol used here as the queue's identifier.
   queue_as :crawl
 
   # Retry configuration:
-  # If the job crashes unexpectedly (NOT a per-company error — those are caught internally),
+  # If the job crashes unexpectedly (NOT a per-company error, those are caught internally),
   # retry up to 2 times with exponential backoff (5 min, 25 min)
   #
-  # `retry_on StandardError, attempts: 2, wait: :polynomially_longer` — if
+  # `retry_on StandardError, attempts: 2, wait: :polynomially_longer`, if
   # `perform` (below) raises ANY StandardError that escapes all the way out
   # (i.e. wasn't caught somewhere inside), ActiveJob will automatically
   # re-run the whole job, up to 2 total attempts, waiting increasingly
   # longer between each retry. Per-company errors are deliberately caught
   # INSIDE `perform` (see the per-company rescue blocks further down) so
-  # they never reach this outer retry mechanism — only a truly unexpected,
+  # they never reach this outer retry mechanism, only a truly unexpected,
   # job-level failure would trigger a full retry here.
   retry_on StandardError, attempts: 2, wait: :polynomially_longer
 
-  # Don't retry Playwright installation errors — those need manual intervention
+  # Don't retry Playwright installation errors, those need manual intervention
   #
   # `discard_on Playwright::Error` is the opposite of retry_on: if this
   # specific error type is raised, ActiveJob gives up immediately instead
-  # of retrying — appropriate here because a broken Playwright installation
+  # of retrying, appropriate here because a broken Playwright installation
   # won't fix itself by simply trying again; a human needs to intervene.
   discard_on Playwright::Error
 
   # Hard cap on how long a single company's parser.run can take. Sites vary a
-  # lot in how many locations they have and how slow their pages load — this
+  # lot in how many locations they have and how slow their pages load, this
   # exists so one bad/slow company can't sit there forever instead of moving
   # on to the next one.
   #
-  # A plain Ruby constant (capitalized name) holding an Integer — number of
+  # A plain Ruby constant (capitalized name) holding an Integer, number of
   # seconds. `# 2 minutes` is an inline trailing comment clarifying the
   # units in human terms.
   COMPANY_TIMEOUT_SECONDS = 120 # 2 minutes
 
   # Hard cap on the whole crawl (all companies combined). Once this elapses,
-  # worker threads stop picking up new companies — whatever hasn't run yet is
+  # worker threads stop picking up new companies, whatever hasn't run yet is
   # skipped and logged rather than left to run indefinitely.
   CRAWL_TIMEOUT_SECONDS = 300 # 5 minutes
 
@@ -156,7 +156,7 @@ class CrawlJob < ApplicationJob
     # Use find! so we get a clear error if the ID doesn't exist
     #
     # `.find` raises ActiveRecord::RecordNotFound if no row with this ID
-    # exists — that's handled by the `rescue ActiveRecord::RecordNotFound`
+    # exists, that's handled by the `rescue ActiveRecord::RecordNotFound`
     # clause near the bottom of this method.
     crawl_run = CrawlRun.find(crawl_run_id)
 
@@ -165,17 +165,17 @@ class CrawlJob < ApplicationJob
     # `crawl_run.running?` is presumably a model method checking the
     # record's status column. This guards against the (unlikely but
     # possible) scenario where two workers somehow both picked up a job for
-    # the same crawl run — the second one to get here bails out instead of
+    # the same crawl run, the second one to get here bails out instead of
     # duplicating work.
     if crawl_run.running?
-      Rails.logger.warn("[CrawlJob] CrawlRun ##{crawl_run_id} is already running — aborting duplicate job")
+      Rails.logger.warn("[CrawlJob] CrawlRun ##{crawl_run_id} is already running, aborting duplicate job")
       return
     end
     # `end` closes the `if crawl_run.running?` block above.
 
     # Mark the crawl as started
     #
-    # `crawl_run.start!` — a model method (again, `!` signals a meaningful
+    # `crawl_run.start!`, a model method (again, `!` signals a meaningful
     # side effect: this saves a status change to the database) that flips
     # the record's status to "running" and likely records a start
     # timestamp.
@@ -183,11 +183,11 @@ class CrawlJob < ApplicationJob
     # Sends a live update to the dashboard (see the broadcast_status
     # private method near the bottom of this file) so the user immediately
     # sees the crawl has begun.
-    broadcast_status(crawl_run, "Crawl started — geocoding search location...")
+    broadcast_status(crawl_run, "Crawl started, geocoding search location...")
 
-    # STEP 1: Geocode the search city to lat/lng — see geocode_search_location
+    # STEP 1: Geocode the search city to lat/lng, see geocode_search_location
     # below. Returns `[search_lat, search_lng]` on success, or `nil` if
-    # geocoding failed — in which case geocode_search_location has already
+    # geocoding failed, in which case geocode_search_location has already
     # marked the crawl_run failed and broadcast the error itself, so there's
     # nothing left to do here except stop.
     coordinates = geocode_search_location(crawl_run)
@@ -198,15 +198,15 @@ class CrawlJob < ApplicationJob
     # 100 (miles) if none was set (nil).
     radius_miles = crawl_run.search_radius_miles || 100
 
-    # STEP 2: Determine which companies to crawl — see
+    # STEP 2: Determine which companies to crawl, see
     # resolve_companies_to_crawl below.
     companies_to_crawl = resolve_companies_to_crawl(crawl_run, options)
 
     # STEPS 3-5: Launch Playwright, run every company's parser (in parallel,
     # up to the configured thread-pool size), then calculate distances once
-    # all companies are done — see crawl_companies_and_calculate_distances
+    # all companies are done, see crawl_companies_and_calculate_distances
     # below. Returns `{ facilities: N, units: N }` totals on success, or
-    # `nil` if the Playwright CLI couldn't be found at all — in which case
+    # `nil` if the Playwright CLI couldn't be found at all, in which case
     # that method has already marked the crawl_run failed and broadcast the
     # error itself, so there's nothing left to do here except stop.
     totals = crawl_companies_and_calculate_distances(
@@ -220,13 +220,13 @@ class CrawlJob < ApplicationJob
     broadcast_log(crawl_run, :info, "system", "Checking alert rules...")
 
     # `AlertCheckerJob.perform_later(...)` ENQUEUES another background job
-    # (see app/jobs/alert_checker_job.rb) to run — using `perform_later`
+    # (see app/jobs/alert_checker_job.rb) to run, using `perform_later`
     # rather than `perform_now` means this CrawlJob doesn't wait around for
     # alert-checking to finish; it just schedules it and moves on
     # immediately to the steps below.
     AlertCheckerJob.perform_later(crawl_run_id: crawl_run.id)
 
-    # STEP 7: Purge old history — see purge_old_crawl_history below.
+    # STEP 7: Purge old history, see purge_old_crawl_history below.
     purge_old_crawl_history(crawl_run)
 
     # -------------------------------------------------------------------------
@@ -238,27 +238,27 @@ class CrawlJob < ApplicationJob
 
     broadcast_status(
       crawl_run,
-      "Crawl complete — #{totals[:facilities]} facilities, #{totals[:units]} matching units found"
+      "Crawl complete, #{totals[:facilities]} facilities, #{totals[:units]} matching units found"
     )
 
     # Broadcast a "done" event so the dashboard can refresh the results table
     broadcast_finished(crawl_run)
 
   rescue ActiveRecord::RecordNotFound => e
-    # The crawl_run record was deleted before the job ran — nothing to do
+    # The crawl_run record was deleted before the job ran, nothing to do
     #
     # This `rescue` (and the one below) is attached directly to the
-    # `def perform ... end` method body — Ruby allows a method definition
+    # `def perform ... end` method body, Ruby allows a method definition
     # to have its own implicit begin/rescue without a separate `begin`
     # keyword, catching errors raised ANYWHERE in the method above.
     # ActiveRecord::RecordNotFound here specifically means the very first
     # `CrawlRun.find(crawl_run_id)` call at the top of this method failed
-    # — since crawl_run was never successfully assigned, there's nothing
+    #, since crawl_run was never successfully assigned, there's nothing
     # meaningful this rescue block can update; it just logs and stops.
     Rails.logger.error("[CrawlJob] CrawlRun ##{crawl_run_id} not found: #{e.message}")
 
   rescue => e
-    # Something went very wrong at the top level — mark the crawl as failed
+    # Something went very wrong at the top level, mark the crawl as failed
     #
     # Catch-all for any other unexpected error anywhere in `perform` (or
     # anything it calls) that wasn't already handled by a more specific
@@ -267,14 +267,14 @@ class CrawlJob < ApplicationJob
     error_msg = "#{e.class}: #{e.message}"
     Rails.logger.error("[CrawlJob] Fatal error: #{error_msg}\n#{e.backtrace.join("\n")}")
 
-    # `begin ... rescue ... end` NESTED inside this outer rescue — this
+    # `begin ... rescue ... end` NESTED inside this outer rescue, this
     # protects against the possibility that even TRYING to mark the crawl
     # as failed (which itself hits the database and the broadcast system)
     # could itself raise an error (e.g. if the database connection is the
     # thing that's broken). Without this inner begin/rescue, such a
     # secondary failure would replace/mask the original error.
     begin
-      # `crawl_run&.fail!(error_msg)` — safe navigation (`&.`) matters here
+      # `crawl_run&.fail!(error_msg)`, safe navigation (`&.`) matters here
       # because if the RecordNotFound case above didn't happen but some
       # OTHER early failure meant `crawl_run` was never assigned, this
       # avoids raising a NoMethodError on nil; it simply does nothing if
@@ -288,12 +288,12 @@ class CrawlJob < ApplicationJob
 
     raise  # Re-raise so ActiveJob knows the job failed (for retry logic)
     # A bare `raise` with no argument, inside a `rescue` block, re-raises
-    # the SAME exception (`e`) that was just caught — this lets ActiveJob's
+    # the SAME exception (`e`) that was just caught, this lets ActiveJob's
     # own error handling (specifically the `retry_on StandardError`
     # configured near the top of this class) see that the job failed and
     # potentially retry it, rather than silently swallowing the error here.
   end
-  # `end` closes the `def perform` method definition — everything below is
+  # `end` closes the `def perform` method definition, everything below is
   # the private, single-purpose methods `perform` delegates each STEP to.
 
   # ---------------------------------------------------------------------------
@@ -309,7 +309,7 @@ class CrawlJob < ApplicationJob
   #
   # Returns a two-element Array `[search_lat, search_lng]` on success. On
   # failure (no geocoding matches at all), marks `crawl_run` failed and
-  # broadcasts the error itself, then returns `nil` — `perform` above
+  # broadcasts the error itself, then returns `nil`, `perform` above
   # checks for that `nil` and stops immediately, since nothing downstream
   # can proceed without coordinates.
   def geocode_search_location(crawl_run)
@@ -327,17 +327,17 @@ class CrawlJob < ApplicationJob
     # name could be ambiguous).
     geocode_results = Geocoder.search(search_city)
 
-    # `.empty?` — no matches came back at all, meaning geocoding failed
+    # `.empty?`, no matches came back at all, meaning geocoding failed
     # entirely for this input.
     if geocode_results.empty?
-      # Geocoding failed — can't do anything without coordinates
+      # Geocoding failed, can't do anything without coordinates
       error_msg = "Could not find coordinates for '#{search_city}'. " \
                   "Try entering a full city name (e.g. 'Gilbert, Arizona') or a ZIP code."
       # `crawl_run.fail!(error_msg)` marks the crawl run as failed in the
       # database, recording the reason.
       crawl_run.fail!(error_msg)
       broadcast_status(crawl_run, error_msg)
-      # Nothing more can be done without coordinates — signal failure to
+      # Nothing more can be done without coordinates, signal failure to
       # the caller (`perform`), which stops here.
       return nil
     end
@@ -354,7 +354,7 @@ class CrawlJob < ApplicationJob
     #
     # `.update!(...)` saves these two columns on the crawl_run database
     # row. The `!` means it will raise an error if validation fails,
-    # instead of silently returning false — appropriate here since a
+    # instead of silently returning false, appropriate here since a
     # failed save would be a real, unexpected problem worth surfacing.
     crawl_run.update!(search_lat: search_lat, search_lng: search_lng)
 
@@ -373,12 +373,12 @@ class CrawlJob < ApplicationJob
   # STEP 2 (extracted): Determine which companies to crawl
   # -------------------------------------------------------------------------
   # Returns the Array of company names to crawl this run, and (as a side
-  # effect) saves that list onto `crawl_run` and logs it — this never fails
+  # effect) saves that list onto `crawl_run` and logs it, this never fails
   # in a way that should stop the crawl, so unlike geocode_search_location
   # above it has no `nil`-means-failure return case.
   def resolve_companies_to_crawl(crawl_run, options)
     # `if ... else ... end` used here as an EXPRESSION whose result is
-    # directly assigned to companies_to_crawl — in Ruby, `if/else` blocks
+    # directly assigned to companies_to_crawl, in Ruby, `if/else` blocks
     # evaluate to the value of whichever branch actually ran, so this is
     # equivalent to (but more readable than) assigning inside each branch
     # separately.
@@ -386,7 +386,7 @@ class CrawlJob < ApplicationJob
       # User selected specific companies
       #
       # `options[:companies]` reads the `:companies` key out of the
-      # `options` Hash passed into `perform` — if the user picked specific
+      # `options` Hash passed into `perform`, if the user picked specific
       # companies via a form, this list comes through the job's arguments.
       options[:companies]
     else
@@ -415,12 +415,12 @@ class CrawlJob < ApplicationJob
   # -------------------------------------------------------------------------
   # STEP 3 (part 1, extracted): Locate the Playwright CLI executable
   # -------------------------------------------------------------------------
-  # Find the playwright CLI — try npm global install location, then PATH.
+  # Find the playwright CLI, try npm global install location, then PATH.
   # Each shell-out is wrapped in the `timeout` coreutil so a stalled `npx`
   # (e.g. blocked on a registry fetch) can't hang the job before the
   # per-company/per-crawl deadlines below even start counting.
   #
-  # Returns the executable path String on success, or `nil` on failure —
+  # Returns the executable path String on success, or `nil` on failure,
   # in which case (like geocode_search_location above) `crawl_run` has
   # already been marked failed and the error already broadcast, so the
   # caller just needs to stop.
@@ -433,21 +433,21 @@ class CrawlJob < ApplicationJob
     # error output. `.strip` trims whitespace/newlines from the result.
     playwright_path = `timeout 10 which playwright 2>/dev/null`.strip
 
-    # `.blank?` — Rails helper for nil-or-empty. If the plain `which`
+    # `.blank?`, Rails helper for nil-or-empty. If the plain `which`
     # lookup found nothing, fall back to trying `npx playwright` (npm's
     # tool for running a locally-installed package's CLI without a global
     # install).
     if playwright_path.blank?
       # `timeout 15 npx playwright --version 2>/dev/null && echo "npx
-      # playwright"` — runs `npx playwright --version` (capped at 15
+      # playwright"`, runs `npx playwright --version` (capped at 15
       # seconds); the shell `&&` means the following `echo` only runs if
       # the version check SUCCEEDED (exit code 0), so the echoed line only
       # appears on success. `.lines` splits the captured multi-line output
       # into an array of individual line strings; `.last` takes the final
       # line (which would be "npx playwright" if the whole command chain
-      # succeeded, or some other line — like a version number, if `&&`
+      # succeeded, or some other line, like a version number, if `&&`
       # short-circuited due to the version check itself printing something
-      # before failing — if it didn't). `&.strip` (safe navigation) trims
+      # before failing, if it didn't). `&.strip` (safe navigation) trims
       # whitespace, guarding against `.last` being nil if there was no
       # output at all.
       playwright_path = `timeout 15 npx playwright --version 2>/dev/null && echo "npx playwright"`.lines.last&.strip
@@ -455,7 +455,7 @@ class CrawlJob < ApplicationJob
     # `end` closes the `if playwright_path.blank?` block above.
 
     if playwright_path.blank?
-      # Both lookup attempts failed — there's no way to launch a browser,
+      # Both lookup attempts failed, there's no way to launch a browser,
       # so fail the whole crawl with an actionable error message.
       error_msg = "Playwright CLI not found. Install it with: npm install -g playwright && playwright install chromium"
       crawl_run.fail!(error_msg)
@@ -474,25 +474,25 @@ class CrawlJob < ApplicationJob
   # -------------------------------------------------------------------------
   # Returns `{ facilities: N, units: N }` totals across every company that
   # actually completed, or `nil` if the Playwright CLI couldn't be found at
-  # all (see find_playwright_executable above) — `perform` checks for that
+  # all (see find_playwright_executable above), `perform` checks for that
   # `nil` and stops.
   def crawl_companies_and_calculate_distances(crawl_run, companies_to_crawl, search_lat, search_lng, radius_miles, options)
     broadcast_log(crawl_run, :info, "system", "Launching browser...")
 
-    # `Setting.get("crawl_headless", default: "true") != false` — reads a
+    # `Setting.get("crawl_headless", default: "true") != false`, reads a
     # configurable app setting, and compares it to the literal value
     # `false`. Since Setting.get likely returns a STRING like "true" or
     # "false" (or possibly an actual boolean depending on how Setting
     # works), this comparison is really just checking "is the setting not
-    # literally the false object" — in practice this evaluates to `true`
+    # literally the false object", in practice this evaluates to `true`
     # for basically any string value including "false" the string (since a
     # non-empty string is never == the boolean false), so effectively
     # `headless` ends up true unless Setting.get somehow returns a real
-    # `false` object. Flagged separately as worth double-checking — kept
+    # `false` object. Flagged separately as worth double-checking, kept
     # exactly as-is here since fixing it is a behavior change, not a
     # comment/refactor cleanup, and outside this method-split's scope.
     headless = Setting.get("crawl_headless", default: "true") != false
-    # `.to_i` converts the setting's value into an Integer — how many
+    # `.to_i` converts the setting's value into an Integer, how many
     # companies to crawl in parallel via separate threads.
     max_parallel = Setting.get("crawl_parallel_companies", default: 2).to_i
 
@@ -500,7 +500,7 @@ class CrawlJob < ApplicationJob
     return nil if playwright_path.nil?
 
     # These totals accumulate as run_company_thread_pool below crawls each
-    # company — using a Hash (rather than two separate local variables)
+    # company, using a Hash (rather than two separate local variables)
     # means it can be passed BY REFERENCE into that method and mutated
     # there, then read back here once every company is done.
     totals = { facilities: 0, units: 0 }
@@ -509,7 +509,7 @@ class CrawlJob < ApplicationJob
     # Playwright driver process (using the executable path found above)
     # and yields a `playwright` control object usable inside the block.
     # Playwright automatically tears down the driver process once this
-    # block finishes (successfully or via an error) — similar to how Ruby
+    # block finishes (successfully or via an error), similar to how Ruby
     # file handles are auto-closed by `File.open(...) do |f| ... end`.
     Playwright.create(playwright_cli_executable_path: playwright_path) do |playwright|
       # `.chromium.launch(...)` starts an actual Chromium browser process.
@@ -522,13 +522,13 @@ class CrawlJob < ApplicationJob
           "--disable-gpu",                   # Not needed for headless, saves resources
           "--window-size=1280,800"           # Set a reasonable viewport
         ]
-        # `args:` is an Array of Chromium command-line flags — each string
+        # `args:` is an Array of Chromium command-line flags, each string
         # is one flag, with an inline comment explaining why it's needed.
       )
 
       broadcast_log(crawl_run, :info, "system", "Browser launched successfully")
 
-      # STEP 4: Run every company's parser via a thread pool — see
+      # STEP 4: Run every company's parser via a thread pool, see
       # run_company_thread_pool below. Mutates `totals` in place as each
       # company finishes.
       run_company_thread_pool(
@@ -551,14 +551,14 @@ class CrawlJob < ApplicationJob
 
       # Close the browser now that we're done crawling
       #
-      # Explicitly shuts down the shared Chromium browser process — done
+      # Explicitly shuts down the shared Chromium browser process, done
       # here (rather than relying only on Playwright.create's automatic
       # cleanup) so the browser is closed as soon as crawling work is
       # truly finished, before this method returns.
       browser.close
-    end # Playwright.create block ends here — browser is automatically closed
+    end # Playwright.create block ends here, browser is automatically closed
     # This trailing `end` closes the `Playwright.create(...) do
-    # |playwright|` block that began above — every line of STEP 3 (browser
+    # |playwright|` block that began above, every line of STEP 3 (browser
     # launch), STEP 4 (company crawling), and STEP 5 (distance calc)
     # happened inside this block, using the `playwright`/`browser` objects
     # it provided.
@@ -582,15 +582,15 @@ class CrawlJob < ApplicationJob
   # finish (with a grace period, and a last-resort force-kill for any
   # thread that's still stuck afterward). Mutates `totals` (passed in from
   # crawl_companies_and_calculate_distances above) in place as each company
-  # finishes — this method has no meaningful return value of its own.
+  # finishes, this method has no meaningful return value of its own.
   def run_company_thread_pool(crawl_run, companies_to_crawl, browser, search_lat, search_lng, radius_miles, options, max_parallel, totals)
     # `Mutex.new` creates a new lock object. See the big explanation at
-    # the top of this file for what a Mutex does — in short, it ensures
+    # the top of this file for what a Mutex does, in short, it ensures
     # that when multiple threads need to read-then-write the SAME shared
     # variable (like `totals` above, or the work queue built next), only
     # one thread does so at a time, preventing corrupted updates.
     mutex = Mutex.new                                       # Prevents race conditions when updating totals
-    # `companies_to_crawl.dup` creates a SHALLOW COPY of the array —
+    # `companies_to_crawl.dup` creates a SHALLOW COPY of the array,
     # important because this new array (`companies_queue`) is going to
     # be mutated (items removed from it one at a time as threads claim
     # work) while `companies_to_crawl` itself is left untouched (it's
@@ -601,11 +601,11 @@ class CrawlJob < ApplicationJob
     # still stuck running.
     active_threads = []
 
-    # Absolute deadline for the whole crawl — computed once, before any
+    # Absolute deadline for the whole crawl, computed once, before any
     # worker threads start, so every thread is racing against the same clock.
     #
     # `monotonic_now` is a private helper method defined near the bottom
-    # of this file — it returns a steadily-increasing clock reading that
+    # of this file, it returns a steadily-increasing clock reading that
     # can't jump backward (unlike wall-clock time, which can be adjusted
     # by NTP synchronization), making it safe for measuring elapsed time.
     # Adding CRAWL_TIMEOUT_SECONDS gives an absolute point in time (in
@@ -614,7 +614,7 @@ class CrawlJob < ApplicationJob
     crawl_deadline = monotonic_now + CRAWL_TIMEOUT_SECONDS
 
     # `max_parallel.times do ... end` runs the block exactly
-    # `max_parallel` times in a row — this is how the "thread pool" size
+    # `max_parallel` times in a row, this is how the "thread pool" size
     # is controlled: if max_parallel is 2, this loop runs twice, each
     # time starting one new worker thread, for 2 threads total working
     # through the same shared companies_queue.
@@ -626,7 +626,7 @@ class CrawlJob < ApplicationJob
       # iteration of `max_parallel.times` (starting the next thread)
       # immediately, without waiting for this thread's block to finish.
       thread = Thread.new do
-        # `loop do ... end` is Ruby's infinite-loop construct — it keeps
+        # `loop do ... end` is Ruby's infinite-loop construct, it keeps
         # running the block over and over until something inside it
         # calls `break` (or the thread is killed from outside). Each
         # pass through this loop, the thread tries to claim and process
@@ -640,16 +640,16 @@ class CrawlJob < ApplicationJob
           # past it).
           remaining_total = crawl_deadline - monotonic_now
           if remaining_total <= 0
-            # The crawl-wide time budget is used up — this thread logs a
+            # The crawl-wide time budget is used up, this thread logs a
             # warning (once, each time it discovers this) and stops
             # taking new work, leaving anything still in companies_queue
             # un-crawled.
             crawl_run.log_warning(
-              "Overall crawl timeout (#{CRAWL_TIMEOUT_SECONDS}s) reached — " \
+              "Overall crawl timeout (#{CRAWL_TIMEOUT_SECONDS}s) reached, " \
               "remaining companies were not crawled this run.",
               company: "system"
             )
-            # `break` exits the `loop do ... end` entirely — this
+            # `break` exits the `loop do ... end` entirely, this
             # thread's block then finishes, and the thread terminates.
             break
           end
@@ -657,14 +657,14 @@ class CrawlJob < ApplicationJob
 
           # Pull the next company from the queue (thread-safe via mutex)
           #
-          # `mutex.synchronize do ... end` — because MULTIPLE threads run
+          # `mutex.synchronize do ... end`, because MULTIPLE threads run
           # this exact same loop body concurrently, and they're all
           # sharing the ONE `companies_queue` array, two threads could
           # otherwise both try to grab a company at the exact same
           # instant and corrupt the array, or both grab the SAME
           # company. Wrapping the shared-array access in
           # `mutex.synchronize` guarantees only one thread executes
-          # `companies_queue.shift` at a time — every other thread
+          # `companies_queue.shift` at a time, every other thread
           # trying to enter a `synchronize` block on this same mutex
           # simply waits its turn.
           #
@@ -674,16 +674,16 @@ class CrawlJob < ApplicationJob
           # work as a shared "work queue": every thread calls `.shift`
           # to atomically claim the next unclaimed company.
           company_name = mutex.synchronize { companies_queue.shift }
-          # If shift returned nil, the queue is empty — no more work for
+          # If shift returned nil, the queue is empty, no more work for
           # this thread to do, so it's done and exits its loop.
-          break if company_name.nil?   # Queue is empty — this thread is done
+          break if company_name.nil?   # Queue is empty, this thread is done
 
           # Never let a single company run longer than COMPANY_TIMEOUT_SECONDS,
           # and never let it push past the overall crawl deadline either.
           #
           # `[ COMPANY_TIMEOUT_SECONDS, remaining_total ].min` takes the
           # SMALLER of the two values: the fixed per-company cap, or
-          # whatever time is actually left in the whole-crawl budget —
+          # whatever time is actually left in the whole-crawl budget,
           # whichever is more restrictive right now. `.clamp(1,
           # COMPANY_TIMEOUT_SECONDS)` then forces the result to be
           # between 1 second (minimum, so Timeout.timeout inside
@@ -692,7 +692,7 @@ class CrawlJob < ApplicationJob
           # (maximum, redundant with the .min above but defensive).
           company_timeout = [ COMPANY_TIMEOUT_SECONDS, remaining_total ].min.clamp(1, COMPANY_TIMEOUT_SECONDS)
 
-          # Crawl this one company — see crawl_one_company below. It
+          # Crawl this one company, see crawl_one_company below. It
           # handles its OWN error cases internally (timeout, unknown
           # company, any other exception) and always returns a
           # `[facilities_count, units_count]` pair, `[0, 0]` if this
@@ -705,7 +705,7 @@ class CrawlJob < ApplicationJob
           # Update totals (thread-safe)
           #
           # Using `mutex.synchronize do ... end` because `totals` is
-          # shared across ALL worker threads — without the mutex, two
+          # shared across ALL worker threads, without the mutex, two
           # threads finishing at nearly the same moment could both read
           # the same starting value and one thread's update could get
           # silently overwritten/lost (the classic "race condition"
@@ -716,12 +716,12 @@ class CrawlJob < ApplicationJob
           end
           # `end` closes the `mutex.synchronize do` block above.
         end
-        # `end` closes the `loop do` block — the infinite work-claiming
+        # `end` closes the `loop do` block, the infinite work-claiming
         # loop for this one worker thread. Once this is reached (via a
         # `break` above), the thread's block is finished and the thread
         # itself terminates.
       end
-      # `end` closes the `Thread.new do` block — everything above this
+      # `end` closes the `Thread.new do` block, everything above this
       # point (from `thread = Thread.new do`) is the CODE THE NEW THREAD
       # WILL RUN; this `end` is where that thread's job description
       # stops. The `thread` local variable now holds a reference to the
@@ -733,9 +733,9 @@ class CrawlJob < ApplicationJob
       # starting all of them.
       active_threads << thread
     end
-    # `end` closes the `max_parallel.times do` loop — by this point,
+    # `end` closes the `max_parallel.times do` loop, by this point,
     # `max_parallel` worker threads have all been STARTED (though they
-    # may still be running/mid-crawl at this exact moment in the code —
+    # may still be running/mid-crawl at this exact moment in the code,
     # starting a thread doesn't wait for it).
 
     # Wait for all threads to finish, but only up to a short grace period past
@@ -753,12 +753,12 @@ class CrawlJob < ApplicationJob
     # thread to finish, ONE AT A TIME, in the order they appear in the
     # array. `t.join(timeout_seconds)` is Thread#join with an argument:
     # normally `.join` (no argument) waits forever until the thread
-    # finishes; passing a number caps how long to wait — if the thread
+    # finishes; passing a number caps how long to wait, if the thread
     # is still running after that many seconds, `.join` just gives up
     # and returns (WITHOUT killing the thread), letting this line move
     # on to `.join` the next thread in the array.
     # `[ join_deadline - monotonic_now, 0 ].max` computes "how many
-    # seconds until join_deadline, but never less than 0" — `.max` picks
+    # seconds until join_deadline, but never less than 0", `.max` picks
     # the larger of the two values in the array, so once join_deadline
     # has already passed, every subsequent `.join` call here effectively
     # gets 0 seconds (meaning: check once and return immediately rather
@@ -767,7 +767,7 @@ class CrawlJob < ApplicationJob
     active_threads.each { |t| t.join([ join_deadline - monotonic_now, 0 ].max) }
 
     # `.select(&:alive?)` filters active_threads down to only the ones
-    # STILL RUNNING after the joins above gave up waiting — `&:alive?`
+    # STILL RUNNING after the joins above gave up waiting, `&:alive?`
     # is Ruby shorthand for `{ |t| t.alive? }` (turning the symbol
     # `:alive?` into a block that calls that method on each element).
     # `Thread#alive?` returns true if the thread hasn't finished yet.
@@ -782,7 +782,7 @@ class CrawlJob < ApplicationJob
         "A worker thread did not stop after the crawl timeout and was force-killed.",
         company: "system"
       )
-      # `t.kill` forcibly terminates the thread from OUTSIDE it — unlike
+      # `t.kill` forcibly terminates the thread from OUTSIDE it, unlike
       # Timeout.timeout (which relies on the target code cooperating at
       # certain interruption points), `.kill` is a blunter, more
       # forceful stop that doesn't require the thread's code to
@@ -801,7 +801,7 @@ class CrawlJob < ApplicationJob
   # Builds this company's parser, runs it under a timeout, and updates the
   # crawl_run's per-company counters/log. ANY failure for this ONE company
   # (a crash, a timeout, an unrecognized company name) is caught here and
-  # turned into a `[0, 0]` result instead of raising — so one bad company
+  # turned into a `[0, 0]` result instead of raising, so one bad company
   # can never take down the whole thread pool. Always returns a
   # `[facilities_count, units_count]` pair (both `0` on any failure).
   def crawl_one_company(crawl_run, company_name, browser, search_lat, search_lng, radius_miles, options, company_timeout)
@@ -816,7 +816,7 @@ class CrawlJob < ApplicationJob
     # app/services/company_registry.rb) looks up and instantiates
     # the right parser class for this company name, passing it
     # the shared browser object (note: the SAME browser instance
-    # is shared across all worker threads — each parser presumably
+    # is shared across all worker threads, each parser presumably
     # opens its OWN page/tab within that one browser) plus the
     # crawl_run record and any user-supplied options.
     parser = CompanyRegistry.build_parser(
@@ -826,7 +826,7 @@ class CrawlJob < ApplicationJob
       options:   options
     )
 
-    # Run the parser — returns { facilities: N, units: N }
+    # Run the parser, returns { facilities: N, units: N }
     #
     # `Timeout.timeout(company_timeout, CompanyTimeoutError) do
     # ... end` runs the block (the actual parser.run call) but
@@ -834,11 +834,11 @@ class CrawlJob < ApplicationJob
     # `company_timeout` seconds. Passing `CompanyTimeoutError` as
     # the second argument tells Ruby to raise THAT specific
     # exception class (instead of Timeout's generic
-    # Timeout::Error) when the timeout fires — which is what lets
+    # Timeout::Error) when the timeout fires, which is what lets
     # the `rescue CompanyTimeoutError` clause below catch it
     # specifically. Under the hood, Timeout.timeout runs the
     # block, but also starts a background watcher that will
-    # interrupt the block's thread if time runs out — this is a
+    # interrupt the block's thread if time runs out, this is a
     # best-effort mechanism: purely native/C-level code that
     # Ruby can't interrupt (mentioned again in run_company_thread_pool's
     # force-kill fallback) can still block past this timeout.
@@ -855,10 +855,10 @@ class CrawlJob < ApplicationJob
     end
     # `end` closes the `Timeout.timeout(...) do` block above.
 
-    # Update crawl run counters (uses SQL increment — thread-safe)
+    # Update crawl run counters (uses SQL increment, thread-safe)
     #
     # These three lines update the database directly rather than
-    # updating plain Ruby variables — the comment notes these
+    # updating plain Ruby variables, the comment notes these
     # particular model methods use a SQL-level increment (like
     # `UPDATE crawl_runs SET facilities_found =
     # facilities_found + 5`), which the database itself performs
@@ -881,7 +881,7 @@ class CrawlJob < ApplicationJob
     [ result[:facilities].to_i, result[:units].to_i ]
 
   rescue CompanyTimeoutError
-    # This company took longer than its time budget — whatever it had
+    # This company took longer than its time budget, whatever it had
     # saved so far stays saved, we just stop waiting on it and move on.
     #
     # This specifically catches the exception raised by
@@ -889,7 +889,7 @@ class CrawlJob < ApplicationJob
     # elapsed without the block finishing.
     crawl_run.log_error(
       "#{company_name} timed out after #{company_timeout.round}s and was skipped so the " \
-      "crawl could keep moving. This can happen on sites with many locations or slow pages — " \
+      "crawl could keep moving. This can happen on sites with many locations or slow pages, " \
       "consider excluding this company or lowering crawl_delay_between_requests_ms in Settings.",
       company: company_name
     )
@@ -897,17 +897,17 @@ class CrawlJob < ApplicationJob
 
     broadcast_log(
       crawl_run, :error, company_name,
-      "✗ #{company_name} timed out — skipped"
+      "✗ #{company_name} timed out, skipped"
     )
 
     [ 0, 0 ]
 
   rescue ArgumentError => e
-    # CompanyRegistry couldn't find a parser — log and skip
+    # CompanyRegistry couldn't find a parser, log and skip
     #
     # `CompanyRegistry.build_parser` (called above) raises
     # ArgumentError if `company_name` isn't a registered company
-    # — this branch catches that specific case.
+    #, this branch catches that specific case.
     crawl_run.log_error(
       "No parser found for '#{company_name}': #{e.message}",
       company: company_name
@@ -917,11 +917,11 @@ class CrawlJob < ApplicationJob
     [ 0, 0 ]
 
   rescue => e
-    # Unexpected error — log it but keep going with other companies
+    # Unexpected error, log it but keep going with other companies
     #
     # A catch-all for anything else that could go wrong while
     # crawling this one company (a bug in the parser, a network
-    # error that isn't a timeout, etc.) — logs it with as much
+    # error that isn't a timeout, etc.), logs it with as much
     # detail as reasonably fits, then returns `[0, 0]` so the
     # caller's loop continues to the next company rather than
     # crashing this whole worker thread.
@@ -934,7 +934,7 @@ class CrawlJob < ApplicationJob
 
     broadcast_log(
       crawl_run, :error, company_name,
-      "✗ #{company_name} failed — see logs for details"
+      "✗ #{company_name} failed, see logs for details"
     )
 
     [ 0, 0 ]
@@ -948,10 +948,10 @@ class CrawlJob < ApplicationJob
   # Delete crawl data older than the configured retention period.
   def purge_old_crawl_history(crawl_run)
     months_to_keep = Setting.get("history_keep_months", default: 6).to_i
-    # `months_to_keep.months.ago` — `.months` is an ActiveSupport
+    # `months_to_keep.months.ago`, `.months` is an ActiveSupport
     # (Rails-added) method on Integer that turns "6" into a Duration
     # representing "6 months," and `.ago` computes the Time that many
-    # months before right now — so cutoff_date ends up being, e.g., "6
+    # months before right now, so cutoff_date ends up being, e.g., "6
     # months ago from today."
     cutoff_date = months_to_keep.months.ago
 
@@ -984,13 +984,13 @@ class CrawlJob < ApplicationJob
   # to use for deadline math.
   def monotonic_now
     # `Process.clock_gettime(Process::CLOCK_MONOTONIC)` is Ruby's
-    # standard-library way to read a "monotonic clock" — a clock that only
+    # standard-library way to read a "monotonic clock", a clock that only
     # ever moves FORWARD at a steady rate, unaffected by the system's
     # wall-clock time being adjusted (e.g. by automatic time
     # synchronization, daylight saving changes, or someone manually
     # changing the system clock). It returns a Float number of seconds
     # since some arbitrary starting point (not tied to any real calendar
-    # date) — only useful for measuring DIFFERENCES between two readings
+    # date), only useful for measuring DIFFERENCES between two readings
     # of it, which is exactly how it's used throughout this file (e.g.
     # `crawl_deadline = monotonic_now + CRAWL_TIMEOUT_SECONDS`, then later
     # compared against a fresh `monotonic_now` call to see how much time
@@ -1004,7 +1004,7 @@ class CrawlJob < ApplicationJob
   def broadcast_status(crawl_run, message)
     # `ActionCable.server.broadcast(channel_name, data)` sends a real-time
     # message to any connected browser tabs currently subscribed to the
-    # given channel — ActionCable is Rails' built-in WebSocket framework,
+    # given channel, ActionCable is Rails' built-in WebSocket framework,
     # used here to push live updates to the dashboard page WITHOUT the
     # browser needing to repeatedly poll/refresh. `"crawl_progress_#{crawl_run.id}"`
     # builds a channel name unique to this specific crawl run, so only
@@ -1019,7 +1019,7 @@ class CrawlJob < ApplicationJob
         facilities: crawl_run.facilities_found,
         units:      crawl_run.units_found
       }
-      # This Hash is the actual payload sent to subscribed browsers —
+      # This Hash is the actual payload sent to subscribed browsers,
       # ActionCable serializes it (turns it into JSON) automatically for
       # transmission over the WebSocket connection. `type: "status"`
       # tells the browser-side JavaScript which kind of update this is,
@@ -1030,7 +1030,7 @@ class CrawlJob < ApplicationJob
     #
     # If ActionCable itself has a problem (e.g. Redis, which ActionCable
     # commonly relies on, is unavailable), that shouldn't be allowed to
-    # crash the actual crawl — broadcasting live progress is a "nice to
+    # crash the actual crawl, broadcasting live progress is a "nice to
     # have," not essential to the crawl succeeding, so failures here are
     # just logged and swallowed.
     Rails.logger.warn("[CrawlJob] Could not broadcast status: #{e.message}")
@@ -1083,4 +1083,4 @@ class CrawlJob < ApplicationJob
   # `end` closes the `def broadcast_finished` method definition above.
 end
 # `end` closes the `class CrawlJob` definition that started at the top of
-# this file — this is the very last line of the file.
+# this file, this is the very last line of the file.

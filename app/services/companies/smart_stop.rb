@@ -3,23 +3,23 @@
 # =============================================================================
 # Crawls smartstopselfstorage.com to find facilities and unit pricing.
 #
-# Website behavior notes (verified by driving the live site — see recon/ for
+# Website behavior notes (verified by driving the live site, see recon/ for
 # saved HTML/screenshots, and the ad-hoc scripts used to discover this):
 #   - No bot-detection/CAPTCHA challenge was ever encountered on this site
 #     while doing this research (no Cloudflare/PerimeterX challenge page, no
-#     "press & hold" gate — the "Protected by Cloudflare" footer badge is
+#     "press & hold" gate, the "Protected by Cloudflare" footer badge is
 #     just a static trust badge, not an active challenge).
 #   - The search page takes real lat/lng query params directly:
 #       /find-storage?latitude=<lat>&longitude=<lng>
 #     (Confirmed by driving the on-page location-search box, which is a
-#     Google Places Autocomplete widget — selecting/submitting a place
+#     Google Places Autocomplete widget, selecting/submitting a place
 #     navigates the browser to exactly this URL shape.)
-#   - The site does NOT expose a radius query param — it always searches a
+#   - The site does NOT expose a radius query param, it always searches a
 #     fixed 25-mile radius regardless of what's passed, so `radius_miles`
 #     is accepted for interface compatibility but not used.
 #   - Search results render server-side as `.location-card` elements, each
 #     with a link (`.location-card__buttons a`) to that facility's detail
-#     page at /find-storage/<state>/<city>/<slug>?unitSize=all — visiting
+#     page at /find-storage/<state>/<city>/<slug>?unitSize=all, visiting
 #     with `unitSize=all` renders ALL unit cards (all size tabs) at once
 #     instead of needing to click through Small/Medium/Large/Vehicle tabs.
 #   - Facility detail pages render unit pricing server-side as `.unit-card`
@@ -35,14 +35,14 @@
 
 # NOVICE PRIMER: `class Companies::SmartStop < Companies::BaseParser` makes
 # this class a SUBCLASS ("child class") of `Companies::BaseParser` (see
-# app/services/companies/base_parser.rb) — it INHERITS every method
+# app/services/companies/base_parser.rb), it INHERITS every method
 # BaseParser defines (`run`, `safe_text`, `safe_attr`, `safe_all_text`,
 # `parse_price`, `parse_size`, `log_info`, `log_warning`, `log_error`,
 # `take_error_screenshot`, etc.) and only needs to implement the 4 methods
 # unique to SmartStop's own website. "Playwright" is the browser-automation
 # library: a `page` object represents one open, invisible ("headless")
 # browser tab, and CSS-selector strings (like ".location-card") are the same
-# mini-language stylesheets use to target HTML elements — see
+# mini-language stylesheets use to target HTML elements, see
 # base_parser.rb's opening comment for a fuller explanation of selectors and
 # Ruby's `protected`/`private` keywords, both used here too.
 class Companies::SmartStop < Companies::BaseParser
@@ -50,30 +50,30 @@ class Companies::SmartStop < Companies::BaseParser
   # reused below when building absolute URLs from relative "/foo" links.
   BASE_URL = "https://www.smartstopselfstorage.com"
 
-  # Overrides BaseParser's abstract `company_name` — required display name
+  # Overrides BaseParser's abstract `company_name`, required display name
   # shown in the UI/exports for this company.
   def company_name
     "SmartStop"
   end
   # `end` closes `def company_name`.
 
-  # Overrides BaseParser's abstract `company_slug` — short id used in log
+  # Overrides BaseParser's abstract `company_slug`, short id used in log
   # lines and screenshot filenames.
   def company_slug
     "smartstop"
   end
   # `end` closes `def company_slug`.
 
-  # Overrides BaseParser's abstract `search_url` — builds the URL for
+  # Overrides BaseParser's abstract `search_url`, builds the URL for
   # SmartStop's search-results page given GPS coordinates and a radius.
   def search_url(lat, lng, radius_miles)
-    # SmartStop's search endpoint takes real lat/lng directly — no
+    # SmartStop's search endpoint takes real lat/lng directly, no
     # reverse-geocoding needed. radius_miles is unused: the site has no
     # radius param and always searches a fixed 25-mile radius.
     "#{BASE_URL}/find-storage?latitude=#{lat}&longitude=#{lng}"
     # String interpolation (`#{...}`) builds the URL by inserting `lat` and
     # `lng` directly into the query string. Note `radius_miles` (the third
-    # method parameter) is never referenced in the body — per the comment
+    # method parameter) is never referenced in the body, per the comment
     # above, this is intentional, not an oversight; kept as a parameter only
     # so this method matches the abstract signature BaseParser#run expects
     # from every subclass. This is the method's only expression, so it's the
@@ -81,14 +81,14 @@ class Companies::SmartStop < Companies::BaseParser
   end
   # `end` closes `def search_url`.
 
-  # Overrides BaseParser's abstract `parse_locations` — reads the list of
+  # Overrides BaseParser's abstract `parse_locations`, reads the list of
   # nearby SmartStop facilities off the search-results page.
   def parse_locations(page)
     locations = []
     # An empty Array that will collect one Hash per facility found.
 
     begin
-      # `begin ... rescue ... end` is Ruby's exception-handling block — code
+      # `begin ... rescue ... end` is Ruby's exception-handling block, code
       # inside `begin` runs normally; an error jumps to the matching
       # `rescue` clause instead of crashing this method.
       page.wait_for_selector(".location-card", timeout: 15_000) rescue nil
@@ -96,12 +96,12 @@ class Companies::SmartStop < Companies::BaseParser
       # appear. The trailing `rescue nil` is Ruby's one-line rescue
       # modifier: any error here (most likely a timeout, if this search area
       # has zero results) is swallowed and the whole expression becomes
-      # `nil` — execution simply continues to the next line, where
+      # `nil`, execution simply continues to the next line, where
       # `query_selector_all` will find zero cards and the "empty" branch
       # below handles that cleanly.
 
       cards = page.query_selector_all(".location-card")
-      # Finds every facility-card element on the page — returns an empty
+      # Finds every facility-card element on the page, returns an empty
       # Array, never nil, if none match.
 
       if cards.empty?
@@ -111,13 +111,13 @@ class Companies::SmartStop < Companies::BaseParser
           "Run ReconService to check current page structure."
         )
         # The trailing `\` continues the string literal onto the next
-        # source line without a real newline — the pieces concatenate into
+        # source line without a real newline, the pieces concatenate into
         # one message.
         take_error_screenshot(page, "no_cards")
         # Inherited helper: saves a screenshot of the current page to logs/,
         # tagged with this label, for later debugging.
         return []
-        # Exits `parse_locations` immediately — nothing left to parse.
+        # Exits `parse_locations` immediately, nothing left to parse.
       end
       # `end` closes the `if cards.empty?` block.
 
@@ -151,17 +151,17 @@ class Companies::SmartStop < Companies::BaseParser
           # "Multiple assignment": calls the private helper (defined near
           # the bottom of this file), which returns a 3-element Array, and
           # Ruby unpacks it into three separate local variables in one line
-          # — equivalent to writing `parts = parse_city_state_zip(...);
+          #, equivalent to writing `parts = parse_city_state_zip(...);
           # city = parts[0]; state = parts[1]; zip = parts[2]` by hand.
 
           next if street.blank?
           # `.blank?` (Rails helper) is true for `nil`/empty/whitespace-only.
           # `next` skips the rest of THIS block iteration (this one card)
-          # and moves to the next card — reached when we couldn't even get a
+          # and moves to the next card, reached when we couldn't even get a
           # usable street address.
 
           # The URL slug (e.g. "/find-storage/az/phoenix/1500-e-baseline-rd")
-          # is stable per facility and unique — use it as external_id since
+          # is stable per facility and unique, use it as external_id since
           # the search results page doesn't expose a numeric store ID.
           external_id = rel_url&.split("?")&.first
           # `&.` safe-navigation chain: if `rel_url` isn't `nil`,
@@ -169,7 +169,7 @@ class Companies::SmartStop < Companies::BaseParser
           # (e.g. "?unitSize=all"), producing an Array like
           # ["/find-storage/az/phoenix/1500-e-baseline-rd"]; `&.first` then
           # safely takes the first piece (the path without any query
-          # string) — the whole chain evaluates to `nil` if `rel_url` itself
+          # string), the whole chain evaluates to `nil` if `rel_url` itself
           # was `nil`.
 
           locations << {
@@ -186,12 +186,12 @@ class Companies::SmartStop < Companies::BaseParser
             zip:         zip || "",
             phone:       nil,
             # No phone number is exposed on SmartStop's search-results cards
-            # in what we scrape — left `nil`.
+            # in what we scrape, left `nil`.
             url:         url,
             external_id: external_id
           }
 
-          log_info("  ✓ #{street} — #{city}, #{state}")
+          log_info("  ✓ #{street}, #{city}, #{state}")
           # A checkmark-prefixed info log line for each successfully parsed
           # location, useful for eyeballing crawl progress in the logs.
 
@@ -212,8 +212,8 @@ class Companies::SmartStop < Companies::BaseParser
       log_error("Timeout waiting for SmartStop search results. Error: #{e.message}")
       take_error_screenshot(page, "search_timeout")
     rescue => e
-      # This bare rescue must come AFTER the more specific one — Ruby checks
-      # `rescue` clauses top-to-bottom and uses the first match — so this is
+      # This bare rescue must come AFTER the more specific one, Ruby checks
+      # `rescue` clauses top-to-bottom and uses the first match, so this is
       # the catch-all for anything else unexpected.
       log_error("Unexpected error parsing SmartStop locations: #{e.class}: #{e.message}")
       take_error_screenshot(page, "parse_locations_error")
@@ -221,12 +221,12 @@ class Companies::SmartStop < Companies::BaseParser
     # `end` closes the outer `begin ... rescue ... rescue ... end` block.
 
     locations
-    # The last expression evaluated — the `locations` Array built above —
+    # The last expression evaluated, the `locations` Array built above,
     # becomes `parse_locations`'s return value.
   end
   # `end` closes `def parse_locations`.
 
-  # Overrides BaseParser's abstract `parse_units` — reads unit sizes/prices
+  # Overrides BaseParser's abstract `parse_units`, reads unit sizes/prices
   # off one facility's own detail page.
   def parse_units(page, facility)
     units = []
@@ -235,7 +235,7 @@ class Companies::SmartStop < Companies::BaseParser
     begin
       page.wait_for_selector(".unit-card", timeout: 15_000)
       # Waits up to 15 seconds for at least one unit card to render. No
-      # trailing `rescue nil` here — a timeout on a facility's own detail
+      # trailing `rescue nil` here, a timeout on a facility's own detail
       # page (which we already know exists) is treated as a real error,
       # handled by the `rescue Playwright::TimeoutError` clause further
       # down.
@@ -250,7 +250,7 @@ class Companies::SmartStop < Companies::BaseParser
         )
         take_error_screenshot(page, "no_units_#{facility.id}")
         return []
-        # Exits early with an empty array — nothing more to parse.
+        # Exits early with an empty array, nothing more to parse.
       end
       # `end` closes the `if cards.empty?` block.
 
@@ -274,7 +274,7 @@ class Companies::SmartStop < Companies::BaseParser
 
           climate_controlled = features.any? { |f| f.include?("climate") }
           # `.any? { |f| ... }` is true if the block returns truthy for AT
-          # LEAST ONE feature string — here, any feature containing
+          # LEAST ONE feature string, here, any feature containing
           # "climate".
           drive_up           = features.any? { |f| f.include?("drive-up") }
           outdoor             = features.any? { |f| f.include?("outside") || f.include?("outdoor") }
@@ -319,7 +319,7 @@ class Companies::SmartStop < Companies::BaseParser
               web_special_note = badge_text.split(/Move-In Costs/i).first.to_s.strip.presence
               # `.split(regex)` breaks the string at every place matching
               # `/Move-In Costs/i` (the `i` flag makes it case-insensitive)
-              # — `.first` takes the piece BEFORE that marker (the actual
+              #, `.first` takes the piece BEFORE that marker (the actual
               # promo headline), `.to_s` guards against `nil` if the split
               # produced nothing, `.strip` trims whitespace, and `.presence`
               # (Rails helper) converts an empty result to `nil` rather than
@@ -345,7 +345,7 @@ class Companies::SmartStop < Companies::BaseParser
 
             web_special_note ||= safe_text(card, ".unit-card__cost__web__online-rate")
             # `||=` is Ruby's "assign only if currently nil/false" operator
-            # — only runs the right-hand `safe_text` lookup and reassigns
+            #, only runs the right-hand `safe_text` lookup and reassigns
             # `web_special_note` if it's still `nil` at this point (i.e. the
             # badge text above didn't produce a usable note), giving a
             # second chance to find promo text from a different element.
@@ -359,7 +359,7 @@ class Companies::SmartStop < Companies::BaseParser
             web_special_note:   web_special_note,
             admin_fee:          admin_fee,
             insurance_note:     nil,
-            # Not exposed on SmartStop's unit markup in what we scrape —
+            # Not exposed on SmartStop's unit markup in what we scrape,
             # left `nil`.
             climate_controlled: climate_controlled,
             available:          true,
@@ -370,7 +370,7 @@ class Companies::SmartStop < Companies::BaseParser
             unit_type:          unit_type,
             booking_url:        facility.facility_url
             # SmartStop's unit markup doesn't carry a per-unit reservation
-            # link — every unit just points back at the general facility
+            # link, every unit just points back at the general facility
             # detail page.
           }
 
@@ -399,13 +399,13 @@ class Companies::SmartStop < Companies::BaseParser
   private
   # Ruby's `private` keyword: everything below this line can only be called
   # from inside this class's own methods (implicit receiver only), never
-  # from outside code — these are internal implementation details.
+  # from outside code, these are internal implementation details.
 
-  # Parses "Phoenix, AZ 85042" (or "Phoenix , AZ 85042" — extra space seen
+  # Parses "Phoenix, AZ 85042" (or "Phoenix , AZ 85042", extra space seen
   # in the wild) into [city, state, zip].
   def parse_city_state_zip(text)
     return [ nil, nil, nil ] if text.blank?
-    # `.blank?` is true for `nil`/empty/whitespace-only — nothing to parse
+    # `.blank?` is true for `nil`/empty/whitespace-only, nothing to parse
     # if there's no text at all. Returns a 3-element Array of `nil`s so
     # callers can always safely destructure the result into three
     # variables, whether or not parsing succeeded.
@@ -416,7 +416,7 @@ class Companies::SmartStop < Companies::BaseParser
     # `^` anchors to the start of the string; `(.+?)` is a "non-greedy"
     # capture group matching one-or-more of any character, but as FEW as
     # possible (so it stops at the first comma rather than swallowing too
-    # much) — this captures the city name; `\s*,\s*` matches a comma with
+    # much), this captures the city name; `\s*,\s*` matches a comma with
     # optional whitespace on either side; `([A-Za-z]{2})` captures exactly 2
     # letters (the state abbreviation); `\s+` matches one-or-more spaces;
     # `(\d{5})` captures exactly 5 digits (the ZIP code).
