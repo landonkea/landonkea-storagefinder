@@ -311,13 +311,14 @@
                 current one, generating one checkbox per company. %>
             <% @available_companies.each do |company| %>
               <%# `CompanyRegistry.stubbed?(company)` is true only for
-                  companies whose parser is a known stub (currently just
-                  StorAmerica — see app/services/company_registry.rb's
-                  STUBBED_COMPANIES) — a crawl against one would silently
-                  return zero results, which used to be indistinguishable
-                  in the UI from "this company legitimately has no
-                  availability right now." `stub` below drives both this
-                  checkbox's disabled state and the label text/styling. %>
+                  companies whose parser is a known stub (none right now —
+                  see app/services/company_registry.rb's STUBBED_COMPANIES,
+                  StorAmerica was the last one until its parser got
+                  implemented) — a crawl against one would silently return
+                  zero results, which used to be indistinguishable in the
+                  UI from "this company legitimately has no availability
+                  right now." `stub` below drives both this checkbox's
+                  disabled state and the label text/styling. %>
               <% stub = CompanyRegistry.stubbed?(company) %>
               <%# Wrapping the checkbox and its text in one `<label>` makes
                   the whole pill clickable, not just the tiny checkbox

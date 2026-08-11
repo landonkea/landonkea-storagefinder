@@ -179,12 +179,15 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   end
   # `end` closes the "index shows no issue badge..." test block.
 
-  test "index disables the StorAmerica company checkbox and marks it unsupported" do
-    # StorAmerica's parser (app/services/companies/stor_america.rb) is a
-    # stub, it always returns zero results. CompanyRegistry.stubbed?
-    # drives the dashboard's checkbox rendering (see
-    # app/views/dashboard/index.html.erb) to disable it and label it
-    # clearly, instead of silently letting it be selected.
+  test "index does not disable any company checkbox when every parser is implemented" do
+    # CompanyRegistry.stubbed? drives the dashboard's checkbox rendering
+    # (see app/views/dashboard/index.html.erb) to disable a company's
+    # checkbox and label it "(not yet supported)" instead of silently
+    # letting it be selected. StorAmerica (app/services/companies/stor_america.rb)
+    # used to be the one stub exercising that path; now that it has a real
+    # parser, CompanyRegistry::STUBBED_COMPANIES is empty, so no checkbox
+    # should render as disabled and the "(not yet supported)" label
+    # shouldn't appear at all.
     #
     # The company checkboxes only render on the "start a new crawl" form,
     # which the dashboard hides while a crawl is already running (see
@@ -197,13 +200,13 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     # `assert_select` parses the response HTML and finds elements matching
-    # a CSS selector, this locates the specific checkbox whose value is
-    # "StorAmerica" and asserts it carries the `disabled` attribute.
-    assert_select "input[name='companies[]'][value='StorAmerica'][disabled]"
-    assert_match "(not yet supported)", response.body
+    # a CSS selector, this confirms NO checkbox anywhere in the response
+    # carries the `disabled` attribute.
+    assert_select "input[name='companies[]'][disabled]", count: 0
+    assert_no_match "(not yet supported)", response.body
   end
-  # `end` closes the "index disables the StorAmerica company checkbox..."
-  # test block.
+  # `end` closes the "index does not disable any company checkbox..." test
+  # block.
 end
 # `end` closes the `class DashboardControllerTest < ActionDispatch::IntegrationTest`
 # definition that started at the top of the file.

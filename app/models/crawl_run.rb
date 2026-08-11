@@ -339,11 +339,12 @@ class CrawlRun < ApplicationRecord
 
   # Returns the most recently completed crawl run
   def self.latest_completed
-    # `completed` calls the `completed` scope (status == "completed"),
-    # then `.order(completed_at: :desc)` sorts those results newest-first,
-    # then `.first` takes just the single most-recent record (or nil if
-    # there are none).
-    completed.order(completed_at: :desc).first
+    # Look for completed crawls first, but if none exist, fall back to
+    # failed crawls that still collected some data (partial results are
+    # better than showing nothing).
+    completed.order(completed_at: :desc).first ||
+      where(status: "failed").where("completed_at IS NOT NULL")
+        .order(completed_at: :desc).first
   end
   # `end` closes the `def self.latest_completed` class method definition.
 

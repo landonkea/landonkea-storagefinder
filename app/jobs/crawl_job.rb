@@ -118,13 +118,17 @@ class CrawlJob < ApplicationJob
   # job-level failure would trigger a full retry here.
   retry_on StandardError, attempts: 2, wait: :polynomially_longer
 
-  # Don't retry Playwright installation errors, those need manual intervention
-  #
-  # `discard_on Playwright::Error` is the opposite of retry_on: if this
-  # specific error type is raised, ActiveJob gives up immediately instead
-  # of retrying, appropriate here because a broken Playwright installation
-  # won't fix itself by simply trying again; a human needs to intervene.
-  discard_on Playwright::Error
+  # Don't retry Playwright installation errors, those need manual intervention.
+  # Instead of silently discarding, rescue and mark the crawl as failed so the
+  # user can see what went wrong on the dashboard.
+  rescue_from Playwright::Error do |error|
+    if @crawl_run
+      @crawl_run.fail!("Playwright error: #{error.message}")
+      if @crawl_run.facility_ids&.any?
+        @crawl_run.update_column(:completed_at, Time.current)
+      end
+    end
+  end
 
   # Hard cap on how long a single company's parser.run can take. Sites vary a
   # lot in how many locations they have and how slow their pages load, this
@@ -158,7 +162,8 @@ class CrawlJob < ApplicationJob
     # `.find` raises ActiveRecord::RecordNotFound if no row with this ID
     # exists, that's handled by the `rescue ActiveRecord::RecordNotFound`
     # clause near the bottom of this method.
-    crawl_run = CrawlRun.find(crawl_run_id)
+    @crawl_run = CrawlRun.find(crawl_run_id)
+    crawl_run = @crawl_run
 
     # Double-check it's not already running (in case of race condition)
     #
@@ -280,6 +285,11 @@ class CrawlJob < ApplicationJob
       # avoids raising a NoMethodError on nil; it simply does nothing if
       # crawl_run is nil.
       crawl_run&.fail!(error_msg)
+      # If any data was collected before the failure, set completed_at so
+      # the dashboard can still show partial results.
+      if crawl_run&.facility_ids&.any?
+        crawl_run.update_column(:completed_at, Time.current)
+      end
       broadcast_status(crawl_run, "Crawl failed: #{error_msg}")
     rescue => inner_e
       Rails.logger.error("[CrawlJob] Could not even mark crawl as failed: #{inner_e.message}")
@@ -513,18 +523,21 @@ class CrawlJob < ApplicationJob
     # file handles are auto-closed by `File.open(...) do |f| ... end`.
     Playwright.create(playwright_cli_executable_path: playwright_path) do |playwright|
       # `.chromium.launch(...)` starts an actual Chromium browser process.
-      browser = playwright.chromium.launch(
-        headless: headless,
-        args: [
-          "--no-sandbox",                    # Required in some Linux environments
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",         # Prevents crashes on low-memory machines
-          "--disable-gpu",                   # Not needed for headless, saves resources
-          "--window-size=1280,800"           # Set a reasonable viewport
-        ]
+      # Wrapped in a timeout so a broken launch can't hang forever.
+      browser = Timeout.timeout(60) do
+        playwright.chromium.launch(
+          headless: headless,
+          args: [
+            "--no-sandbox",                    # Required in some Linux environments
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",         # Prevents crashes on low-memory machines
+            "--disable-gpu",                   # Not needed for headless, saves resources
+            "--window-size=1280,800"           # Set a reasonable viewport
+          ]
+        )
         # `args:` is an Array of Chromium command-line flags, each string
         # is one flag, with an inline comment explaining why it's needed.
-      )
+      end
 
       broadcast_log(crawl_run, :info, "system", "Browser launched successfully")
 

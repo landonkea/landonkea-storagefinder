@@ -2,9 +2,9 @@
 
 A self-hosted, single-user tool that crawls self-storage company websites
 (Public Storage, U-Haul, Extra Space, CubeSmart, SmartStop, Devon Self
-Storage, iStorage/NSA, StorAmerica is a stub awaiting a parser) for unit
-pricing near a given address, shows results on a live dashboard, and can
-email/Discord you when a price drops or falls below a threshold you set.
+Storage, iStorage/NSA, StorAmerica) for unit pricing near a given address,
+shows results on a live dashboard, and can email/Discord you when a price
+drops or falls below a threshold you set.
 
 It's a Rails 8 app that drives a headless Chromium browser via Playwright to
 do the actual scraping, runs crawls as background jobs, and stores results

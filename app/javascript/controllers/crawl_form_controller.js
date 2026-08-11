@@ -49,9 +49,10 @@ export default class extends Controller {
     // square brackets in the name make Rails treat submitted values as an
     // array on the server side).
     // `:not(:disabled)` excludes stub-company checkboxes (see
-    // app/views/dashboard/index.html.erb, a company like StorAmerica
-    // whose parser isn't implemented yet gets `disabled` set) from both
-    // the "are they all checked?" calculation below and the toggle itself;
+    // app/views/dashboard/index.html.erb, any company whose parser isn't
+    // implemented yet gets `disabled` set, none currently, see
+    // CompanyRegistry::STUBBED_COMPANIES) from both the "are they all
+    // checked?" calculation below and the toggle itself;
     // a disabled checkbox can't be usefully checked/unchecked by a user
     // anyway, and leaving it out of the count keeps "Toggle all" from
     // treating one permanently-unchecked stub as a reason to think

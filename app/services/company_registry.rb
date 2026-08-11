@@ -57,29 +57,23 @@ module CompanyRegistry
     "U-Haul Self-Storage" => Companies::UHaul,
     "SmartStop"           => Companies::SmartStop,
     "iStorage"            => Companies::IStorage,     # NSA Storage brand
-
-    # --- Stub, framework ready, parser needs completion ---
-    # To complete a stub: run ReconService on the URL, then implement
-    # parse_locations and parse_units based on the recon report.
-    # This entry points at a parser class that exists but isn't fully
-    # written yet, registering it here means it will show up in the UI
-    # and be attempted, even though its crawl logic is incomplete.
     "StorAmerica"         => Companies::StorAmerica
   }.freeze
 
-  # `STUBBED_COMPANIES` lists every company name whose parser is a stub
-  # (see app/services/companies/stor_america.rb's own header comment),
-  # registered here so the rest of the app knows what CAN be crawled, but
-  # whose `parse_locations` always returns `[]` and logs a warning rather
-  # than actually scraping anything. Kept as its own small, explicit list
-  # (rather than, say, inspecting each parser class for some "stub?" flag)
-  # so a human deciding whether a company is really ready has one obvious
-  # place to update, the dashboard's company checkboxes (see
-  # app/views/dashboard/index.html.erb) read this list to disable
-  # StorAmerica's checkbox and label it "(not yet supported)" instead of
-  # silently letting a user select it and get zero results back with no
-  # explanation.
-  STUBBED_COMPANIES = [ "StorAmerica" ].freeze
+  # `STUBBED_COMPANIES` lists every company name whose parser is a stub, a
+  # parser class that's registered (so the rest of the app knows the
+  # company exists) but whose `parse_locations` always returns `[]` and
+  # logs a warning instead of actually scraping anything. Kept as its own
+  # small, explicit list (rather than, say, inspecting each parser class
+  # for some "stub?" flag) so a human deciding whether a company is really
+  # ready has one obvious place to update, the dashboard's company
+  # checkboxes (see app/views/dashboard/index.html.erb) read this list to
+  # disable a stubbed company's checkbox and label it "(not yet supported)"
+  # instead of silently letting a user select it and get zero results back
+  # with no explanation. Empty for now, every registered company above has
+  # a real, implemented parser, add an entry here again the moment a new
+  # stub gets registered in COMPANIES.
+  STUBBED_COMPANIES = [].freeze
   # `.freeze` is called on the whole hash literal above. Freezing an object
   # in Ruby makes it immutable, any later attempt to modify this hash
   # (like `COMPANIES["X"] = Y`) would raise a FrozenError instead of

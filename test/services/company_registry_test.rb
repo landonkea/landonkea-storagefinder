@@ -117,16 +117,20 @@ class CompanyRegistryTest < ActiveSupport::TestCase
   end
   # `end` closes the "build_parser wraps errors with context..." test block above.
 
-  test "stubbed? is true for StorAmerica and false for a fully implemented company" do
+  test "stubbed? is false for every registered company" do
     # `CompanyRegistry.stubbed?` (see company_registry.rb's STUBBED_COMPANIES
-    # constant) is what drives the dashboard disabling StorAmerica's
+    # constant) is what would drive the dashboard disabling a company's
     # checkbox and labeling it "(not yet supported)", see
     # test/controllers/dashboard_controller_test.rb for that view-level
-    # assertion.
-    assert CompanyRegistry.stubbed?("StorAmerica")
-    refute CompanyRegistry.stubbed?("Public Storage")
+    # assertion. StorAmerica (app/services/companies/stor_america.rb) used
+    # to be the one stub here; now that every registered company has a real
+    # parser, STUBBED_COMPANIES is empty and nothing should read as stubbed.
+    CompanyRegistry.all_company_names.each do |name|
+      refute CompanyRegistry.stubbed?(name), "expected #{name} not to be stubbed"
+    end
   end
-  # `end` closes the "stubbed? is true for StorAmerica..." test block above.
+  # `end` closes the "stubbed? is false for every registered company" test
+  # block above.
 end
 # `end` closes the `class CompanyRegistryTest < ActiveSupport::TestCase`
 # definition that started at the top of this file.
