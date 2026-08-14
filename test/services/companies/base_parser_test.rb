@@ -5,34 +5,34 @@ require "test_helper"
 # BaseParser is abstract (company_name/company_slug/etc. raise
 # NotImplementedError) and its browser-facing methods (open_page,
 # take_error_screenshot, parse_locations, parse_units) need a real
-# Playwright page — not something to fake convincingly in a unit test. This
+# Playwright page, not something to fake convincingly in a unit test. This
 # covers the pure, browser-independent shared logic every company parser
 # inherits: price/size parsing, filtering, and the Facility upsert logic.
 #
 # `class TestParser < Companies::BaseParser` defines a MINIMAL concrete
 # subclass of Companies::BaseParser (app/services/companies/base_parser.rb)
-# purely for testing purposes — it's not a real company parser used by the
+# purely for testing purposes, it's not a real company parser used by the
 # app, it exists ONLY in this test file so BaseParser's shared/protected
 # methods (tested below) can actually be exercised on a real instance,
 # since BaseParser itself can't be instantiated usefully on its own (its
 # abstract methods would raise NotImplementedError if called).
 class TestParser < Companies::BaseParser
   # `def company_name = "Test Co"` is Ruby's single-line "endless method"
-  # syntax (available since Ruby 3.0) — equivalent to writing
+  # syntax (available since Ruby 3.0), equivalent to writing
   # `def company_name; "Test Co"; end` but on one line, with the `=`
   # marking where the method body starts. This overrides BaseParser's
   # abstract `company_name` (which normally raises NotImplementedError) so
   # TestParser has a real, harmless value to return instead.
   def company_name = "Test Co"
-  # Same idea — overrides company_slug, used in log tags and screenshot
+  # Same idea, overrides company_slug, used in log tags and screenshot
   # filenames, with a fixed placeholder value.
   def company_slug = "test_co"
   # Overrides search_url. It ignores its three parameters (`lat`, `lng`,
-  # `radius_miles` — accepted but unused, since this test class never
+  # `radius_miles`, accepted but unused, since this test class never
   # actually needs to build a real search URL) and always returns the same
   # fake URL string.
   def search_url(lat, lng, radius_miles) = "https://example.com/search"
-  # Overrides parse_locations to always return an empty Array — fine here
+  # Overrides parse_locations to always return an empty Array, fine here
   # because none of the tests below call `.run` (BaseParser's real
   # browser-driving entry point), only the individual protected helper
   # methods directly.
@@ -42,7 +42,7 @@ class TestParser < Companies::BaseParser
 end
 # `end` closes the `class TestParser < Companies::BaseParser` definition above.
 
-# `class BaseParserTest < ActiveSupport::TestCase` — the actual test class
+# `class BaseParserTest < ActiveSupport::TestCase`, the actual test class
 # for this file, using TestParser (defined above) as its test subject.
 class BaseParserTest < ActiveSupport::TestCase
   # `def parser(options: {})` defines a helper method (with a keyword
@@ -54,7 +54,7 @@ class BaseParserTest < ActiveSupport::TestCase
     # Companies::BaseParser#initialize's required keyword arguments (see
     # app/services/companies/base_parser.rb). `crawl_runs(:current_completed)`
     # is a fixture lookup. `browser: Object.new` passes in a plain, generic
-    # Ruby Object as a stand-in "browser" — good enough here because none
+    # Ruby Object as a stand-in "browser", good enough here because none
     # of the tests below actually call methods that would need a real
     # Playwright browser object (like `open_page`), only ones that work on
     # plain Ruby data (strings, hashes).
@@ -67,13 +67,13 @@ class BaseParserTest < ActiveSupport::TestCase
     # options) and stores the resulting TestParser instance in a local
     # variable for this test to use.
     p = parser
-    # `p.send(:parse_price, "$89.00/mo")` — `parse_price` is a PROTECTED
+    # `p.send(:parse_price, "$89.00/mo")`, `parse_price` is a PROTECTED
     # method on BaseParser (see the "protected" keyword partway through
     # app/services/companies/base_parser.rb), meaning it can normally only
-    # be called from other code inside the same class or its subclasses —
+    # be called from other code inside the same class or its subclasses,
     # not directly from outside code like this test. `.send(...)` is
     # Ruby's way of calling ANY method (public, protected, or private) by
-    # name, bypassing that visibility restriction — a common trick in
+    # name, bypassing that visibility restriction, a common trick in
     # tests that need to exercise internal helper logic directly without
     # going through the full public `.run` method. Here it confirms
     # `parse_price` strips the "$", "/mo" and converts to a numeric 89.0.
@@ -124,7 +124,7 @@ class BaseParserTest < ActiveSupport::TestCase
     assert_nil p.send(:parse_size, nil)
     assert_nil p.send(:parse_size, "")
     # The word "large" contains no digits at all, so parse_size can't find
-    # even one number, let alone the two (width and depth) it needs — it
+    # even one number, let alone the two (width and depth) it needs, it
     # returns nil rather than raising.
     assert_nil p.send(:parse_size, "large")
   end
@@ -143,7 +143,7 @@ class BaseParserTest < ActiveSupport::TestCase
     # `p.send(:apply_filters, units)` calls the protected apply_filters
     # method directly (bypassing its normal visibility via `.send`, as
     # above). `assert_empty` passes only if the returned Array has zero
-    # elements — confirming the too-small unit was filtered out.
+    # elements, confirming the too-small unit was filtered out.
     assert_empty p.send(:apply_filters, units)
   end
   # `end` closes the "apply_filters drops units smaller than the 10x10
@@ -151,7 +151,7 @@ class BaseParserTest < ActiveSupport::TestCase
 
   test "apply_filters drops excluded unit types" do
     p = parser
-    # `unit_type: "parking"` — BaseParser's default `Unit::EXCLUDED_TYPES`
+    # `unit_type: "parking"`, BaseParser's default `Unit::EXCLUDED_TYPES`
     # list (referenced inside apply_filters when no `options[:excluded_types]`
     # override is given) includes types like "parking" that should never
     # be surfaced as storage units.
@@ -196,7 +196,7 @@ class BaseParserTest < ActiveSupport::TestCase
     # other tests use. Per the comment kept from the original test and the
     # matching comment inside base_parser.rb's apply_filters method, there
     # is intentionally no filter option that excludes drive-up/outdoor
-    # units — this test documents that "on purpose" behavior so a future
+    # units, this test documents that "on purpose" behavior so a future
     # change that accidentally started dropping them would break this test.
     units = [ { size: "10x10", unit_type: "standard", climate_controlled: false, drive_up: true } ]
     assert_equal 1, p.send(:apply_filters, units).length
@@ -207,13 +207,13 @@ class BaseParserTest < ActiveSupport::TestCase
     p = parser
     # `facilities(:gilbert_public_storage)` looks up a Facility fixture
     # (test/fixtures/facilities.yml) whose `company` column is "Public
-    # Storage" — a DIFFERENT company name than TestParser's own
+    # Storage", a DIFFERENT company name than TestParser's own
     # `company_name` ("Test Co", defined at the top of this file).
     existing = facilities(:gilbert_public_storage) # company: "Public Storage"
 
     # `p.send(:upsert_facility, { ... })` calls the protected upsert_facility
     # method with a Hash of location data that reuses the EXISTING
-    # facility's address/city/state/zip/external_id — everything matches
+    # facility's address/city/state/zip/external_id, everything matches
     # except the company (implicitly "Test Co", since that's what this
     # parser's own company_name returns and upsert_facility scopes its
     # database lookup by that).
@@ -230,7 +230,7 @@ class BaseParserTest < ActiveSupport::TestCase
     # Storage".
     assert_equal "Test Co", found.company
     # `refute_equal existing.id, found.id` confirms this is a genuinely
-    # DIFFERENT database row than the existing Public Storage facility —
+    # DIFFERENT database row than the existing Public Storage facility,
     # proving upsert_facility didn't accidentally match/reuse (and thus
     # corrupt) the other company's record.
     refute_equal existing.id, found.id
@@ -252,7 +252,7 @@ class BaseParserTest < ActiveSupport::TestCase
     # exists yet, so upsert_facility creates a brand new row.
     first  = p.send(:upsert_facility, location_data)
     # Second call: `location_data.merge(name: "Updated Name")` builds a NEW
-    # Hash that's a copy of location_data but with `name` overridden — the
+    # Hash that's a copy of location_data but with `name` overridden, the
     # original `location_data` Hash itself is left unchanged (`.merge`
     # returns a new Hash rather than mutating the original). Passing this
     # (same external_id, different name) should find and UPDATE the
@@ -260,7 +260,7 @@ class BaseParserTest < ActiveSupport::TestCase
     second = p.send(:upsert_facility, location_data.merge(name: "Updated Name"))
 
     # `assert_equal first.id, second.id` confirms both calls returned the
-    # SAME database row (same primary key) — proving it was an update, not
+    # SAME database row (same primary key), proving it was an update, not
     # an accidental duplicate insert.
     assert_equal first.id, second.id
     # `second.reload.name` re-fetches the row from the database (rather
@@ -275,12 +275,12 @@ class BaseParserTest < ActiveSupport::TestCase
     p = parser
     # `assert_raises(RuntimeError) do ... end` is a Minitest assertion that
     # runs the block and PASSES only if it raises an exception of exactly
-    # this class (or a subclass) — and FAILS if the block either raises
+    # this class (or a subclass), and FAILS if the block either raises
     # nothing at all, or raises some other, different kind of exception.
     # The raised exception object itself is also returned by
     # `assert_raises`, captured here into the local variable `error`.
     error = assert_raises(RuntimeError) do
-      # This Hash is deliberately missing an `address:` key — Facility
+      # This Hash is deliberately missing an `address:` key, Facility
       # presumably validates that address is required (see
       # app/models/facility.rb), so `facility.save` inside upsert_facility
       # should fail, triggering the `raise "Could not save facility..."`
@@ -315,7 +315,7 @@ class BaseParserTest < ActiveSupport::TestCase
     assert_equal facility, unit.facility
     # Confirms the saved Unit's `crawl_run` association was set to the
     # CrawlRun the parser itself was built with (`crawl_runs(:current_completed)`,
-    # set inside the `parser` helper method at the top of this file) — this
+    # set inside the `parser` helper method at the top of this file), this
     # is what lets every unit from one crawl run be traced back to it later.
     assert_equal crawl_runs(:current_completed), unit.crawl_run
   end

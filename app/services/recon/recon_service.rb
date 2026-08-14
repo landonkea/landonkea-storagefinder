@@ -20,33 +20,33 @@
 # =============================================================================
 
 # A plain-Ruby "service object" (see app/services/company_registry.rb for a
-# full explanation) — a class that isn't a database model or web
+# full explanation), a class that isn't a database model or web
 # controller, dedicated instead to one task: driving a real browser to
 # visit a storage company's website and dump out everything that looks
 # potentially useful for a human (or an AI) to then write a proper parser
 # for that site.
 #
 # This class is meant to be run manually (from a Rails console or a rake
-# task), not as part of the normal crawl flow — it's a developer tool.
+# task), not as part of the normal crawl flow, it's a developer tool.
 class ReconService
   # Patterns we use to find "interesting" elements on the page
   # These are guesses that work on most storage websites
   #
-  # Each of these constants is a Ruby REGULAR EXPRESSION (regex) — a
+  # Each of these constants is a Ruby REGULAR EXPRESSION (regex), a
   # pattern used to test whether a piece of text matches certain rules.
   # Regex literals in Ruby are written between forward slashes `/like
   # this/`. Below is a breakdown of the regex syntax used in each pattern:
-  #   \d       — matches any single digit (0-9)
-  #   \b       — a "word boundary": matches the edge between a word
+  #   \d      , matches any single digit (0-9)
+  #   \b      , a "word boundary": matches the edge between a word
   #              character and a non-word character (e.g. right before or
   #              after a whole word), so `\bprice\b` matches the standalone
   #              word "price" but NOT "priceless" or "unpriced"
-  #   |        — "or": matches if EITHER side of the pipe matches
-  #   [x×]     — a "character class": matches any ONE of the characters
+  #   |       , "or": matches if EITHER side of the pipe matches
+  #   [x×]    , a "character class": matches any ONE of the characters
   #              listed inside the brackets (here, either a lowercase x or
   #              the multiplication sign ×, as in "10x10" or "10×10")
-  #   +        — "one or more" of whatever came immediately before it
-  #   i        — a trailing flag (outside the closing slash) meaning
+  #   +       , "one or more" of whatever came immediately before it
+  #   i       , a trailing flag (outside the closing slash) meaning
   #              "case-insensitive": matches regardless of upper/lower case
   #
   # PRICE_PATTERNS matches text containing a dollar sign followed by a
@@ -60,7 +60,7 @@ class ReconService
   # FACILITY_PATTERNS matches words that suggest a storage facility/location listing.
   FACILITY_PATTERNS  = /\bfacility\b|\blocation\b|\bstore\b|\bstorage\b|\bresult\b/i
   # UNIT_PATTERNS matches words describing an individual storage unit.
-  # `\bstorage.unit\b` — note the `.` here (not escaped as `\.`) matches
+  # `\bstorage.unit\b`, note the `.` here (not escaped as `\.`) matches
   # ANY single character between "storage" and "unit" (not just a literal
   # period), so it matches "storage unit," "storage-unit," "storage.unit," etc.
   UNIT_PATTERNS      = /\bunit\b|\bspace\b|\broom\b|\bstorage.unit\b/i
@@ -68,10 +68,10 @@ class ReconService
   LINK_PATTERNS      = /\breserve\b|\brent\b|\bbook\b|\bdetail\b|\bview\b/i
 
   # ---------------------------------------------------------------------------
-  # CLASS METHOD — the main entry point
+  # CLASS METHOD, the main entry point
   # ---------------------------------------------------------------------------
   # `company_name: nil` is a keyword argument with a default value of nil
-  # — callers may omit it, in which case the class will try to guess a
+  # , callers may omit it, in which case the class will try to guess a
   # company name from the URL itself (see extract_company_name below).
   def self.run(url, company_name: nil)
     # Same convenience pattern seen in the other service objects in this
@@ -86,7 +86,7 @@ class ReconService
   # ---------------------------------------------------------------------------
   def initialize(url, company_name: nil)
     @url          = url
-    # `company_name || extract_company_name(url)` — use the explicitly
+    # `company_name || extract_company_name(url)`, use the explicitly
     # passed-in name if given, otherwise fall back to guessing one from
     # the URL by calling the private method defined near the bottom of
     # this file.
@@ -97,7 +97,7 @@ class ReconService
     # filename, since filenames can't contain most punctuation/spaces.
     @timestamp    = Time.current.strftime("%Y%m%d_%H%M%S")
     # `Rails.root.join("recon")` builds a full filesystem path to a
-    # "recon" folder inside this Rails app's root directory — `Rails.root`
+    # "recon" folder inside this Rails app's root directory, `Rails.root`
     # is Rails' way of finding the app's own top-level directory
     # regardless of what the current working directory happens to be.
     @output_dir   = Rails.root.join("recon")
@@ -105,7 +105,7 @@ class ReconService
     # Create output directory if it doesn't exist
     #
     # `FileUtils.mkdir_p` is Ruby's standard-library equivalent of the
-    # shell command `mkdir -p` — it creates the given directory (and any
+    # shell command `mkdir -p`, it creates the given directory (and any
     # missing parent directories) and does NOT raise an error if the
     # directory already exists (unlike plain `mkdir`).
     FileUtils.mkdir_p(@output_dir)
@@ -115,10 +115,10 @@ class ReconService
     # Builds a shared filename prefix (without extension) that every
     # output file for this recon run will share, so they're easy to spot
     # together in a directory listing. `@company_name.downcase` lowercases
-    # it; `.gsub(/\W+/, "_")` uses another regex — `\W` means "any
+    # it; `.gsub(/\W+/, "_")` uses another regex, `\W` means "any
     # NON-word character" (i.e., anything that ISN'T a letter, digit, or
     # underscore, like spaces or punctuation) and `+` means "one or more
-    # in a row" — replacing any run of such characters with a single
+    # in a row", replacing any run of such characters with a single
     # underscore, so a company name like "U-Haul Self-Storage" becomes
     # something filesystem-safe like "u_haul_self_storage".
     @base_filename = "#{@output_dir}/#{@company_name.downcase.gsub(/\W+/, "_")}_#{@timestamp}"
@@ -130,7 +130,7 @@ class ReconService
   # ---------------------------------------------------------------------------
   def run
     # `puts` prints a line of text directly to the console/terminal output
-    # (as opposed to Rails.logger, which writes to the app's log file) —
+    # (as opposed to Rails.logger, which writes to the app's log file),
     # appropriate here since this is a developer-run console tool meant to
     # show live progress to whoever is running it.
     puts ""
@@ -156,7 +156,7 @@ class ReconService
     # the captured string. `.strip` removes leading/trailing whitespace
     # (like a trailing newline) from the captured output.
     playwright_path = `timeout 10 which playwright 2>/dev/null`.strip
-    # `.blank?` — the Rails helper meaning nil-or-empty — checks whether
+    # `.blank?`, the Rails helper meaning nil-or-empty, checks whether
     # the `which` command found nothing. If so, fall back to just the bare
     # string "playwright" and let Playwright itself raise a clear error if
     # that turns out not to be runnable either (rather than trying to
@@ -168,7 +168,7 @@ class ReconService
     # Playwright driver process (using the executable path found above)
     # and yields a `playwright` object you can use to control a browser.
     # When the block finishes (or raises), Playwright automatically shuts
-    # that driver process down — similar to how Ruby's `File.open(...) do
+    # that driver process down, similar to how Ruby's `File.open(...) do
     # |f| ... end` automatically closes the file afterward.
     Playwright.create(playwright_cli_executable_path: playwright_path) do |playwright|
       # `.chromium.launch(...)` starts an actual Chromium (Chrome-like)
@@ -177,15 +177,15 @@ class ReconService
         headless: false,  # Visible so you can see what the recon tool is doing
         # `headless: false` means the browser window is actually shown on
         # screen (as opposed to CrawlJob's browser, which typically runs
-        # "headless" — invisible, with no window — for efficiency). Seeing
+        # "headless", invisible, with no window, for efficiency). Seeing
         # the browser is useful here since a human developer is actively
         # watching this tool run to understand a new site.
         args: [ "--window-size=1280,900" ]
         # `args:` passes extra command-line flags to the underlying
-        # Chromium process — here, just setting its window size.
+        # Chromium process, here, just setting its window size.
       )
 
-      # `browser.new_page` opens a new browser tab/page — most Playwright
+      # `browser.new_page` opens a new browser tab/page, most Playwright
       # actions (navigating, clicking, reading content) happen through
       # this `page` object rather than the `browser` object directly.
       page = browser.new_page
@@ -203,11 +203,11 @@ class ReconService
                         "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
       })
 
-      # `begin ... rescue ... ensure ... end` — this block runs the actual
+      # `begin ... rescue ... ensure ... end`, this block runs the actual
       # page visit and data extraction. `rescue` clauses catch specific
       # error types if something goes wrong, and `ensure` (below) runs
-      # NO MATTER WHAT — whether the block succeeded, raised a caught
-      # error, or even an uncaught one — guaranteeing the browser gets
+      # NO MATTER WHAT, whether the block succeeded, raised a caught
+      # error, or even an uncaught one, guaranteeing the browser gets
       # closed either way.
       begin
         puts "Loading page..."
@@ -217,14 +217,14 @@ class ReconService
         # basic HTML structure has loaded (not necessarily every image or
         # background script). `timeout: 30_000` is the max time to wait,
         # in milliseconds (the underscore in `30_000` is just a Ruby
-        # readability separator for large numbers — it's parsed identically
-        # to `30000`) — 30 seconds.
+        # readability separator for large numbers, it's parsed identically
+        # to `30000`), 30 seconds.
         page.goto(@url, waitUntil: "domcontentloaded", timeout: 30_000)
 
         # Wait a bit for lazy-loaded content to appear
         #
         # Many modern sites load some content (like unit listings) via
-        # JavaScript AFTER the initial page load finishes — this pauses
+        # JavaScript AFTER the initial page load finishes, this pauses
         # for a fixed 3000 milliseconds (3 seconds) to give that content
         # time to appear before we start scanning the page.
         page.wait_for_timeout(3000)
@@ -286,7 +286,7 @@ class ReconService
 
       rescue Playwright::TimeoutError => e
         # Specifically catches the case where `page.goto` (or another
-        # Playwright wait) exceeded its timeout — usually meaning the site
+        # Playwright wait) exceeded its timeout, usually meaning the site
         # is slow, unreachable, or blocking automated browsers.
         puts "ERROR: Page timed out loading #{@url}"
         puts "Details: #{e.message}"
@@ -298,21 +298,21 @@ class ReconService
         puts "ERROR: #{e.class}: #{e.message}"
         # `e.backtrace` is an array of strings describing the call stack
         # at the moment the error was raised (which method called which,
-        # down to file/line numbers) — useful for debugging. `.first(5)`
+        # down to file/line numbers), useful for debugging. `.first(5)`
         # takes just the first 5 entries (the most immediately relevant
         # ones) rather than dumping the whole (potentially huge) stack.
         puts e.backtrace.first(5).join("\n")
 
       ensure
         # Runs unconditionally after the begin block, whether it succeeded
-        # or hit one of the rescue clauses above — guarantees the browser
+        # or hit one of the rescue clauses above, guarantees the browser
         # process gets shut down and doesn't linger running in the
         # background even if something above failed.
         browser.close
       end
       # `end` closes the `begin/rescue/ensure` block above.
     end
-    # `end` closes the `Playwright.create(...) do |playwright|` block —
+    # `end` closes the `Playwright.create(...) do |playwright|` block,
     # this is also where Playwright shuts down its driver process.
   end
   # `end` closes the `def run` method definition above.
@@ -415,7 +415,7 @@ class ReconService
     } : { exists: false }
 
     # The findings Hash, now fully populated, is the last expression
-    # evaluated — so it's this method's return value.
+    # evaluated, so it's this method's return value.
     findings
   end
   # `end` closes the `def scan_page` method definition above.
@@ -438,7 +438,7 @@ class ReconService
     # `.each do |el| ... end` loops over every matched element.
     all_elements.each do |el|
       # `break` here exits the loop entirely once we've already collected
-      # `limit` results — no point continuing to scan the rest of a
+      # `limit` results, no point continuing to scan the rest of a
       # possibly huge page once we have enough matches.
       break if results.length >= limit
 
@@ -448,24 +448,24 @@ class ReconService
       begin
         # `el.text_content` reads the element's visible text content.
         # `&.strip` is Ruby's "safe navigation" operator: it calls `.strip`
-        # (trim whitespace) ONLY if text_content isn't nil — if it IS nil,
+        # (trim whitespace) ONLY if text_content isn't nil, if it IS nil,
         # the whole expression short-circuits to nil instead of raising a
         # NoMethodError trying to call .strip on nil.
         text = el.text_content&.strip
         # Skip elements with no real text, or absurdly long ones (likely a
         # big wrapper div containing the whole page's text rather than one
-        # meaningful snippet) — `next` skips the rest of this iteration
+        # meaningful snippet), `next` skips the rest of this iteration
         # and moves on to the next element in the loop.
         next if text.blank? || text.length > 200   # Skip empty or huge blocks
 
         # `.match?(pattern)` tests the text against the regex pattern
-        # passed into this method (e.g. PRICE_PATTERNS) — true if it
+        # passed into this method (e.g. PRICE_PATTERNS), true if it
         # matches anywhere in the text.
         if text.match?(pattern)
           results << {
             # `.truncate(100)` is a Rails String helper that shortens the
             # text to at most 100 characters, appending "..." if it had to
-            # cut it short — keeps the report readable.
+            # cut it short, keeps the report readable.
             text:     text.truncate(100),
             # `el.evaluate("el => el.tagName.toLowerCase()")` runs actual
             # JAVASCRIPT inside the browser page (Playwright lets Ruby code
@@ -482,7 +482,7 @@ class ReconService
         # Skip elements we can't read
         #
         # A bare `rescue` with no `=> e` and no error class still catches
-        # any StandardError — it's used here purely to skip past a
+        # any StandardError, it's used here purely to skip past a
         # problematic element without caring what specifically went wrong.
       end
       # `end` closes the `begin/rescue` block for this one element.
@@ -492,11 +492,11 @@ class ReconService
     results
   rescue => e
     # This `rescue` is attached to the METHOD itself (not a specific
-    # inner block) — it would catch an error raised outside the per-element
+    # inner block), it would catch an error raised outside the per-element
     # begin/rescue above, such as query_selector_all itself failing.
     # Notably, on error this returns an ARRAY CONTAINING A STRING
     # describing the error, rather than the empty/results array the method
-    # normally returns — callers treating this as a list of Hashes would
+    # normally returns, callers treating this as a list of Hashes would
     # get a String in that position instead. Flagged separately below.
     [ "Error extracting elements: #{e.message}" ]
   end
@@ -508,7 +508,7 @@ class ReconService
 
     # Look for elements with multiple children that match the pattern
     #
-    # A list of CSS selector strings to try, one at a time — each one is a
+    # A list of CSS selector strings to try, one at a time, each one is a
     # guess at what a "repeating card" container might look like on a
     # storage company site.
     candidate_selectors = [
@@ -522,19 +522,19 @@ class ReconService
 
       elements = page.query_selector_all(selector)
       # If nothing on the page matches this particular candidate selector,
-      # move on to the next one — `next` skips the rest of the current
+      # move on to the next one, `next` skips the rest of the current
       # loop iteration without recording anything.
       next if elements.empty?
 
       # Check if any of these elements contain pattern-matching text
       #
       # Only inspect the FIRST matching element as a representative sample
-      # (rather than every one) — if there are, say, 40 facility cards on
+      # (rather than every one), if there are, say, 40 facility cards on
       # the page, we just need to look at one of them to judge the whole
       # group.
       sample = elements.first
       begin
-        # `sample&.text_content || ""` — safe-navigation read of the
+        # `sample&.text_content || ""`, safe-navigation read of the
         # sample's text, falling back to an empty string if sample were
         # somehow nil (defensive, though `elements.empty?` was already
         # checked above so sample here shouldn't actually be nil).
@@ -585,9 +585,9 @@ class ReconService
         # useful to record about it.
         next if text.blank? && href.blank?
 
-        # `(text || "").match?(pattern)` — guards against `text` being nil
+        # `(text || "").match?(pattern)`, guards against `text` being nil
         # (safe-navigation wasn't used here, so this explicit `|| ""`
-        # fallback prevents calling `.match?` on nil) — matches if EITHER
+        # fallback prevents calling `.match?` on nil), matches if EITHER
         # the visible link text or the href URL itself matches the
         # pattern (e.g. contains the word "reserve" or "book").
         if (text || "").match?(pattern) || (href || "").match?(pattern)
@@ -611,7 +611,7 @@ class ReconService
 
   # Collect all CSS class names and how many times each appears
   def collect_css_classes(page)
-    # `Hash.new(0)` creates a Hash with a DEFAULT VALUE of 0 — meaning
+    # `Hash.new(0)` creates a Hash with a DEFAULT VALUE of 0, meaning
     # looking up any key that hasn't been explicitly set yet returns 0
     # instead of nil. This is a common Ruby idiom for building a frequency
     # counter, since it lets `class_counts[c] += 1` work correctly even
@@ -632,7 +632,7 @@ class ReconService
         # running count by 1 in the class_counts hash.
         classes.each { |c| class_counts[c] += 1 }
         # `{ |c| ... }` here is the same kind of block as `do |c| ... end`
-        # — Ruby allows curly-brace blocks as a compact alternative syntax
+        # , Ruby allows curly-brace blocks as a compact alternative syntax
         # for short, single-line blocks.
       rescue
       end
@@ -643,7 +643,7 @@ class ReconService
     # Return top 50 most common classes
     #
     # `.sort_by { |_, count| -count }` sorts the hash's key/value pairs.
-    # `|_, count|` destructures each pair into two block variables — the
+    # `|_, count|` destructures each pair into two block variables, the
     # underscore `_` is Ruby convention for "a variable I'm receiving but
     # intentionally not using" (here, the class name itself is ignored for
     # sorting purposes). Sorting by `-count` (negative count) achieves a
@@ -653,7 +653,7 @@ class ReconService
     # a proper Hash.
     class_counts.sort_by { |_, count| -count }.first(50).to_h
   rescue => e
-    # FIXED: this used to return `{ error: e.message }` on failure — a
+    # FIXED: this used to return `{ error: e.message }` on failure, a
     # Hash whose one key/value pair isn't a real class-name/count pair,
     # unlike every entry this method normally returns. A caller reading
     # `findings[:all_classes_with_counts]` as "class name => count" (its
@@ -672,7 +672,7 @@ class ReconService
     # `page.evaluate(<<~JS ... JS)` runs the JavaScript code inside the
     # heredoc directly INSIDE THE BROWSER PAGE (not in Ruby) and returns
     # its result back to Ruby. This is different from `el.evaluate` seen
-    # earlier, which ran JS scoped to one specific element — this one runs
+    # earlier, which ran JS scoped to one specific element, this one runs
     # against the whole page/document.
     attrs = page.evaluate(<<~JS
       () => {
@@ -695,7 +695,7 @@ class ReconService
     # "data-" (custom data attributes commonly used by JS frameworks like
     # React/Vue to attach extra info to elements), and adds each such
     # attribute NAME (not value) to the Set. Finally it converts the Set
-    # to a sorted Array and returns it — Playwright automatically converts
+    # to a sorted Array and returns it, Playwright automatically converts
     # this JS array into a Ruby array for the `attrs` variable above.
     attrs
   rescue => e
@@ -705,7 +705,7 @@ class ReconService
 
   # Describe an element in a way that could be used as a CSS selector
   def describe_element(el)
-    # `el.evaluate("el => el.tagName.toLowerCase()") rescue "?"` — this is
+    # `el.evaluate("el => el.tagName.toLowerCase()") rescue "?"`, this is
     # Ruby's "inline rescue" modifier: if the expression before `rescue`
     # raises any StandardError, the expression's value becomes whatever
     # follows `rescue` instead (here, the string "?") rather than the
@@ -713,7 +713,7 @@ class ReconService
     # blows up, just use this fallback value."
     tag     = el.evaluate("el => el.tagName.toLowerCase()") rescue "?"
     id      = el.get_attribute("id")
-    # `.to_s.split.first(3).join(".")` — converts the class attribute to a
+    # `.to_s.split.first(3).join(".")`, converts the class attribute to a
     # string (guarding nil), splits it into individual class names,
     # takes at most the first 3 of them, and joins those back together
     # separated by periods (mimicking CSS class-selector syntax like
@@ -724,7 +724,7 @@ class ReconService
     # starting with just the tag name.
     selector = tag
     # `+=` appends to the string in place. Only add an `#id` part if there
-    # actually is an id (`.present?` — not nil/blank).
+    # actually is an id (`.present?`, not nil/blank).
     selector += "##{id}" if id.present?
     # Only add a `.class.names` part if there are any classes.
     selector += ".#{classes}" if classes.present?
@@ -741,7 +741,7 @@ class ReconService
   def describe_children(el)
     # Runs JS scoped to this one element (`el` inside the JS arrow
     # function refers to the browser element, shadowing/unrelated to the
-    # Ruby `el` parameter of the same name — they're in completely
+    # Ruby `el` parameter of the same name, they're in completely
     # separate languages).
     el.evaluate(<<~JS
       el => {
@@ -757,7 +757,7 @@ class ReconService
     # on it. `.slice(0, 5)` keeps just the first 5 children. `.map(...)`
     # transforms each child into a short descriptive string: its tag name
     # in lowercase, plus (if it has any CSS class) a period followed by
-    # just its FIRST class name — mirroring simplified CSS selector
+    # just its FIRST class name, mirroring simplified CSS selector
     # notation, e.g. "div.card".
   rescue
     # If anything goes wrong (e.g. el has no children property somehow),
@@ -821,7 +821,7 @@ class ReconService
     # `end` closes this `.each do |link|` loop.
 
     lines << "--- TOP CSS CLASSES ---"
-    # `.each do |cls, count| ... end` — iterating over a Hash yields each
+    # `.each do |cls, count| ... end`, iterating over a Hash yields each
     # key/value pair, destructured here into `cls` (the class name) and
     # `count` (how many times it appeared).
     findings[:all_classes_with_counts].each do |cls, count|

@@ -1,12 +1,12 @@
 # Loads test/test_helper.rb, which boots the Rails app in test mode and sets
-# up shared test infrastructure (Minitest, fixture loading, etc.) — every
+# up shared test infrastructure (Minitest, fixture loading, etc.), every
 # test file in this app starts with this same line. See
 # test/models/alert_rule_test.rb or test/test_helper.rb for a fuller
 # explanation of what this line does and why it's needed.
 require "test_helper"
 
 # An automated test suite for the CrawlLogEntry model (see
-# app/models/crawl_log_entry.rb) — a test suite is a group of related,
+# app/models/crawl_log_entry.rb), a test suite is a group of related,
 # automatically-runnable checks. `class CrawlLogEntryTest <
 # ActiveSupport::TestCase` inherits from Rails' base test class, which is
 # what makes the `test "..." do ... end` blocks below, the `assert_*` /
@@ -21,7 +21,7 @@ class CrawlLogEntryTest < ActiveSupport::TestCase
     # test/fixtures/ (here, test/fixtures/crawl_runs.yml) and automatically
     # loaded into the test database before every test runs. This call
     # returns the real, already-saved CrawlRun record built from the
-    # `current_completed:` entry in that file — used here to satisfy
+    # `current_completed:` entry in that file, used here to satisfy
     # CrawlLogEntry's `belongs_to :crawl_run` requirement (every log entry
     # must belong to a real crawl run).
     { crawl_run: crawl_runs(:current_completed), company: "Test Co", message: "hello", level: "info" }
@@ -39,7 +39,7 @@ class CrawlLogEntryTest < ActiveSupport::TestCase
     # both overwritten to empty strings, to intentionally violate the
     # model's presence validations on those two fields.
     entry = CrawlLogEntry.new(valid_attributes.merge(company: "", message: ""))
-    # `refute entry.valid?` — `.valid?` runs every validation defined in
+    # `refute entry.valid?`, `.valid?` runs every validation defined in
     # app/models/crawl_log_entry.rb and returns true/false; `refute`
     # (Minitest's "expect false" assertion) fails this test unless the
     # blank company/message actually make the record invalid.
@@ -47,7 +47,7 @@ class CrawlLogEntryTest < ActiveSupport::TestCase
     # `entry.errors[:company]` reads the array of validation-error messages
     # attached specifically to the `company` field (populated as a side
     # effect of the `.valid?` call above). `assert_includes array, item`
-    # checks that `item` appears somewhere in `array` — here, that the
+    # checks that `item` appears somewhere in `array`, here, that the
     # model's custom presence-validation message shows up.
     assert_includes entry.errors[:company], "Company is required on a log entry"
     # Same idea for the `message` field's error messages.
@@ -71,11 +71,11 @@ class CrawlLogEntryTest < ActiveSupport::TestCase
     # with `level: info`.
     #
     # `CrawlLogEntry.errors` calls the `errors` SCOPE defined in
-    # app/models/crawl_log_entry.rb (`where(level: "error")`) — a query for
+    # app/models/crawl_log_entry.rb (`where(level: "error")`), a query for
     # every log entry whose level is "error". `assert_includes` checks the
     # error_entry fixture shows up in that query's results.
     assert_includes CrawlLogEntry.errors, crawl_log_entries(:error_entry)
-    # `refute_includes` is the opposite check — confirms the info_entry
+    # `refute_includes` is the opposite check, confirms the info_entry
     # fixture (level "info") is correctly EXCLUDED from the `errors` scope.
     refute_includes CrawlLogEntry.errors, crawl_log_entries(:info_entry)
     # Confirms the `infos` scope (`where(level: "info")`) correctly INCLUDES
@@ -85,20 +85,20 @@ class CrawlLogEntryTest < ActiveSupport::TestCase
   # `end` closes this `test` block.
 
   test "to_log_line includes timestamp, level, company, and message" do
-    # Loads the error_entry fixture — see test/fixtures/crawl_log_entries.yml
+    # Loads the error_entry fixture, see test/fixtures/crawl_log_entries.yml
     # for its exact stored values (level: error, company: "Public Storage",
     # a timeout message, retry_count: 3).
     entry = crawl_log_entries(:error_entry)
     # `entry.to_log_line` calls the instance method defined in
     # app/models/crawl_log_entry.rb, which builds one formatted text line
     # combining the timestamp, level, company, message, and (if present) a
-    # retry count — the same format written to the app's log file.
+    # retry count, the same format written to the app's log file.
     line = entry.to_log_line
 
     # `assert_includes string, substring` also works for checking that one
     # string CONTAINS another (Ruby Strings support `.include?`, which
-    # `assert_includes` uses under the hood — it isn't limited to arrays).
-    # `entry.level.upcase` converts "error" to "ERROR" — to_log_line
+    # `assert_includes` uses under the hood, it isn't limited to arrays).
+    # `entry.level.upcase` converts "error" to "ERROR", to_log_line
     # uppercases the level when building the line, so this checks that
     # transformation happened.
     assert_includes line, entry.level.upcase
@@ -107,7 +107,7 @@ class CrawlLogEntryTest < ActiveSupport::TestCase
     # Confirms the original message text appears somewhere in the line.
     assert_includes line, entry.message
     # The error_entry fixture has retry_count: 3, and to_log_line appends
-    # "(retry N)" whenever retry_count is greater than 0 — this checks that
+    # "(retry N)" whenever retry_count is greater than 0, this checks that
     # exact substring appears.
     assert_includes line, "retry 3"
   end
@@ -115,7 +115,7 @@ class CrawlLogEntryTest < ActiveSupport::TestCase
 
   test "css_class maps level to a CSS class" do
     # `CrawlLogEntry.new(level: "error")` builds a brand-new, unsaved record
-    # with ONLY the `level` attribute set (no company/message — this is
+    # with ONLY the `level` attribute set (no company/message, this is
     # fine here since we're never calling `.valid?` or `.save`, just reading
     # the `css_class` method, which doesn't depend on those other fields).
     # `.css_class` (see app/models/crawl_log_entry.rb) maps the level string

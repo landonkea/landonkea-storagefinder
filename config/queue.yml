@@ -1,19 +1,16 @@
 # This file (config/queue.yml) configures Solid Queue, Rails' database-
-# backed background-job processing system, keyed by environment. NOTE: this
-# app's actual active job adapter setting is `:async` (see
-# config/application.rb's BACKGROUND JOBS section, and config/environments/
-# production.rb, both of which set `config.active_job.queue_adapter =
-# :async`), NOT Solid Queue — this file follows the generic shape Rails
-# generates for Solid Queue by default, but does not currently take effect:
-# nothing in this app starts a Solid Queue dispatcher/worker process (no
-# `bin/jobs`, no `:solid_queue` Puma plugin — see config/puma.rb), and the
-# `solid_queue` gem isn't even in the Gemfile. This file (and
-# config/recurring.yml, which configures Solid Queue's recurring-task
-# schedule) are unused Rails 8 generator scaffolding, left in place in case
-# this single-process, in-memory `:async` setup ever needs to become a real
-# persistent job queue (e.g. if jobs need to survive a process restart, or
-# run across more than one process) — not worth deleting for something that
-# costs nothing to leave, but don't assume it's doing anything today.
+# backed background-job processing system, keyed by environment. Production
+# and staging actually use Solid Queue (see config/environments/
+# production.rb and staging.rb, both of which set
+# `config.active_job.queue_adapter = :solid_queue`) — the `gem
+# "solid_queue"` in the Gemfile, `bin/jobs` (run as its own process, see
+# config/deploy.yml's "job:" server role), and config/recurring.yml (which
+# configures Solid Queue's recurring-task schedule) all work together with
+# this file. Development and test still use the simpler in-process `:async`
+# adapter (see config/application.rb's BACKGROUND JOBS section) — this
+# file's development/test sections exist only so `bin/rails` commands that
+# reference Solid Queue's config don't error out locally; nothing here
+# actually dispatches jobs outside production/staging.
 #
 # YAML primer: lines starting with "#" are comments, ignored by whatever
 # parses this file. Plain "key: value" pairs work like entries in a Ruby

@@ -1,21 +1,21 @@
 # This file is a SCHEMA file, not a migration. A "schema" is a snapshot that
 # describes the complete, current structure of a database (which tables
 # exist, which columns each table has, which indexes speed up lookups) as of
-# right now — as opposed to a migration, which describes a single CHANGE to
+# right now, as opposed to a migration, which describes a single CHANGE to
 # apply. Rails can rebuild an empty database instantly by replaying this one
 # file, instead of re-running every migration that ever existed one by one.
 #
 # This particular schema file is for a SEPARATE, secondary database used only
-# by the "Solid Queue" gem (Rails' database-backed background job queue —
+# by the "Solid Queue" gem (Rails' database-backed background job queue,
 # the system that runs work like sending emails or crawling websites outside
 # of a web request, without needing a separate tool like Redis/Sidekiq).
 # Rails 8 apps can have multiple databases wired up (the app's main data, a
 # cache store, a queue, a cable store, etc.) and each one gets its own
-# schema file like this — that's why this lives in its own file instead of
+# schema file like this, that's why this lives in its own file instead of
 # inside db/schema.rb.
 #
 # Like db/schema.rb, this file is auto-generated (by the solid_queue gem's
-# own migrations) — you would not hand-edit it in normal use. See the longer
+# own migrations), you would not hand-edit it in normal use. See the longer
 # note in db/schema.rb for why comments added to auto-generated files like
 # this one can get overwritten if the underlying migrations are ever re-run.
 #
@@ -33,7 +33,7 @@
 # same.
 
 # `ActiveRecord::Schema[7.1]` says "build this schema using the rules/syntax
-# of ActiveRecord as they existed in Rails version 7.1" — pinning a version
+# of ActiveRecord as they existed in Rails version 7.1", pinning a version
 # number here means later Rails upgrades won't silently change how this file
 # is interpreted. `.define(version: 1) do ... end` starts the block listing
 # every table for this database; `version: 1` records that only one
@@ -44,14 +44,14 @@ ActiveRecord::Schema[7.1].define(version: 1) do
   # one row per job that's ready to run EXCEPT it's currently blocked by a
   # concurrency limit (e.g. "only run one job with this key at a time").
   # `force: :cascade` tells Rails "if a table with this name already
-  # exists, drop and recreate it" — safe here since this file only builds a
+  # exists, drop and recreate it", safe here since this file only builds a
   # database from nothing. `do |t|` opens a block where `t` is a
   # table-definition helper; each `t.something` line adds one column.
   create_table "solid_queue_blocked_executions", force: :cascade do |t|
     # `t.bigint "job_id"` adds a column storing a large whole number (a
     # "big integer", for values bigger than a normal 32-bit integer allows)
-    # — this identifies which row in "solid_queue_jobs" this blocked
-    # execution refers to. `null: false` means this is always required —
+    #, this identifies which row in "solid_queue_jobs" this blocked
+    # execution refers to. `null: false` means this is always required,
     # the database rejects any row missing it.
     t.bigint "job_id", null: false
     # `t.string "queue_name"` adds a text column naming which queue this
@@ -64,7 +64,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     # rows start at priority 0 unless set otherwise. `null: false` means a
     # priority value is always present (never left blank/nil).
     t.integer "priority", default: 0, null: false
-    # Text column holding the "concurrency key" — jobs sharing the same key
+    # Text column holding the "concurrency key", jobs sharing the same key
     # are limited to running one-at-a-time; this is what determines which
     # jobs block each other. Required.
     t.string "concurrency_key", null: false
@@ -74,11 +74,11 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     t.datetime "expires_at", null: false
     # Timestamp column recording when this row was created. Required.
     t.datetime "created_at", null: false
-    # `t.index [...]` creates a database INDEX — a lookup structure similar
+    # `t.index [...]` creates a database INDEX, a lookup structure similar
     # to a book's index, so queries can jump straight to matching rows
     # instead of scanning the whole table. This one covers THREE columns
     # together (`[ "concurrency_key", "priority", "job_id" ]` is a Ruby
-    # array/list of column names) — it supports the query "find the next
+    # array/list of column names), it supports the query "find the next
     # blocked job to release for this concurrency key, in priority order."
     # `name:` gives the index an explicit, readable name.
     t.index [ "concurrency_key", "priority", "job_id" ], name: "index_solid_queue_blocked_executions_for_release"
@@ -86,7 +86,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     # entries that have expired for this concurrency key."
     t.index [ "expires_at", "concurrency_key" ], name: "index_solid_queue_blocked_executions_for_maintenance"
     # A single-column index on "job_id", and `unique: true` makes it a
-    # UNIQUE INDEX — the database refuses a second row with the same
+    # UNIQUE INDEX, the database refuses a second row with the same
     # job_id, guaranteeing a given job can only be in the "blocked" state
     # once at a time.
     t.index [ "job_id" ], name: "index_solid_queue_blocked_executions_on_job_id", unique: true
@@ -100,12 +100,12 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     # claim is for. Required.
     t.bigint "job_id", null: false
     # Big-integer column identifying which worker process claimed this job
-    # — links to solid_queue_processes. No `null: false`, so this column is
+    #, links to solid_queue_processes. No `null: false`, so this column is
     # OPTIONAL (can be nil, e.g. momentarily between states).
     t.bigint "process_id"
     # Timestamp column recording when the claim was made. Required.
     t.datetime "created_at", null: false
-    # Unique index on "job_id" — a job can only be claimed once at a time.
+    # Unique index on "job_id", a job can only be claimed once at a time.
     t.index [ "job_id" ], name: "index_solid_queue_claimed_executions_on_job_id", unique: true
     # Two-column (non-unique) index supporting "find all jobs claimed by
     # this process" queries, ordered/filtered by job_id too.
@@ -119,25 +119,25 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     # Big-integer column identifying which job failed. Required.
     t.bigint "job_id", null: false
     # `t.text "error"` adds a column for longer free-form text than
-    # `t.string` typically allows — holds the error message/backtrace from
-    # the failure. Optional (no null: false) — though in practice a failed
+    # `t.string` typically allows, holds the error message/backtrace from
+    # the failure. Optional (no null: false), though in practice a failed
     # row would normally have one.
     t.text "error"
     # Timestamp column recording when the failure was recorded. Required.
     t.datetime "created_at", null: false
-    # Unique index on "job_id" — a given job has at most one failure record
+    # Unique index on "job_id", a given job has at most one failure record
     # at a time.
     t.index [ "job_id" ], name: "index_solid_queue_failed_executions_on_job_id", unique: true
   end
   # Closes the `create_table "solid_queue_failed_executions" do |t|` block.
 
-  # The main jobs table — one row per background job that has ever been
+  # The main jobs table, one row per background job that has ever been
   # enqueued, regardless of what state it's currently in.
   create_table "solid_queue_jobs", force: :cascade do |t|
     # Text column naming which queue this job was enqueued on. Required.
     t.string "queue_name", null: false
     # Text column holding the Ruby class name of the job to run (e.g.
-    # "CrawlFacilitiesJob") — this is how Solid Queue knows what code to
+    # "CrawlFacilitiesJob"), this is how Solid Queue knows what code to
     # actually execute for this row. Required.
     t.string "class_name", null: false
     # Longer free-form text column holding the job's arguments, serialized
@@ -147,14 +147,14 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     # Required (never left blank).
     t.integer "priority", default: 0, null: false
     # Text column holding Rails' own internal ActiveJob id for this job (a
-    # separate identifier from this row's own database id) — lets
+    # separate identifier from this row's own database id), lets
     # ActiveJob correlate its job objects with Solid Queue's rows. Optional.
     t.string "active_job_id"
     # Timestamp column recording when this job is scheduled to run (for
-    # delayed jobs). Optional — nil for jobs meant to run immediately.
+    # delayed jobs). Optional, nil for jobs meant to run immediately.
     t.datetime "scheduled_at"
     # Timestamp column recording when this job finished running (whether it
-    # succeeded or failed). Optional — nil while still pending/running.
+    # succeeded or failed). Optional, nil while still pending/running.
     t.datetime "finished_at"
     # Text column holding a concurrency key for this job, if it has one
     # (used to decide whether it should be blocked behind another job with
@@ -177,7 +177,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     # they're finished" queries.
     t.index [ "queue_name", "finished_at" ], name: "index_solid_queue_jobs_for_filtering"
     # Two-column index supporting queries that look for jobs approaching
-    # (or past) their scheduled time but not yet finished — used for
+    # (or past) their scheduled time but not yet finished, used for
     # alerting on stuck/overdue jobs.
     t.index [ "scheduled_at", "finished_at" ], name: "index_solid_queue_jobs_for_alerting"
   end
@@ -190,7 +190,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     t.string "queue_name", null: false
     # Timestamp column recording when the pause was created. Required.
     t.datetime "created_at", null: false
-    # Unique index on "queue_name" — a given queue can only have one pause
+    # Unique index on "queue_name", a given queue can only have one pause
     # record (it's either paused or it isn't, not paused multiple times).
     t.index [ "queue_name" ], name: "index_solid_queue_pauses_on_queue_name", unique: true
   end
@@ -200,11 +200,11 @@ ActiveRecord::Schema[7.1].define(version: 1) do
   # executing jobs) that Solid Queue is tracking.
   create_table "solid_queue_processes", force: :cascade do |t|
     # Text column describing what kind of process this is (e.g.
-    # "Worker", "Dispatcher", "Scheduler" — different roles within Solid
+    # "Worker", "Dispatcher", "Scheduler", different roles within Solid
     # Queue's architecture). Required.
     t.string "kind", null: false
     # Timestamp column recording the last time this process "checked in" to
-    # prove it's still alive — used to detect crashed/dead processes.
+    # prove it's still alive, used to detect crashed/dead processes.
     # Required.
     t.datetime "last_heartbeat_at", null: false
     # Big-integer column linking to a parent/supervising process, if this
@@ -228,7 +228,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     # Index speeding up lookups/filters by last heartbeat time (finding
     # processes that have gone quiet/died).
     t.index [ "last_heartbeat_at" ], name: "index_solid_queue_processes_on_last_heartbeat_at"
-    # Two-column unique index — a process name must be unique WITHIN a
+    # Two-column unique index, a process name must be unique WITHIN a
     # given supervisor (no two sibling processes share a name under the
     # same supervisor).
     t.index [ "name", "supervisor_id" ], name: "index_solid_queue_processes_on_name_and_supervisor_id", unique: true
@@ -238,7 +238,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
   # Closes the `create_table "solid_queue_processes" do |t|` block.
 
   # Table holding one row per job that is ready to run right now (not
-  # blocked, not scheduled for later) — workers poll this table to find
+  # blocked, not scheduled for later), workers poll this table to find
   # work.
   create_table "solid_queue_ready_executions", force: :cascade do |t|
     # Big-integer column identifying which job this is. Required.
@@ -249,11 +249,11 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     t.integer "priority", default: 0, null: false
     # Timestamp column recording when this ready row was created. Required.
     t.datetime "created_at", null: false
-    # Unique index on "job_id" — a job appears in the "ready" state at most
+    # Unique index on "job_id", a job appears in the "ready" state at most
     # once at a time.
     t.index [ "job_id" ], name: "index_solid_queue_ready_executions_on_job_id", unique: true
     # Two-column index supporting "poll for the next job to run across all
-    # queues, in priority order" — the naming ("poll_all") reflects that
+    # queues, in priority order", the naming ("poll_all") reflects that
     # this is used by workers polling without restricting to one queue.
     t.index [ "priority", "job_id" ], name: "index_solid_queue_poll_all"
     # Three-column index supporting the same kind of polling query, but
@@ -263,7 +263,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
   # Closes the `create_table "solid_queue_ready_executions" do |t|` block.
 
   # Table holding one row per SCHEDULED occurrence of a recurring task
-  # (e.g. "run the daily crawl job for 2026-07-22") — links a recurring
+  # (e.g. "run the daily crawl job for 2026-07-22"), links a recurring
   # task definition to the actual job it produced.
   create_table "solid_queue_recurring_executions", force: :cascade do |t|
     # Big-integer column identifying the job this recurring execution
@@ -277,10 +277,10 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     t.datetime "run_at", null: false
     # Timestamp column recording when this row was created. Required.
     t.datetime "created_at", null: false
-    # Unique index on "job_id" — each job corresponds to exactly one
+    # Unique index on "job_id", each job corresponds to exactly one
     # recurring execution record.
     t.index [ "job_id" ], name: "index_solid_queue_recurring_executions_on_job_id", unique: true
-    # Two-column UNIQUE index on (task_key, run_at) — guarantees the same
+    # Two-column UNIQUE index on (task_key, run_at), guarantees the same
     # recurring task can't be scheduled to run twice for the same run_at
     # timestamp (prevents duplicate runs of a cron-like schedule).
     t.index [ "task_key", "run_at" ], name: "index_solid_queue_recurring_executions_on_task_key_and_run_at", unique: true
@@ -288,7 +288,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
   # Closes the `create_table "solid_queue_recurring_executions" do |t|` block.
 
   # Table holding one row per DEFINED recurring task (the schedule/rule
-  # itself, e.g. "run this job every day at 6am") — distinct from the table
+  # itself, e.g. "run this job every day at 6am"), distinct from the table
   # above, which tracks individual scheduled occurrences of these rules.
   create_table "solid_queue_recurring_tasks", force: :cascade do |t|
     # Text column with this task's unique key/identifier. Required.
@@ -308,7 +308,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     t.string "queue_name"
     # Whole-number priority column for jobs produced by this task.
     # `default: 0`, and no `null: false` here (unlike similar priority
-    # columns above) — so this one CAN be left nil, unlike the others.
+    # columns above), so this one CAN be left nil, unlike the others.
     t.integer "priority", default: 0
     # Boolean column recording whether this task is defined statically (in
     # application configuration) as opposed to created dynamically at
@@ -324,7 +324,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     # Timestamp column recording when this task definition was last
     # updated. Required.
     t.datetime "updated_at", null: false
-    # Unique index on "key" — each recurring task's key must be unique, so
+    # Unique index on "key", each recurring task's key must be unique, so
     # there's exactly one definition per key.
     t.index [ "key" ], name: "index_solid_queue_recurring_tasks_on_key", unique: true
     # Index speeding up filtering tasks by whether they're statically
@@ -348,16 +348,16 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     t.datetime "scheduled_at", null: false
     # Timestamp column recording when this row was created. Required.
     t.datetime "created_at", null: false
-    # Unique index on "job_id" — a job is scheduled at most once at a time.
+    # Unique index on "job_id", a job is scheduled at most once at a time.
     t.index [ "job_id" ], name: "index_solid_queue_scheduled_executions_on_job_id", unique: true
-    # Three-column index supporting the "dispatch" query — finding jobs
+    # Three-column index supporting the "dispatch" query, finding jobs
     # whose scheduled time has arrived, across all queues, in priority
     # order, so they can be moved into the "ready" table.
     t.index [ "scheduled_at", "priority", "job_id" ], name: "index_solid_queue_dispatch_all"
   end
   # Closes the `create_table "solid_queue_scheduled_executions" do |t|` block.
 
-  # Table implementing SEMAPHORES — a low-level concurrency-control
+  # Table implementing SEMAPHORES, a low-level concurrency-control
   # primitive (like a counter with a limit) used internally to enforce
   # "only N jobs with this key may run at once" rules.
   create_table "solid_queue_semaphores", force: :cascade do |t|
@@ -383,23 +383,23 @@ ActiveRecord::Schema[7.1].define(version: 1) do
     # Two-column (non-unique) index supporting lookups by key and current
     # value together.
     t.index [ "key", "value" ], name: "index_solid_queue_semaphores_on_key_and_value"
-    # Unique index on "key" — each concurrency key has exactly one
+    # Unique index on "key", each concurrency key has exactly one
     # semaphore row tracking it.
     t.index [ "key" ], name: "index_solid_queue_semaphores_on_key", unique: true
   end
   # Closes the `create_table "solid_queue_semaphores" do |t|` block.
 
-  # `add_foreign_key` adds a FOREIGN KEY constraint to an existing table — a
+  # `add_foreign_key` adds a FOREIGN KEY constraint to an existing table, a
   # database-level rule that a column's value must match an existing row's
   # id in another table (here, that "job_id" must point at a real row in
   # "solid_queue_jobs"). This protects data integrity even if application
   # code has a bug that tries to insert an orphaned row. `column:
   # "job_id"` tells Rails which column on "solid_queue_blocked_executions"
   # holds the reference (needed because the table name and the referenced
-  # table name — "solid_queue_jobs" — don't match by Rails' usual naming
+  # table name, "solid_queue_jobs", don't match by Rails' usual naming
   # convention). `on_delete: :cascade` tells the DATABASE to automatically
   # delete any row here whenever the "solid_queue_jobs" row it points to is
-  # deleted — so finishing/removing a job automatically cleans up its
+  # deleted, so finishing/removing a job automatically cleans up its
   # related blocked-execution row too, without the app having to do it
   # manually.
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
@@ -418,7 +418,7 @@ ActiveRecord::Schema[7.1].define(version: 1) do
   # Same pattern: scheduled_executions rows are auto-deleted when their job
   # is deleted. Note there is no equivalent add_foreign_key line for
   # "solid_queue_processes.supervisor_id" or
-  # "solid_queue_claimed_executions.process_id" — those references are left
+  # "solid_queue_claimed_executions.process_id", those references are left
   # unenforced at the database level (see flagged observations at the end
   # of this review).
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

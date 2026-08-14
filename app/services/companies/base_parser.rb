@@ -20,7 +20,7 @@
 #   - parse_units(page, facility) → Array of unit attribute hashes
 # =============================================================================
 
-# NOVICE PRIMER — read this before the rest of the file:
+# NOVICE PRIMER, read this before the rest of the file:
 #
 # 1. "class Foo < Bar" means "define a class named Foo that INHERITS from Bar."
 #    Inheritance means Foo automatically gets every method Bar defines, without
@@ -30,12 +30,12 @@
 #    this folder (cube_smart.rb, extra_space.rb, etc.) is a child class that
 #    writes `class Companies::CubeSmart < Companies::BaseParser`. That child
 #    class gets `run`, `open_page`, `safe_text`, and every other method
-#    defined below for free — it only has to define the handful of methods
+#    defined below for free, it only has to define the handful of methods
 #    that are actually different per company (company_name, search_url, etc).
 #
 # 2. "Playwright" is a browser-automation library: Ruby code in this file
 #    tells a real (invisible/"headless") web browser to open a page, click
-#    things, and read back what's on the page — exactly like a human browsing
+#    things, and read back what's on the page, exactly like a human browsing
 #    the site, except driven by code. A "page" object (you'll see `page.` all
 #    over this file) represents one open browser tab.
 #
@@ -54,7 +54,7 @@
 #    restrict who can call a method. Everything defined ABOVE one of these
 #    keywords in the file is a normal ("public") method, callable from
 #    anywhere. Everything defined BELOW `protected` can only be called by code
-#    inside this class or a subclass of it (i.e. the company parser files) —
+#    inside this class or a subclass of it (i.e. the company parser files),
 #    outside code (like the job that kicks off a crawl) cannot call them
 #    directly. `private` is even stricter: only this exact class (and,
 #    practically here, subclasses calling with an implicit receiver) can call
@@ -63,22 +63,22 @@
 #    so the only thing the outside world is meant to call is `run`.
 class Companies::BaseParser
   # ---------------------------------------------------------------------------
-  # CONFIGURATION — subclasses can override these
+  # CONFIGURATION, subclasses can override these
   # ---------------------------------------------------------------------------
 
-  # A Ruby "constant" — by convention, any variable name written in
+  # A Ruby "constant", by convention, any variable name written in
   # ALL_CAPS is treated as a constant (a value that isn't meant to change).
   # This one sets how many times to retry a failed page load before giving up.
   MAX_RETRIES = 3
 
   # How long to wait between retries (in milliseconds). "_MS" in the name is
   # just a naming convention reminding readers of the unit (milliseconds,
-  # i.e. thousandths of a second) — Ruby doesn't enforce units.
+  # i.e. thousandths of a second), Ruby doesn't enforce units.
   RETRY_DELAY_MS = 3000
 
   # How long to wait for a page to load before timing out (in milliseconds)
   PAGE_TIMEOUT_MS = 30_000
-  # (The underscore in 30_000 is just a readability separator, like a comma —
+  # (The underscore in 30_000 is just a readability separator, like a comma,
   # Ruby ignores underscores inside number literals, so 30_000 == 30000.)
 
   # How long to wait after a page loads for JS (JavaScript) to finish
@@ -93,7 +93,7 @@ class Companies::BaseParser
   # browser:   a Playwright browser instance shared across parsers
   # options:   hash of filter options from the user's crawl settings
   # ---------------------------------------------------------------------------
-  # `initialize` is Ruby's special method name for "the constructor" — it runs
+  # `initialize` is Ruby's special method name for "the constructor", it runs
   # automatically whenever someone writes `Companies::CubeSmart.new(...)`.
   # The parameter list here uses "keyword arguments": `crawl_run:`, `browser:`,
   # and `options:` (with `options: {}` giving it a default empty hash `{}` if
@@ -101,12 +101,12 @@ class Companies::BaseParser
   # the call site, e.g. `.new(crawl_run: run, browser: b)`, which makes the
   # call self-documenting compared to plain positional arguments.
   def initialize(crawl_run:, browser:, options: {})
-    @crawl_run = crawl_run    # The CrawlRun record — used for logging
-    # `@crawl_run` (with an `@` prefix) is an "instance variable" — it's
+    @crawl_run = crawl_run    # The CrawlRun record, used for logging
+    # `@crawl_run` (with an `@` prefix) is an "instance variable", it's
     # attached to this specific object and stays available in every other
     # method of this object (unlike a plain local variable, which only lives
     # inside the method it's declared in).
-    @browser   = browser      # Playwright browser — used to open pages
+    @browser   = browser      # Playwright browser, used to open pages
     # Same idea: stash the shared Playwright browser instance so `open_page`
     # (further down) can use it to open new tabs.
     @options   = options      # Filter options (sizes, climate_controlled, etc.)
@@ -120,7 +120,7 @@ class Companies::BaseParser
     # prefixed with the company name (e.g. "[CubeSmart] ..."), making it easy
     # to tell which company's crawl produced which log line when several
     # crawls run concurrently. `company_name` here calls the method defined
-    # further down in this same class — since subclasses override it, this
+    # further down in this same class, since subclasses override it, this
     # will actually invoke the SUBCLASS's version (e.g. CubeSmart's, which
     # returns "CubeSmart") even though we're inside BaseParser's code. This
     # is called "polymorphism": the same method call resolves differently
@@ -132,24 +132,24 @@ class Companies::BaseParser
   # MAIN ENTRY POINT
   # ---------------------------------------------------------------------------
   # This is the method called by the CrawlJob to run this company's parser.
-  # Subclasses should NOT override this — override parse_locations and parse_units instead.
+  # Subclasses should NOT override this, override parse_locations and parse_units instead.
   # ---------------------------------------------------------------------------
   # Again, keyword arguments: callers must invoke this as
   # `.run(search_lat: ..., search_lng: ..., radius_miles: ...)`.
   def run(search_lat:, search_lng:, radius_miles:)
     log_info("Starting crawl for #{company_name}")
-    # `#{...}` inside a double-quoted string is Ruby "string interpolation" —
+    # `#{...}` inside a double-quoted string is Ruby "string interpolation",
     # it runs the Ruby expression inside the braces and inserts its result as
     # text. So this logs something like "Starting crawl for CubeSmart".
 
     facilities_saved = 0
     # Local variable (no `@`) counting how many facilities we successfully
-    # saved to the database during this run — starts at zero.
+    # saved to the database during this run, starts at zero.
     units_saved      = 0
     # Same idea, counting individual storage units saved.
 
     begin
-      # `begin ... rescue ... end` is Ruby's exception-handling block — like
+      # `begin ... rescue ... end` is Ruby's exception-handling block, like
       # try/catch in other languages. Code inside `begin` runs normally; if
       # it raises an error, execution jumps to the matching `rescue` clause
       # instead of crashing the whole program. This lets one company's crawl
@@ -160,7 +160,7 @@ class Companies::BaseParser
 
       search_page_url = search_url(search_lat, search_lng, radius_miles)
       # Calls the subclass's `search_url` method (each company implements its
-      # own — see e.g. cube_smart.rb) to build the URL for the search results
+      # own, see e.g. cube_smart.rb) to build the URL for the search results
       # page for this company, given the coordinates and radius.
       page = open_page(search_page_url)
       # `open_page` (defined further down, in the `protected` section) opens
@@ -187,7 +187,7 @@ class Companies::BaseParser
         # nothing.
         return { facilities: 0, units: 0 }
         # `return` immediately exits the `run` method with this Hash as the
-        # result — no locations means nothing more to do.
+        # result, no locations means nothing more to do.
       end
       # `end` closes the `if locations.empty?` block above.
 
@@ -197,13 +197,13 @@ class Companies::BaseParser
       #
       # REFACTORING NOTE: the per-location work used to be inlined directly
       # in this loop (upsert facility, open its page, parse/filter/save
-      # units, two rescue clauses — around 100 lines) — a comment/refactor
+      # units, two rescue clauses, around 100 lines), a comment/refactor
       # audit flagged it as a self-contained unit of work that could be
       # pulled out, matching this file's own established pattern of small,
       # single-purpose helpers (open_page, apply_filters, save_unit,
       # upsert_facility are all already separate methods below). It's now
       # `process_location` (in the `protected` section further down),
-      # which returns a `[facility_saved, units_saved_count]` pair — this
+      # which returns a `[facility_saved, units_saved_count]` pair, this
       # loop just accumulates those pairs into the running totals.
       locations.each_with_index do |location_data, index|
         # `.each_with_index do |element, index| ... end` is a Ruby loop: it
@@ -214,21 +214,21 @@ class Companies::BaseParser
         log_info("Processing location #{index + 1}/#{locations.length}: #{location_data[:name]}")
         # `location_data[:name]` reads the value stored under the `:name` key
         # of this location's Hash. `:name` (with a leading colon) is a Ruby
-        # "symbol" — a lightweight, immutable label commonly used as a Hash
+        # "symbol", a lightweight, immutable label commonly used as a Hash
         # key, similar to a string but more memory-efficient since identical
         # symbols are the same object in memory.
 
         # `process_location` handles its OWN error cases internally (a
         # timed-out page load, or any other unexpected error for this ONE
         # location) and always returns a `[facility_saved, units_saved]`
-        # pair — `[false, 0]` if this location failed for any reason — so
+        # pair, `[false, 0]` if this location failed for any reason, so
         # there's no begin/rescue needed here at all; one bad location can
         # never stop the rest of this loop from running.
         facility_saved, units_saved_here = process_location(location_data)
         facilities_saved += 1 if facility_saved
         units_saved      += units_saved_here
 
-        # Polite delay between location requests — avoids overwhelming the site
+        # Polite delay between location requests, avoids overwhelming the site
         # and helps with rate limiting on slow hardware
         delay_ms = Setting.get("crawl_delay_between_requests_ms", default: 2000).to_i
         # Reads a configurable delay (in milliseconds) from the app's
@@ -241,24 +241,24 @@ class Companies::BaseParser
         # integer division truncating to 2).
       end
       # `end` closes the `locations.each_with_index do |location_data, index|`
-      # loop — every location has now been processed.
+      # loop, every location has now been processed.
 
       log_success("Completed #{company_name}: #{facilities_saved} facilities, #{units_saved} units saved")
       { facilities: facilities_saved, units: units_saved }
       # This Hash literal is the LAST expression evaluated in the `begin`
       # block on the success path, so it becomes the value the whole
       # `begin/rescue/end` expression evaluates to, which in turn is the
-      # last expression in `run`, so it becomes `run`'s return value —
+      # last expression in `run`, so it becomes `run`'s return value,
       # Ruby methods return whatever their last-evaluated expression is,
       # with no explicit `return` needed.
 
     rescue Playwright::TimeoutError => e
       # This OUTER rescue (matching the OUTER `begin` that started right
       # after `facilities_saved = 0` / `units_saved = 0`) catches a timeout
-      # that happens on the very FIRST page load (the search page itself) —
+      # that happens on the very FIRST page load (the search page itself),
       # if that fails, we never even got a location list, so there's nothing
       # left to salvage for this company on this run.
-      # The initial search page timed out — can't get any locations
+      # The initial search page timed out, can't get any locations
       log_error(
         "Timeout on search page for #{company_name}. " \
         "URL: #{search_url(search_lat, search_lng, radius_miles)}. " \
@@ -269,14 +269,14 @@ class Companies::BaseParser
       # knows this run didn't fully succeed.
 
     rescue => e
-      # Catch-all for unexpected errors — log everything we know
+      # Catch-all for unexpected errors, log everything we know
       log_error(
         "Unexpected error crawling #{company_name}: #{e.class}: #{e.message}. " \
         "Full backtrace: #{e.backtrace.join("\n")}"
       )
       # Unlike the inner per-location rescue above (which trims the
       # backtrace to 3 lines), this one joins the ENTIRE backtrace with
-      # newlines (`"\n"`) — since this is a crawl-ending failure, we want the
+      # newlines (`"\n"`), since this is a crawl-ending failure, we want the
       # full picture in the logs to debug it.
       { facilities: 0, units: 0, error: e.message }
     end
@@ -293,7 +293,7 @@ class Companies::BaseParser
   # Example: "Extra Space Storage"
   def company_name
     # This is the "default" implementation of `company_name` on the base
-    # class. It's never meant to actually be used as-is — its ONLY job is to
+    # class. It's never meant to actually be used as-is, its ONLY job is to
     # raise an error if a subclass forgets to override it, so mistakes are
     # caught loudly instead of silently returning nothing.
     raise NotImplementedError,
@@ -303,7 +303,7 @@ class Companies::BaseParser
     # throws an error of the given class. `NotImplementedError` is a
     # built-in Ruby exception class meant exactly for this "abstract method,
     # subclass must override me" situation. `self.class.name` reads the name
-    # of whichever actual class this code is running as part of — e.g. if
+    # of whichever actual class this code is running as part of, e.g. if
     # some subclass forgot to define `company_name`, this would print that
     # subclass's real name (e.g. "Companies::CubeSmart") in the error, making
     # it obvious which file is missing the method.
@@ -351,7 +351,7 @@ class Companies::BaseParser
   # `end` closes `def parse_units`.
 
   # ---------------------------------------------------------------------------
-  # SHARED HELPER METHODS — available to all subclasses via inheritance
+  # SHARED HELPER METHODS, available to all subclasses via inheritance
   # ---------------------------------------------------------------------------
   protected
   # Everything from here to the end of the class is `protected`: it can only
@@ -364,17 +364,17 @@ class Companies::BaseParser
   # Processes ONE location from the search-results page: upserts its
   # Facility record, opens its own pricing page, parses/filters/saves its
   # units. Extracted out of `run`'s main loop above (see that loop's
-  # REFACTORING NOTE) — this is the unit of work that used to be inlined
+  # REFACTORING NOTE), this is the unit of work that used to be inlined
   # there.
   #
   # Returns a two-element Array `[facility_saved, units_saved_count]`:
   # `facility_saved` is `true`/`false` (whether this location should count
-  # toward the facilities-processed total — false if it had no URL, no
+  # toward the facilities-processed total, false if it had no URL, no
   # units found, or any error occurred), and `units_saved_count` is how
   # many individual units were actually written to the database for this
   # one location (`0` in every failure case). ANY failure for this ONE
   # location (a timeout, a bad parser, a network error) is caught here and
-  # turned into `[false, 0]` instead of raising — so one bad location can
+  # turned into `[false, 0]` instead of raising, so one bad location can
   # never stop `run`'s loop from moving on to the next one.
   def process_location(location_data)
     # Find or create the Facility record in the database
@@ -386,9 +386,9 @@ class Companies::BaseParser
     facility_page_url = location_data[:url]
     if facility_page_url.blank?
       # `.blank?` is a Rails helper: true for nil, empty string, empty
-      # array, whitespace-only string, etc. — a broader check than
+      # array, whitespace-only string, etc., a broader check than
       # Ruby's plain `.nil?` or `.empty?`.
-      log_warning("No URL for #{location_data[:name]} — skipping unit pricing")
+      log_warning("No URL for #{location_data[:name]}, skipping unit pricing")
       return [ false, 0 ]
     end
     # `end` closes the `if facility_page_url.blank?` check.
@@ -413,7 +413,7 @@ class Companies::BaseParser
     # Step 4: Filter units based on user's filter options
     filtered_units = apply_filters(raw_units)
     # Narrows `raw_units` down to only the ones matching the user's
-    # chosen filters (size, climate control, etc.) — see
+    # chosen filters (size, climate control, etc.), see
     # `apply_filters` further down.
 
     log_info("Found #{raw_units.length} units, #{filtered_units.length} match filters at #{location_data[:name]}")
@@ -424,18 +424,18 @@ class Companies::BaseParser
       # plain `.each` instead of `.each_with_index`).
       save_unit(unit_data, facility)
       # Writes this unit to the database, associated with the
-      # facility — see `save_unit` further down.
+      # facility, see `save_unit` further down.
     end
     # `end` closes the `filtered_units.each do |unit_data|` loop.
 
     # This location counts as successfully processed (only reached when
-    # raw_units was non-empty) — the caller adds `filtered_units.length`
+    # raw_units was non-empty), the caller adds `filtered_units.length`
     # onto its own running units_saved total.
     [ true, filtered_units.length ]
 
   rescue Playwright::TimeoutError => e
     # This `rescue` clause only catches errors of type
-    # `Playwright::TimeoutError` (or subclasses of it) — a specific
+    # `Playwright::TimeoutError` (or subclasses of it), a specific
     # exception class Playwright raises when a page takes too long to
     # respond. `=> e` captures the actual exception object into a local
     # variable `e` so we can read its message below.
@@ -447,19 +447,19 @@ class Companies::BaseParser
       url: location_data[:url]
     )
     # The trailing `\` at the end of a line lets a Ruby string literal
-    # continue onto the next line without inserting a literal newline —
+    # continue onto the next line without inserting a literal newline,
     # it's purely for keeping source lines from getting too long. The
     # two string pieces get concatenated into one long message.
     [ false, 0 ]
 
   rescue => e
     # A bare `rescue => e` with no exception class after it catches
-    # `StandardError` and its subclasses — i.e. "any other normal
+    # `StandardError` and its subclasses, i.e. "any other normal
     # error we didn't specifically handle above." This must come AFTER
     # the more specific `Playwright::TimeoutError` rescue, because Ruby
     # checks rescue clauses top-to-bottom and uses the first one that
     # matches.
-    # Any other error on this specific location — log it and let the
+    # Any other error on this specific location, log it and let the
     # caller move on to the next one
     log_error(
       "Error processing #{location_data[:name]}: #{e.class}: #{e.message}. " \
@@ -480,7 +480,7 @@ class Companies::BaseParser
   # Opens a URL in a new browser page with automatic retry logic
   # Returns the Playwright page object
   def open_page(url, retries: MAX_RETRIES)
-    # `retries: MAX_RETRIES` is a keyword argument with a default value —
+    # `retries: MAX_RETRIES` is a keyword argument with a default value,
     # callers can omit it (as `run` does above) to use the `MAX_RETRIES`
     # constant (3), or pass a different number if needed.
     attempt = 0
@@ -490,7 +490,7 @@ class Companies::BaseParser
       attempt += 1
       log_info("Opening page (attempt #{attempt}/#{retries + 1}): #{url}")
       # `retries + 1` because "3 retries" means up to 4 total attempts (the
-      # first try plus 3 retries) — this just makes the log message read
+      # first try plus 3 retries), this just makes the log message read
       # correctly.
 
       # Create a new browser tab
@@ -516,14 +516,14 @@ class Companies::BaseParser
 
       # Navigate to the URL. We used to wait for "networkidle" here, but modern
       # sites keep background connections open indefinitely (analytics, chat
-      # widgets, polling) so network activity never actually goes idle — that
+      # widgets, polling) so network activity never actually goes idle, that
       # made every page load hit the full timeout. "domcontentloaded" fires as
       # soon as the HTML is parsed; each parser's own wait_for_selector call
       # (in parse_locations/parse_units) handles waiting for the real content.
       page.goto(url, waitUntil: "domcontentloaded", timeout: PAGE_TIMEOUT_MS)
       # `.goto(url, ...)` tells the browser tab to navigate to `url`.
       # `waitUntil: "domcontentloaded"` tells Playwright which browser
-      # lifecycle event counts as "done navigating" — here, as soon as the
+      # lifecycle event counts as "done navigating", here, as soon as the
       # raw HTML has been parsed into the page (before all images/scripts
       # necessarily finish). `timeout: PAGE_TIMEOUT_MS` caps how long to wait
       # (30 seconds, per the constant above) before giving up and raising
@@ -553,23 +553,23 @@ class Companies::BaseParser
         )
         sleep(RETRY_DELAY_MS / 1000.0)
         # Pause briefly (3 seconds, converted from ms to seconds) before
-        # trying again — gives a temporarily slow/overloaded site a moment
+        # trying again, gives a temporarily slow/overloaded site a moment
         # to recover.
         retry
         # `retry` is a special Ruby keyword that jumps back to the very
         # start of the enclosing `begin` block and runs it again from
         # scratch (so `attempt += 1` runs again, `page = @browser.new_page`
-        # runs again, etc.) — this is literally how the retry loop works,
+        # runs again, etc.), this is literally how the retry loop works,
         # there's no explicit `while` loop here.
       else
-        # We've used up all our retries — give up for real.
+        # We've used up all our retries, give up for real.
         log_error(
           "Page load failed after #{retries + 1} attempts. Giving up. " \
           "URL: #{url}. Error: #{e.message}"
         )
         raise  # Re-raise so the caller can handle it
         # A bare `raise` with no arguments, inside a `rescue` block,
-        # re-raises the SAME exception that was just caught (`e`) — it
+        # re-raises the SAME exception that was just caught (`e`), it
         # propagates up to whichever code called `open_page` (in `run`,
         # above), which has its own rescue clauses to handle it.
       end
@@ -577,7 +577,7 @@ class Companies::BaseParser
 
     rescue => e
       # Handles any OTHER kind of error (not a Playwright timeout) that
-      # might happen while opening the page — same retry logic applies.
+      # might happen while opening the page, same retry logic applies.
       if attempt <= retries
         log_warning(
           "Unexpected error loading page (attempt #{attempt}/#{retries + 1}): " \
@@ -603,15 +603,15 @@ class Companies::BaseParser
   # Usage: safe_text(page, ".price-label")
   def safe_text(page_or_element, selector)
     # `page_or_element` can be either a whole Playwright `page`, OR a smaller
-    # already-found element (like one facility "card") — both respond to
+    # already-found element (like one facility "card"), both respond to
     # `.query_selector`, so this method works either way, letting callers
     # search either the whole page or just within one element.
     element = page_or_element.query_selector(selector)
     # Finds the FIRST element matching the CSS `selector` within
     # `page_or_element`. Returns `nil` if nothing matches (Playwright does
-    # NOT raise an error for "not found" here — it just returns nil).
+    # NOT raise an error for "not found" here, it just returns nil).
     return nil if element.nil?
-    # If nothing was found, stop here and return `nil` — this is the whole
+    # If nothing was found, stop here and return `nil`, this is the whole
     # point of "safe_text": calling `.text_content` on `nil` directly would
     # crash with a `NoMethodError`, so we check first.
 
@@ -620,24 +620,24 @@ class Companies::BaseParser
     # (stripping out the HTML tags themselves), e.g. for
     # `<span>  $89.00  </span>` it returns "  $89.00  ".
     text&.strip&.presence  # strip whitespace, return nil if empty string
-    # `&.` is Ruby's "safe navigation operator" — it calls the following
+    # `&.` is Ruby's "safe navigation operator", it calls the following
     # method only if the thing on the left isn't `nil`; if it IS nil, the
     # whole expression short-circuits to `nil` instead of raising an error.
     # Chained here: `.strip` removes leading/trailing whitespace,
     # `.presence` (a Rails helper) returns the string if it's non-empty, or
-    # `nil` if it's blank/empty — so callers always get either real text or
+    # `nil` if it's blank/empty, so callers always get either real text or
     # a clean `nil`, never an empty string like "". This is the LAST
     # expression in the method, so it's the return value.
   rescue => e
     # This `rescue` is attached directly to the `def ... end` method body
-    # (no separate `begin` needed — Ruby lets you rescue errors for an
+    # (no separate `begin` needed, Ruby lets you rescue errors for an
     # entire method this way). Catches ANY unexpected error during the
     # lookup (e.g. the page/tab was already closed) so one bad selector
     # can't crash the whole crawl.
     log_warning("Could not read text from selector '#{selector}': #{e.message}")
     nil
     # Falls back to returning `nil`, consistent with the "not found" case
-    # above — callers never need to worry about this method raising.
+    # above, callers never need to worry about this method raising.
   end
   # `end` closes `def safe_text`.
 
@@ -670,17 +670,17 @@ class Companies::BaseParser
 
     elements.map { |el| el.text_content&.strip&.presence }.compact
     # `.map { |el| ... }` runs the block once per element in `elements` and
-    # builds a new Array out of whatever each block call returns — here,
+    # builds a new Array out of whatever each block call returns, here,
     # each element's cleaned-up text (or nil if it was blank). `{ |el| ... }`
     # is the same kind of block as `do |el| ... end`, just written with curly
-    # braces instead — Ruby convention is curly braces for short one-line
+    # braces instead, Ruby convention is curly braces for short one-line
     # blocks, `do...end` for longer multi-line ones (as used elsewhere in
     # this file). `.compact` then removes any `nil` entries from that array,
     # so the final result only contains real, non-blank text values.
   rescue => e
     log_warning("Could not read all text from selector '#{selector}': #{e.message}")
     []
-    # On error, return an empty array — same "safe" contract as the other
+    # On error, return an empty array, same "safe" contract as the other
     # helpers: never raises, just returns an empty/nil result.
   end
   # `end` closes `def safe_all_text`.
@@ -695,7 +695,7 @@ class Companies::BaseParser
     cleaned = price_string.to_s.gsub(/[^\d.]/, "")
     # `.to_s` ensures we're working with a String even if something odd was
     # passed in. `.gsub(pattern, replacement)` replaces every match of
-    # `pattern` with `replacement` (global substitute — "g" = all
+    # `pattern` with `replacement` (global substitute, "g" = all
     # occurrences, not just the first). The pattern `/[^\d.]/` is a regular
     # expression (regex): `[...]` is a "character class" matching any ONE of
     # the characters listed inside; `^` as the FIRST character inside `[...]`
@@ -703,7 +703,7 @@ class Companies::BaseParser
     # means "a digit (0-9)"; `.` inside a character class is a literal dot,
     # not "any character" (that special meaning of `.` only applies outside
     # `[...]`). So this regex matches any character that is neither a digit
-    # nor a dot, and replaces each one with `""` (nothing) — effectively
+    # nor a dot, and replaces each one with `""` (nothing), effectively
     # stripping out currency symbols, commas, "/mo", spaces, etc., leaving
     # just something like "89.00".
     return nil if cleaned.blank?
@@ -714,7 +714,7 @@ class Companies::BaseParser
     # `.to_f` converts the cleaned numeric string into a Float (a
     # floating-point/decimal number), e.g. "89.00" -> 89.0.
     return nil if price <= 0
-    # A price of zero or negative doesn't make sense for a storage unit —
+    # A price of zero or negative doesn't make sense for a storage unit,
     # treat it as "couldn't parse a real price."
 
     price.round(2)
@@ -730,18 +730,18 @@ class Companies::BaseParser
   def parse_size(size_string)
     return nil if size_string.blank?
 
-    # Extract just the numbers — handles formats like "10x20", "10' x 20'", "10 X 20 ft"
+    # Extract just the numbers, handles formats like "10x20", "10' x 20'", "10 X 20 ft"
     numbers = size_string.to_s.scan(/\d+/).map(&:to_i)
     # `.scan(/\d+/)` finds every run of one-or-more digits (`\d+`) in the
     # string and returns them all as an Array of Strings, e.g. "10' x 20'"
     # -> ["10", "20"]. `.map(&:to_i)` then converts each of those strings to
-    # an Integer. `&:to_i` is shorthand for `{ |s| s.to_i }` — the `&` turns
+    # an Integer. `&:to_i` is shorthand for `{ |s| s.to_i }`, the `&` turns
     # the symbol `:to_i` into something `.map` can call as a block, applying
     # that one method to every element.
 
     # We need exactly two numbers (width and depth)
     return nil unless numbers.length >= 2
-    # `unless` is Ruby's inverted `if` — this line means "return nil IF NOT
+    # `unless` is Ruby's inverted `if`, this line means "return nil IF NOT
     # (numbers.length >= 2)", i.e. bail out unless we found at least two
     # numbers (some formats might have a stray extra number like "10x20 ft2",
     # so we only require AT LEAST two, and use just the first two below).
@@ -760,7 +760,7 @@ class Companies::BaseParser
   # Used automatically when errors occur so you can see what went wrong
   def take_error_screenshot(page, label)
     filename = "logs/#{company_slug}_#{label}_#{Time.current.strftime("%Y%m%d_%H%M%S")}.png"
-    # Builds a filename like "logs/cubesmart_no_cards_20260722_143012.png" —
+    # Builds a filename like "logs/cubesmart_no_cards_20260722_143012.png",
     # `Time.current` (a Rails helper, timezone-aware version of `Time.now`)
     # gives the current timestamp, and `.strftime("%Y%m%d_%H%M%S")` formats
     # it as Year-Month-Day_Hour-Minute-Second so filenames sort chronologically
@@ -778,7 +778,7 @@ class Companies::BaseParser
     rescue => e
       log_warning("Could not save screenshot: #{e.message}")
       # If even taking the screenshot fails (e.g. the page/tab already
-      # closed), don't let that crash the crawl either — just log it.
+      # closed), don't let that crash the crawl either, just log it.
     end
     # `end` closes this inner `begin ... rescue ... end`.
   end
@@ -790,7 +790,7 @@ class Companies::BaseParser
     # Try to find an existing facility by external_id first (most reliable)
     facility = if location_data[:external_id].present?
       # An `if/else` expression can be assigned directly to a variable in
-      # Ruby — whichever branch runs, its last-evaluated line becomes the
+      # Ruby, whichever branch runs, its last-evaluated line becomes the
       # value assigned to `facility`. `.present?` is the opposite of
       # `.blank?` (true when there IS real/non-empty content).
       Facility.find_or_initialize_by(
@@ -836,7 +836,7 @@ class Companies::BaseParser
     )
     # `.assign_attributes(...)` sets all these columns on the in-memory
     # `facility` object (whether it's a brand-new record or one we just
-    # fetched from the database) WITHOUT saving to the database yet — so
+    # fetched from the database) WITHOUT saving to the database yet, so
     # every crawl refreshes the facility's info (phone, address, etc.) even
     # for facilities we've seen before.
 
@@ -856,7 +856,7 @@ class Companies::BaseParser
       # combines them into one comma-separated string for the error message.
       raise "Could not save facility '#{location_data[:name]}': #{error_messages}"
       # `raise "some string"` raises a generic `RuntimeError` with that
-      # string as its message — this propagates up to the `rescue` clauses
+      # string as its message, this propagates up to the `rescue` clauses
       # in `run` (the per-location `begin/rescue`), which will log it and
       # move on to the next location rather than crashing the whole crawl.
     end
@@ -876,20 +876,20 @@ class Companies::BaseParser
     # `**unit_data` is Ruby's "double-splat" operator: it takes every
     # key/value pair out of the `unit_data` Hash (size:, monthly_price:,
     # etc., as built by each company's `parse_units`) and passes them all as
-    # individual keyword arguments here — equivalent to writing out
+    # individual keyword arguments here, equivalent to writing out
     # `size: unit_data[:size], monthly_price: unit_data[:monthly_price], ...`
     # by hand for every key, but far shorter and automatically stays correct
     # if new keys get added to unit_data later.
 
     unless unit.save
-      # `unless` again = "if not" — this block runs only when `.save`
+      # `unless` again = "if not", this block runs only when `.save`
       # returns false (failed).
       error_messages = unit.errors.full_messages.join(", ")
       log_warning(
         "Could not save unit (#{unit_data[:size]} at #{facility.name}): #{error_messages}"
       )
       # Unlike `upsert_facility`, a failed unit save only logs a WARNING
-      # (not a raised error) — one bad unit shouldn't stop the rest of the
+      # (not a raised error), one bad unit shouldn't stop the rest of the
       # units at this facility from being saved.
     end
     # `end` closes the `unless unit.save` block.
@@ -907,7 +907,7 @@ class Companies::BaseParser
     # What sizes did the user select?
     selected_sizes = @options[:sizes] || Unit::DEFAULT_SIZES
     # If the user's crawl options included specific sizes, use those;
-    # otherwise fall back to `Unit::DEFAULT_SIZES` — a constant defined on
+    # otherwise fall back to `Unit::DEFAULT_SIZES`, a constant defined on
     # the `Unit` model (accessed here via `Unit::DEFAULT_SIZES`, where `::`
     # is how Ruby reaches a constant defined inside another
     # class/module).
@@ -923,15 +923,15 @@ class Companies::BaseParser
       # Must be climate controlled (if filter is on)
       next false if @options[:climate_controlled] && !unit[:climate_controlled]
       # Inside a `.select`/`.each`/etc. block, `next value` works like
-      # `return value` for a normal method — it immediately ends this one
+      # `return value` for a normal method, it immediately ends this one
       # iteration of the block with `value` as the block's result (here,
       # `false`, meaning "exclude this unit"), then moves on to the next
       # unit. So: if the user turned ON the climate-controlled filter AND
       # this particular unit is NOT climate controlled, exclude it.
 
-      # Must not be an excluded type (parking, RV, boat, locker, etc. — see
+      # Must not be an excluded type (parking, RV, boat, locker, etc., see
       # Unit::EXCLUDED_TYPES). Note: we do NOT hard-exclude drive-up/outdoor
-      # units here — there's no UI control for that, so silently dropping
+      # units here, there's no UI control for that, so silently dropping
       # them just loses real inventory the user asked to see.
       next false if excluded_types.include?(unit[:unit_type].to_s.downcase)
       # Excludes this unit if its `unit_type` (lower-cased, converted to a
@@ -949,27 +949,27 @@ class Companies::BaseParser
       # Splits the normalized "10x20" string on the literal "x" character,
       # giving ["10", "20"], then converts each piece to an Integer.
       next false unless parts.length == 2
-      # Defensive check — should always be exactly 2 pieces given how
+      # Defensive check, should always be exactly 2 pieces given how
       # `parse_size` builds its output, but guards against any edge case.
 
       width, depth = parts
       # "Multiple assignment": unpacks the two-element `parts` array into two
-      # separate local variables in one line — equivalent to
+      # separate local variables in one line, equivalent to
       # `width = parts[0]; depth = parts[1]`.
       min_width = 10
       min_depth  = 10
       # (Note the extra space before `= 10` on this line is just how the
-      # original code was formatted — doesn't change behavior.)
+      # original code was formatted, doesn't change behavior.)
 
       next false if width < min_width || depth < min_depth
       # Excludes units smaller than the site's practical minimum (10 feet in
-      # either dimension) — these are treated as too small/likely lockers
+      # either dimension), these are treated as too small/likely lockers
       # rather than real filterable storage sizes.
 
       # If specific sizes are selected, include this unit if it belongs to
       # the closest selected size bucket. Real listings come in far more
       # granular sizes than the 5 standard checkboxes (10x12, 10x24, 12x20,
-      # ...) — matching the *exact* string would silently drop almost
+      # ...), matching the *exact* string would silently drop almost
       # everything that isn't precisely "10x10"/"10x15"/etc. Bucketing by
       # square footage keeps every unit >= 10x10 visible under whichever
       # standard size it's closest to.
@@ -980,7 +980,7 @@ class Companies::BaseParser
         next false unless selected_sizes.include?(size_bucket(width, depth))
         # `size_bucket` (defined right below) maps this unit's actual
         # dimensions to whichever "standard" size (from the 5 checkbox
-        # options) it's closest to by area — exclude the unit unless that
+        # options) it's closest to by area, exclude the unit unless that
         # bucket is one the user selected.
       end
       # `end` closes the `if selected_sizes.present?` block.
@@ -1010,7 +1010,7 @@ class Companies::BaseParser
       # `Unit::DEFAULT_SIZES` is presumably an Array of standard size
       # strings like ["5x5", "5x10", "10x10", "10x15", "10x20"].
       # `.min_by do |el| ... end` returns whichever ELEMENT of the array
-      # produces the SMALLEST value when passed through the block — here,
+      # produces the SMALLEST value when passed through the block, here,
       # it finds the standard size string whose own square footage is
       # closest (in absolute difference) to this unit's actual square
       # footage.
@@ -1020,7 +1020,7 @@ class Companies::BaseParser
       # `apply_filters` above.
       (sqft - (sw * sd)).abs
       # Computes the absolute difference in area between this unit's real
-      # square footage and this standard size's square footage — `.abs`
+      # square footage and this standard size's square footage, `.abs`
       # makes negative differences positive, since we only care about how
       # far apart they are, not which direction. This is the block's
       # return value, which `.min_by` uses to decide which standard_size
@@ -1033,19 +1033,19 @@ class Companies::BaseParser
   # `end` closes `def size_bucket`.
 
   # ---------------------------------------------------------------------------
-  # LOGGING HELPERS — delegate to the CrawlRun model's log methods
+  # LOGGING HELPERS, delegate to the CrawlRun model's log methods
   # ---------------------------------------------------------------------------
   # These four tiny methods all follow the same pattern: they exist so the
   # rest of this file (and every subclass) can just write `log_info("...")`
   # instead of the longer `@crawl_run.log_info("...", company: company_name)`
-  # every single time — a small but very common convenience wrapper. Each one
+  # every single time, a small but very common convenience wrapper. Each one
   # "delegates" (hands off) the actual work to a method of the same name on
   # the `CrawlRun` ActiveRecord model, which presumably writes the message to
   # a database-backed crawl log the UI can display, tagging every entry with
   # which company and (optionally) which URL it came from.
 
   def log_info(message, url: nil)
-    # `url: nil` is a keyword argument with a default of `nil` — callers can
+    # `url: nil` is a keyword argument with a default of `nil`, callers can
     # omit it entirely (as most calls to `log_info` in this file do).
     @crawl_run.log_info(message, company: company_name, url: url)
   end

@@ -3,7 +3,7 @@
 # =============================================================================
 # Crawls to find iStorage facilities and unit pricing.
 #
-# Website behavior notes (verified by driving the live site with Playwright —
+# Website behavior notes (verified by driving the live site with Playwright,
 # see recon/ for a saved screenshot/report, and the exploration notes below):
 #
 #   - istorage.com is NOT an independent site anymore. Every single path on
@@ -13,21 +13,21 @@
 #     an "NSA Storage Family of Brands" carousel (SecurCare, Northwest Self
 #     Storage, RightSpace Storage, Move It Storage, Southern Self Storage,
 #     iStorage, ...). This is normal corporate site consolidation, not bot
-#     detection — no CAPTCHA/"press & hold"/challenge page was ever shown.
+#     detection, no CAPTCHA/"press & hold"/challenge page was ever shown.
 #   - The site's own header/search-page search form
 #     (id="headerSearchForm" / id="searchForm") POSTs via GET to
 #     `https://www.nsastorage.com/search-results?location=<City, State>`,
 #     which itself redirects to a friendly URL like
 #     `/storage/<state>/storage-units-<city>`. We drive that endpoint
 #     directly with a reverse-geocoded "City, State" string (same technique
-#     as Companies::PublicStorage — there's no lat/lng search endpoint).
+#     as Companies::PublicStorage, there's no lat/lng search endpoint).
 #   - IMPORTANT: nsastorage.com's search-results page returns the nearest
-#     facilities from ALL NSA brands mixed together, sorted by distance —
+#     facilities from ALL NSA brands mixed together, sorted by distance,
 #     not just iStorage. Each result card has a brand-qualified title
 #     (e.g. "RightSpace Storage | N Gilbert Rd" or "iStorage | W Davis St").
 #     We MUST filter to only cards whose title starts with "iStorage",
 #     otherwise we'd be saving RightSpace/SecurCare/etc. facilities under the
-#     iStorage company name. In some markets (e.g. Phoenix/Gilbert, AZ — that
+#     iStorage company name. In some markets (e.g. Phoenix/Gilbert, AZ, that
 #     market is served entirely by RightSpace Storage) this filter will
 #     legitimately produce zero iStorage results; that's correct, not a bug.
 #   - Facility cards live under `.facility-card` (search-results page). Each
@@ -48,7 +48,7 @@
 #       `a.form-opener[href]` → relative booking/reservation URL
 #   - `.no-results-description` is present in the DOM on every page load
 #     (it's a "no results" fallback for an unrelated unit-filter widget, not
-#     the facility search) — like Public Storage's `.no-stores-results-content`
+#     the facility search), like Public Storage's `.no-stores-results-content`
 #     trap, its presence can't be used as a signal. We rely on actual counts
 #     of `.facility-card` / `.unit-select-item` instead.
 #
@@ -58,7 +58,7 @@
 
 # NOVICE PRIMER: `class Companies::IStorage < Companies::BaseParser` makes
 # this class a SUBCLASS ("child class") of `Companies::BaseParser` (see
-# app/services/companies/base_parser.rb) — it INHERITS every method
+# app/services/companies/base_parser.rb), it INHERITS every method
 # BaseParser defines (`run`, `safe_text`, `safe_attr`, `safe_all_text`,
 # `parse_price`, `parse_size`, `log_info`, `log_warning`, `log_error`,
 # `take_error_screenshot`, etc.) and only needs to implement the 4 methods
@@ -66,48 +66,48 @@
 # the browser-automation library: a `page` object represents one open,
 # invisible ("headless") browser tab, and CSS-selector strings (like
 # ".facility-card") are the same mini-language stylesheets use to target
-# HTML elements — see base_parser.rb's opening comment for a fuller
+# HTML elements, see base_parser.rb's opening comment for a fuller
 # explanation of selectors and Ruby's `protected`/`private` keywords, both
 # used here too.
 class Companies::IStorage < Companies::BaseParser
-  # A Ruby "constant" (ALL_CAPS name) holding the real site's root — note
+  # A Ruby "constant" (ALL_CAPS name) holding the real site's root, note
   # this is nsastorage.com, not istorage.com, per the header notes above.
   BASE_URL = "https://www.nsastorage.com"
 
-  # Overrides BaseParser's abstract `company_name` — required display name
+  # Overrides BaseParser's abstract `company_name`, required display name
   # shown in the UI/exports. Note this is "iStorage" even though the
-  # underlying site and BASE_URL are nsastorage.com — see header notes.
+  # underlying site and BASE_URL are nsastorage.com, see header notes.
   def company_name
     "iStorage"
   end
   # `end` closes `def company_name`.
 
-  # Overrides BaseParser's abstract `company_slug` — short id used in log
+  # Overrides BaseParser's abstract `company_slug`, short id used in log
   # lines and screenshot filenames.
   def company_slug
     "istorage"
   end
   # `end` closes `def company_slug`.
 
-  # Overrides BaseParser's abstract `search_url` — builds the URL for the
+  # Overrides BaseParser's abstract `search_url`, builds the URL for the
   # NSA Storage search-results page given GPS coordinates (radius_miles is
   # accepted for interface compatibility with BaseParser#run, but the site
   # has no radius parameter to pass it through to).
   def search_url(lat, lng, radius_miles)
     location_query = reverse_geocode_city_state(lat, lng)
     # Calls the private helper (near the bottom of this file) that turns raw
-    # GPS coordinates into a "City, State" string — this site's search box
+    # GPS coordinates into a "City, State" string, this site's search box
     # takes free text, not coordinates.
     "#{BASE_URL}/search-results?location=#{ERB::Util.url_encode(location_query)}"
     # String interpolation builds the URL. `ERB::Util.url_encode` percent-
     # encodes the "City, State" string so special characters (spaces,
-    # commas) survive being embedded in a URL query string — e.g. "Gilbert,
+    # commas) survive being embedded in a URL query string, e.g. "Gilbert,
     # Arizona" becomes safe characters like "Gilbert%2C+Arizona". This is the
     # method's only expression, so it's the return value.
   end
   # `end` closes `def search_url`.
 
-  # Overrides BaseParser's abstract `parse_locations` — reads the list of
+  # Overrides BaseParser's abstract `parse_locations`, reads the list of
   # nearby facilities off the search-results page and filters it down to
   # just the ones actually branded "iStorage" (see header notes above for
   # why this filtering step is necessary).
@@ -117,7 +117,7 @@ class Companies::IStorage < Companies::BaseParser
     # facility found.
 
     begin
-      # `begin ... rescue ... end` is Ruby's exception-handling block — code
+      # `begin ... rescue ... end` is Ruby's exception-handling block, code
       # inside `begin` runs normally; an error jumps to a matching `rescue`
       # clause instead of crashing this method.
       page.wait_for_selector(".facility-card", timeout: 15_000) rescue nil
@@ -125,12 +125,12 @@ class Companies::IStorage < Companies::BaseParser
       # The trailing `rescue nil` is Ruby's one-line rescue modifier: any
       # error here (most likely a timeout, if this search area genuinely has
       # zero NSA-brand facilities nearby) is swallowed and the expression
-      # becomes `nil` — execution just continues on to the next line, where
+      # becomes `nil`, execution just continues on to the next line, where
       # `query_selector_all` will simply find zero cards.
 
       all_cards = page.query_selector_all(".facility-card")
       # Finds EVERY facility card on the page, across ALL NSA brands (not
-      # just iStorage yet) — returns an empty Array, never nil, if none
+      # just iStorage yet), returns an empty Array, never nil, if none
       # match.
 
       if all_cards.empty?
@@ -140,19 +140,19 @@ class Companies::IStorage < Companies::BaseParser
           "The page layout may have changed. Run ReconService to check current page structure."
         )
         # The trailing `\` continues the string literal onto the next source
-        # line without a real newline — purely a source-formatting choice;
+        # line without a real newline, purely a source-formatting choice;
         # the two pieces concatenate into one message.
         take_error_screenshot(page, "no_cards")
         # Inherited helper: saves a PNG of the current page to logs/,
         # tagged with this label, for later debugging.
         return []
-        # Exits `parse_locations` immediately — literally zero cards of any
+        # Exits `parse_locations` immediately, literally zero cards of any
         # brand means there's nothing to filter or parse.
       end
       # `end` closes the `if all_cards.empty?` block.
 
       # nsastorage.com mixes results from every NSA brand (RightSpace,
-      # SecurCare, Northwest, Move It, iStorage, ...) sorted by distance —
+      # SecurCare, Northwest, Move It, iStorage, ...) sorted by distance,
       # keep only the ones actually branded "iStorage".
       cards = all_cards.select do |card|
         # `.select do |element| ... end` (a.k.a. `.filter`) builds a NEW
@@ -165,7 +165,7 @@ class Companies::IStorage < Companies::BaseParser
         # `.present?` (Rails helper) is true for non-blank text. `&&`
         # requires both sides true. `.start_with?("iStorage")` is a Ruby
         # String method that's true only if the string begins with exactly
-        # that text — this is the block's last expression, so it's what
+        # that text, this is the block's last expression, so it's what
         # `.select` uses to decide whether to keep this card.
       end
       # `end` closes the `all_cards.select do |card| ... end` block. Its
@@ -178,7 +178,7 @@ class Companies::IStorage < Companies::BaseParser
         )
         return []
         # This is a DIFFERENT "empty" case than the one above: cards of
-        # OTHER brands did exist nearby, just none of them were iStorage —
+        # OTHER brands did exist nearby, just none of them were iStorage,
         # still correctly returns an empty result, but with a more specific
         # log message (per the header notes, this is expected/correct
         # behavior in some markets, not a bug).
@@ -204,10 +204,10 @@ class Companies::IStorage < Companies::BaseParser
           external_id = url.to_s[/-(\d+)\z/, 1]
           # `.to_s` guards against `url` being `nil`. `[...]` with a regex
           # and a capture-group index is Ruby's "String#[]" pattern-match
-          # form: it searches for `/-(\d+)\z/` — a literal hyphen, followed
+          # form: it searches for `/-(\d+)\z/`, a literal hyphen, followed
           # by a captured group of one-or-more digits, anchored to the very
           # END of the string (`\z` matches only the absolute end, unlike
-          # `$` which can also match before a trailing newline) — and
+          # `$` which can also match before a trailing newline), and
           # returns just the text captured by that group (the trailing
           # numeric facility ID), or `nil` if the pattern doesn't match.
 
@@ -218,7 +218,7 @@ class Companies::IStorage < Companies::BaseParser
           # `.to_s` guards against `nil`. `.split(",")` breaks the line on
           # every comma. `.map(&:strip)` trims whitespace off each piece
           # (`&:strip` is shorthand for `{ |s| s.strip }`). `.reject(&:blank?)`
-          # then drops any resulting empty/blank pieces — `.reject` keeps
+          # then drops any resulting empty/blank pieces, `.reject` keeps
           # only elements for which the block returns FALSE (the opposite of
           # `.select`), so this removes accidental blank entries (e.g. from
           # a stray double comma).
@@ -239,7 +239,7 @@ class Companies::IStorage < Companies::BaseParser
           next if street.blank?
           # `.blank?` is true for `nil`/empty/whitespace-only. `next` skips
           # the rest of THIS block iteration (this one card) and moves to
-          # the next card — reached only when we couldn't even get a usable
+          # the next card, reached only when we couldn't even get a usable
           # street address.
 
           locations << {
@@ -259,7 +259,7 @@ class Companies::IStorage < Companies::BaseParser
             external_id: external_id
           }
 
-          log_info("  ✓ #{street} — #{city}, #{state}")
+          log_info("  ✓ #{street}, #{city}, #{state}")
           # A checkmark-prefixed info log line for each successfully parsed
           # location, useful for eyeballing crawl progress in the logs.
 
@@ -281,7 +281,7 @@ class Companies::IStorage < Companies::BaseParser
       take_error_screenshot(page, "search_timeout")
     rescue => e
       # This bare rescue comes AFTER the more specific one, since Ruby
-      # checks `rescue` clauses top-to-bottom and uses the first match — so
+      # checks `rescue` clauses top-to-bottom and uses the first match, so
       # this is the catch-all for anything else unexpected.
       log_error("Unexpected error parsing iStorage locations: #{e.class}: #{e.message}")
       take_error_screenshot(page, "parse_locations_error")
@@ -289,12 +289,12 @@ class Companies::IStorage < Companies::BaseParser
     # `end` closes the outer `begin ... rescue ... rescue ... end` block.
 
     locations
-    # The last expression evaluated — the `locations` Array built above —
+    # The last expression evaluated, the `locations` Array built above,
     # becomes `parse_locations`'s return value.
   end
   # `end` closes `def parse_locations`.
 
-  # Overrides BaseParser's abstract `parse_units` — reads unit sizes/prices
+  # Overrides BaseParser's abstract `parse_units`, reads unit sizes/prices
   # off one facility's own detail page.
   def parse_units(page, facility)
     units = []
@@ -303,7 +303,7 @@ class Companies::IStorage < Companies::BaseParser
     begin
       page.wait_for_selector(".unit-select-item", timeout: 15_000)
       # Waits up to 15 seconds for at least one unit card to render. No
-      # trailing `rescue nil` here — a timeout on a facility's own detail
+      # trailing `rescue nil` here, a timeout on a facility's own detail
       # page (which we already know exists, since parse_locations found it)
       # is treated as a real error, handled by the `rescue
       # Playwright::TimeoutError` clause further down.
@@ -318,7 +318,7 @@ class Companies::IStorage < Companies::BaseParser
         )
         take_error_screenshot(page, "no_units_#{facility.id}")
         return []
-        # Exits early with an empty array — nothing more to parse.
+        # Exits early with an empty array, nothing more to parse.
       end
       # `end` closes the `if unit_els.empty?` block.
 
@@ -337,7 +337,7 @@ class Companies::IStorage < Companies::BaseParser
           current_price = parse_price(safe_text(el, ".part_item_price"))
           # Reads and parses the currently-listed price (may be a promo
           # price or the regular price, depending on whether an old price is
-          # also shown — decided below).
+          # also shown, decided below).
           old_price     = parse_price(safe_text(el, ".part_item_old_price"))
           # Reads and parses the higher, crossed-out "In-Store" price, if
           # present (`nil` if this unit has no promo).
@@ -362,14 +362,14 @@ class Companies::IStorage < Companies::BaseParser
             web_special_price = current_price
             # The lower, currently-listed price becomes the promotional
             # price.
-            web_special_note  = badges.present? ? "Online price — #{badges.join(', ')}" : "Online price"
+            web_special_note  = badges.present? ? "Online price, #{badges.join(', ')}" : "Online price"
             # Ternary: if there were any promo badges, include them
             # (comma-joined) in the note; otherwise just say "Online price".
           elsif badges.present?
-            # `elsif` = "else if" — only checked if the first `if` condition
+            # `elsif` = "else if", only checked if the first `if` condition
             # was false. Here: there was no old/current price gap, but there
             # WERE promo badges (e.g. a flat "1st Month Free" with no price
-            # discount) — still worth recording as a note.
+            # discount), still worth recording as a note.
             web_special_note = badges.join(", ")
           end
           # `end` closes the `if ... elsif ... end` branch.
@@ -394,11 +394,11 @@ class Companies::IStorage < Companies::BaseParser
           # unit).
           indoor               = !drive_up if features.empty?
           # A SECOND assignment to `indoor`, only applied `if features.empty?`
-          # — i.e. this line only runs (overwriting the value computed just
+          # , i.e. this line only runs (overwriting the value computed just
           # above) when there was no feature text at all to go on, in which
           # case we fall back to the simplest possible guess: "indoor unless
           # we know it's drive-up." See the "flag but don't fix" notes at
-          # the end of this review — reassigning the same variable twice
+          # the end of this review, reassigning the same variable twice
           # like this is a slightly unusual pattern worth double-checking.
 
           data_unit_size = el.get_attribute("data-unit-size").to_s
@@ -455,22 +455,22 @@ class Companies::IStorage < Companies::BaseParser
   private
   # Ruby's `private` keyword: everything below this line can only be called
   # from inside this class's own methods (implicit receiver only), never
-  # from outside code — these are internal implementation details.
+  # from outside code, these are internal implementation details.
 
   # iStorage's (nsastorage.com's) search box takes a free-text "City, State"
-  # query, not coordinates — reverse-geocode what we were given back into
+  # query, not coordinates, reverse-geocode what we were given back into
   # that form. Same approach as Companies::PublicStorage.
   def reverse_geocode_city_state(lat, lng)
     result = Geocoder.search([ lat, lng ]).first
     # `Geocoder` is a third-party Ruby gem providing geocoding (address <->
     # coordinates lookups). `.search([lat, lng])` performs a "reverse
-    # geocode" — coordinates in, real-world address out — returning an
+    # geocode", coordinates in, real-world address out, returning an
     # Array of matches; `.first` takes the best one, which may be `nil`.
     if result&.city.present?
       # `&.` safely reads `.city` only if `result` isn't `nil`; `.present?`
       # is then true if that city string is real/non-blank.
       "#{result.city}, #{result.state}"
-      # Builds a "City, State" string, e.g. "Gilbert, Arizona" — the last
+      # Builds a "City, State" string, e.g. "Gilbert, Arizona", the last
       # expression of this branch, and (since the whole if/else is the
       # method's last expression) the method's return value on success.
     else
@@ -482,7 +482,7 @@ class Companies::IStorage < Companies::BaseParser
     # `end` closes the `if result&.city.present? ... else ... end` branch.
   rescue => e
     # A method-level rescue (attached directly to `def`, no separate
-    # `begin` needed) — catches any error from the geocoding call (e.g. a
+    # `begin` needed), catches any error from the geocoding call (e.g. a
     # network failure).
     log_warning("Reverse geocoding failed for #{lat},#{lng}: #{e.message}")
     "#{lat},#{lng}"
@@ -507,16 +507,16 @@ class Companies::IStorage < Companies::BaseParser
     # anchored to the absolute start of the string (`\A`), replacing just
     # that FIRST match (`.sub` replaces only one occurrence, unlike
     # `.gsub`'s "replace all"). `.gsub(/\D/, "")` then removes every
-    # non-digit character (`\D` is the regex shorthand for "NOT a digit") —
-    # globally (all occurrences) — leaving just the raw phone digits, e.g.
+    # non-digit character (`\D` is the regex shorthand for "NOT a digit"),
+    # globally (all occurrences), leaving just the raw phone digits, e.g.
     # "4805551234".
     return nil if digits.length != 10
     # A US phone number should have exactly 10 digits (area code + number,
-    # no country code) — if it doesn't, treat it as unparseable rather than
+    # no country code), if it doesn't, treat it as unparseable rather than
     # showing a garbled number.
 
     "(#{digits[0, 3]}) #{digits[3, 3]}-#{digits[6, 4]}"
-    # `digits[0, 3]` is Ruby's "String#[]" with a (start, length) pair —
+    # `digits[0, 3]` is Ruby's "String#[]" with a (start, length) pair,
     # takes 3 characters starting at index 0 (the area code); `digits[3, 3]`
     # takes the next 3 (the exchange); `digits[6, 4]` takes the final 4 (the
     # line number). String interpolation assembles them into the familiar

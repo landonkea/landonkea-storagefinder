@@ -63,6 +63,12 @@
       page reload instead of silently keeping stale CSS. %>
   <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
 
+  <%# Leaflet — required CSS for the facility map on the dashboard (see
+      app/javascript/controllers/facility_map_controller.js and
+      config/importmap.rb's "leaflet" pin). Vendored locally the same way
+      as tailwind above, rather than pulled from a CDN. %>
+  <%= stylesheet_link_tag "leaflet", "data-turbo-track": "reload" %>
+
   <%# JavaScript — Stimulus + Turbo + our custom JS %>
   <%# `javascript_importmap_tags` is a Rails helper (from the "importmap"
       approach to JS, which lets browsers load JavaScript modules by name

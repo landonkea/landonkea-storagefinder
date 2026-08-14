@@ -215,3 +215,30 @@ staging:
     <<: *default
     database: storage/staging_cable.sqlite3
     migrations_paths: db/cable_migrate
+
+# "dev:" is StorageFinder's fourth database configuration, backing the
+# "dev" Kamal destination (see config/deploy.dev.yml and config/
+# environments/dev.rb for what that tier is for — a disposable preview
+# container, one rung below staging). Structured identically to "staging:"
+# above: the same four named connections (primary/cache/queue/cable), same
+# migrations_paths, only the file paths differ (storage/dev*.sqlite3).
+# Isolation works the same way too — separate files inside a separate
+# Docker volume (config/deploy.dev.yml's own "storagefinder_dev_storage"
+# volume), so dev can be wiped, redeployed, or left to rot without ever
+# touching staging's or production's data.
+dev:
+  primary:
+    <<: *default
+    database: storage/dev.sqlite3
+  cache:
+    <<: *default
+    database: storage/dev_cache.sqlite3
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: storage/dev_queue.sqlite3
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: storage/dev_cable.sqlite3
+    migrations_paths: db/cable_migrate

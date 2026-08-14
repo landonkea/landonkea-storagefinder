@@ -20,14 +20,14 @@ class ExportsControllerTest < ActionDispatch::IntegrationTest
     # `get` simulates a browser GET request to the CSV export endpoint.
     get exports_csv_path
     # `assert_redirected_to` checks the response was an HTTP redirect (3xx)
-    # AND that its target matches `root_path` (the dashboard) — i.e.
+    # AND that its target matches `root_path` (the dashboard), i.e.
     # instead of downloading a file, the user gets bounced back to the
     # dashboard because there's nothing to export.
     assert_redirected_to root_path
     # `flash[:alert]` reads the one-time flash message the controller set
     # before redirecting (flash messages survive exactly one subsequent
     # request, then clear). `assert_match` checks the message text contains
-    # the given Regexp pattern — `/Run a crawl first/` is a regex literal
+    # the given Regexp pattern, `/Run a crawl first/` is a regex literal
     # (delimited by slashes) matched loosely rather than requiring an exact
     # string match.
     assert_match(/Run a crawl first/, flash[:alert])
@@ -44,7 +44,7 @@ class ExportsControllerTest < ActionDispatch::IntegrationTest
     # response's Content-Type header (e.g. "text/csv", without the
     # "charset=..." suffix Rails also sends). This assertion string-
     # concatenates ("+ ") a hardcoded "; charset=utf-8" suffix back onto it
-    # before comparing — an odd way to write this check (see the flagged
+    # before comparing, an odd way to write this check (see the flagged
     # issues at the end of this pass), but it does confirm the media type
     # itself is exactly "text/csv".
     assert_equal "text/csv; charset=utf-8", response.media_type + "; charset=utf-8"
@@ -54,8 +54,8 @@ class ExportsControllerTest < ActionDispatch::IntegrationTest
     # that header includes the word "attachment," which is what triggers a
     # download prompt rather than showing the CSV text in the browser.
     assert_match(/attachment/, response.headers["Content-Disposition"])
-    # Confirms the actual CSV content includes real exported data — the
-    # company name "Public Storage" from the fixture units — rather than
+    # Confirms the actual CSV content includes real exported data, the
+    # company name "Public Storage" from the fixture units, rather than
     # being empty or malformed. `response.body` is the raw text of the
     # response (here, the CSV file's contents).
     assert_match "Public Storage", response.body
@@ -78,7 +78,7 @@ class ExportsControllerTest < ActionDispatch::IntegrationTest
   test "excel downloads an xlsx file of the latest crawl's units" do
     get exports_excel_path
     assert_response :success
-    # Same download-header check as the CSV test — confirms the response
+    # Same download-header check as the CSV test, confirms the response
     # triggers a file download rather than rendering inline. Unlike the CSV
     # test, this doesn't assert on the file's binary content, since an
     # .xlsx file is a binary zip-based format, not readable/matchable as

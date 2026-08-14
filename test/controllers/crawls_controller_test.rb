@@ -7,7 +7,7 @@ require "test_helper"
 # test class, inheriting request-simulation helpers (`get`/`post`/`patch`/
 # `delete`) and assertion methods from Rails' integration test base class.
 # These helpers send a request through the app's real router and controller
-# code in-process — no actual browser or network socket involved.
+# code in-process, no actual browser or network socket involved.
 class CrawlsControllerTest < ActionDispatch::IntegrationTest
   # `test "..." do ... end` is Minitest/Rails syntax defining one test case;
   # the string is the test's descriptive name, and the block is its body.
@@ -17,7 +17,7 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     # data may include one, per test/fixtures/crawl_runs.yml). `.destroy_all`
     # deletes all matching rows immediately. This is done because the
     # controller's create action presumably checks "is a crawl already
-    # running?" before starting a new one — clearing running rows here
+    # running?" before starting a new one, clearing running rows here
     # guarantees that check passes, isolating this test from fixture state.
     # The trailing `#` comment documents why in the code itself.
     CrawlRun.where(status: "running").destroy_all # any_running? must be false
@@ -25,21 +25,21 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     # `assert_enqueued_with` is a Rails test helper (from ActiveJob::
     # TestHelper) that runs the block passed to it and then checks that a
     # background job matching the given options was scheduled ("enqueued")
-    # during that block — WITHOUT actually running the job's code. `job:
+    # during that block, WITHOUT actually running the job's code. `job:
     # CrawlJob` means "assert some instance of the CrawlJob class was
     # enqueued." This proves the controller kicks off background work
     # rather than, say, silently doing nothing.
     assert_enqueued_with(job: CrawlJob) do
       # `post` simulates an HTTP POST request (the verb for creating a new
       # resource / submitting a form). `params:` supplies the request's
-      # parameters as a Ruby Hash — here flat (not nested under a model
+      # parameters as a Ruby Hash, here flat (not nested under a model
       # name), mirroring simple form fields named `search_city` and
       # `radius_miles` directly. All values are given as strings since real
       # HTTP form submissions only ever send strings; the controller/model
       # converts types as needed.
       post crawls_path, params: { search_city: "Tempe, Arizona", radius_miles: "50" }
     end
-    # `end` closes the `assert_enqueued_with(job: CrawlJob) do` block — only
+    # `end` closes the `assert_enqueued_with(job: CrawlJob) do` block, only
     # the `post` call inside counts toward the enqueued-job check.
 
     # After a successful create, the controller redirects to the dashboard
@@ -47,7 +47,7 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
     # `CrawlRun.order(:created_at).last` sorts all CrawlRun rows by their
     # `created_at` timestamp ascending and takes the last (most recent) one
-    # — i.e. "the crawl row that was just created by the request above."
+    # , i.e. "the crawl row that was just created by the request above."
     # `.search_city` reads its search_city column, confirming the value we
     # submitted was actually persisted correctly.
     assert_equal "Tempe, Arizona", CrawlRun.order(:created_at).last.search_city
@@ -58,7 +58,7 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     # `CrawlRun.any_running?` is presumably a model class method (defined on
     # CrawlRun, not built into Rails) that returns true if any crawl has
     # status "running". `assert` with no comparison just checks the given
-    # expression is truthy — here confirming the fixture data already has a
+    # expression is truthy, here confirming the fixture data already has a
     # running crawl, which is the precondition this test needs.
     assert CrawlRun.any_running?
 
@@ -66,7 +66,7 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     post crawls_path, params: { search_city: "Tempe, Arizona", radius_miles: "50" }
 
     # Even though the crawl is refused, the controller still redirects back
-    # to the dashboard (rather than, say, returning an error status) —
+    # to the dashboard (rather than, say, returning an error status),
     # that's the existing Rails pattern of "always redirect after a POST,
     # explain the outcome via flash."
     assert_redirected_to root_path
@@ -89,10 +89,10 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to root_path
     # `assert_match` checks that a string matches a Ruby Regexp (regular
-    # expression) — a pattern-matching tool for text. `/enter a city name/`
+    # expression), a pattern-matching tool for text. `/enter a city name/`
     # is regex literal syntax (slashes delimit the pattern); this one simply
     # looks for that literal phrase anywhere inside flash[:alert], which is
-    # looser than assert_equal's exact-match check — useful when only part
+    # looser than assert_equal's exact-match check, useful when only part
     # of the message matters to the test.
     assert_match(/enter a city name/, flash[:alert])
   end
@@ -142,7 +142,7 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     # CrawlRun model). `.create!` builds AND immediately saves a new
     # CrawlLogEntry row with the given attributes, associated with this
     # crawl_run automatically. The `!` (bang) means this raises an exception
-    # if saving fails, rather than silently returning false — appropriate
+    # if saving fails, rather than silently returning false, appropriate
     # in test setup, where a save failure should loudly break the test.
     newer = crawl_run.crawl_log_entries.create!(company: "system", level: "info", message: "newer entry")
 
@@ -164,14 +164,14 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     body = JSON.parse(response.body)
     # `body["entries"]` reads the "entries" key from the parsed JSON hash.
     # `.map { |e| e["id"] }` transforms that array of entry hashes into a
-    # plain array of just their "id" values — `.map` runs the block once per
+    # plain array of just their "id" values, `.map` runs the block once per
     # element and collects the block's return values into a new array;
     # `|e|` names each element as `e` inside the block.
     ids = body["entries"].map { |e| e["id"] }
     # `assert_includes` checks that the `newer` entry's id IS present in the
-    # returned list — proving new entries after since_id are included.
+    # returned list, proving new entries after since_id are included.
     assert_includes ids, newer.id
-    # `refute_includes` is the negative counterpart — it checks the `older`
+    # `refute_includes` is the negative counterpart, it checks the `older`
     # entry's id is NOT present, proving already-seen entries are correctly
     # excluded.
     refute_includes ids, older.id
@@ -196,7 +196,7 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     # otherwise reflect any changes the controller made to the underlying
     # row).
     running.reload
-    # Confirms the record was NOT deleted but instead marked "failed" —
+    # Confirms the record was NOT deleted but instead marked "failed",
     # proving "destroy" on a running crawl means "cancel it," not remove it.
     assert_equal "failed", running.status
     # Confirms the error_message column records that this was a
@@ -209,12 +209,12 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     finished = crawl_runs(:previous_completed)
     # `.pluck(:id)` runs an efficient SQL query that returns just the `id`
     # column values (as a plain Ruby array) for every log entry belonging
-    # to this crawl, without loading full ActiveRecord objects — used here
+    # to this crawl, without loading full ActiveRecord objects, used here
     # purely to remember which ids existed before deletion so we can check
     # they're gone afterward.
     log_entry_ids = finished.crawl_log_entries.pluck(:id)
     unit_ids = finished.units.pluck(:id)
-    # Sanity-checks the fixture actually has at least one associated unit —
+    # Sanity-checks the fixture actually has at least one associated unit,
     # otherwise the cascade-delete assertions below (`assert_empty
     # Unit.where(...)`) would trivially pass even if cascading were broken,
     # since an empty set is empty either way. The string argument to
@@ -222,18 +222,18 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     # explaining why this particular check exists.
     assert unit_ids.any?, "fixture should have at least one unit to prove cascade delete"
 
-    # Deletes a FINISHED (not running) crawl this time — different code
+    # Deletes a FINISHED (not running) crawl this time, different code
     # path than the cancel-instead-of-delete case above.
     delete crawl_path(finished), as: :json
     assert_response :success
 
     # `CrawlRun.exists?(finished.id)` returns true/false for whether a row
     # with that id still exists. `assert_not` asserts the given expression
-    # is falsy — confirming the crawl run row itself was actually deleted.
+    # is falsy, confirming the crawl run row itself was actually deleted.
     assert_not CrawlRun.exists?(finished.id)
     # `CrawlLogEntry.where(id: log_entry_ids)` builds a query matching any
     # of the previously-recorded ids. `assert_empty` checks the resulting
-    # relation has zero records — confirming the crawl's log entries were
+    # relation has zero records, confirming the crawl's log entries were
     # deleted too (a "cascade delete" via the model's associations), not
     # left orphaned in the database.
     assert_empty CrawlLogEntry.where(id: log_entry_ids)
@@ -276,11 +276,11 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     # request, proving nothing changed.
     count_before = CrawlRun.count
 
-    # Sends an empty array for `ids:` — an edge case where the user
+    # Sends an empty array for `ids:`, an edge case where the user
     # submitted the bulk-delete form without checking anything.
     delete destroy_selected_crawls_path, params: { ids: [] }, as: :json
     # Expects a 422 error response (rather than :success) since there's
-    # nothing valid to act on — this is the same "unprocessable content"
+    # nothing valid to act on, this is the same "unprocessable content"
     # status used elsewhere in this app for rejected/invalid requests.
     assert_response :unprocessable_content
 

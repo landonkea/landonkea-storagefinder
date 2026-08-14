@@ -22,7 +22,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   test "update saves a text setting" do
     # `patch` simulates an HTTP PATCH request, the verb conventionally used
     # for partial updates to an existing resource. `params:` supplies the
-    # request's parameters as a Ruby Hash — here nested under a `settings:`
+    # request's parameters as a Ruby Hash, here nested under a `settings:`
     # key holding a hash of individual setting names to their new values
     # (mirroring how a settings form would submit many fields named like
     # `settings[email_smtp_host]` at once). String keys like
@@ -30,7 +30,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     # real HTTP form field names arrive.
     patch settings_path, params: { settings: { "email_smtp_host" => "smtp.new-host.com" } }
     # `assert_redirected_to` checks the response was an HTTP redirect (3xx)
-    # back to the settings page itself — the standard "save, then redirect
+    # back to the settings page itself, the standard "save, then redirect
     # to avoid re-submitting on refresh" pattern.
     assert_redirected_to settings_path
     # `Setting.get(key)` is presumably this app's own model method for
@@ -41,15 +41,15 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   # `end` closes the "update saves a text setting" test block.
 
   test "update ignores unknown setting keys (form tampering protection)" do
-    # Submits a key that isn't one of the app's real, expected settings —
+    # Submits a key that isn't one of the app's real, expected settings,
     # simulating a malicious or malformed request (e.g. someone editing the
     # form's HTML in devtools to add an extra field) rather than a normal
     # user interaction.
     patch settings_path, params: { settings: { "not_a_real_setting" => "value" } }
     # The controller should still redirect normally rather than erroring...
     assert_redirected_to settings_path
-    # ...but `Setting.find_by(key: "not_a_real_setting")` — an ActiveRecord
-    # lookup that returns the matching record or `nil` if none exists —
+    # ...but `Setting.find_by(key: "not_a_real_setting")`, an ActiveRecord
+    # lookup that returns the matching record or `nil` if none exists,
     # should come back nil, confirming the controller only ever writes
     # settings from an allow-list of known keys instead of blindly saving
     # whatever params arrive.
@@ -65,14 +65,14 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     # the SAME name ending in "_unchecked" that always submits "false" as a
     # fallback, so the checked value ("true", sent by the visible checkbox)
     # can override it when present. This test simulates a browser
-    # submitting BOTH fields — as a real checked checkbox's form actually
-    # would — to prove the controller correctly ends up with `true` when
+    # submitting BOTH fields, as a real checked checkbox's form actually
+    # would, to prove the controller correctly ends up with `true` when
     # both are present.
     patch settings_path, params: {
       settings: { "crawl_headless" => "true", "crawl_headless_unchecked" => "false" }
     }
     # `assert_equal true, ...` checks the stored value is the actual Ruby
-    # boolean `true` (not the string `"true"`) — confirming the controller
+    # boolean `true` (not the string `"true"`), confirming the controller
     # converts/casts the submitted text into a real boolean before saving.
     assert_equal true, Setting.get("crawl_headless")
   end
@@ -103,13 +103,13 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     # Pre-sets a password value to prove it survives the update below.
     Setting.set("email_smtp_password", "super-secret")
 
-    # Submits an empty string for the password field — simulating a user
+    # Submits an empty string for the password field, simulating a user
     # who opens the settings form (which presumably shows password fields
     # blank for security, not pre-filled with the real secret) and saves
     # without intending to change the password.
     patch settings_path, params: { settings: { "email_smtp_password" => "" } }
 
-    # Confirms the ORIGINAL password is still stored — the controller must
+    # Confirms the ORIGINAL password is still stored, the controller must
     # specifically special-case blank password fields as "leave unchanged"
     # rather than treating them like any other field (which would wipe the
     # stored secret out to an empty string).
@@ -120,7 +120,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   test "update saves a non-blank password field" do
     # The counterpart to the previous test: proves that submitting an
     # ACTUAL new password value (not blank) does correctly overwrite the
-    # stored one — i.e. the blank-field special case above doesn't
+    # stored one, i.e. the blank-field special case above doesn't
     # accidentally block real password changes too.
     patch settings_path, params: { settings: { "email_smtp_password" => "new-secret" } }
     assert_equal "new-secret", Setting.get("email_smtp_password")
@@ -139,7 +139,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     # success/failure payload rather than a full HTML page or redirect).
     post test_email_settings_path, as: :json
     # Even though the underlying action "failed" (no recipient), the HTTP
-    # response itself is still a successful 2xx — the failure is reported
+    # response itself is still a successful 2xx, the failure is reported
     # INSIDE the JSON body, not via the HTTP status code. This is a common
     # API pattern: "the request was handled correctly, and here's the
     # business-logic outcome," as opposed to using HTTP error codes for
@@ -153,8 +153,8 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     # (the opposite of `assert`). Confirms the JSON's "success" field is
     # false/falsy, reporting the operation did not succeed.
     refute body["success"]
-    # Confirms the human-readable failure message explains WHY — no
-    # recipient was configured — via a loose Regexp match rather than an
+    # Confirms the human-readable failure message explains WHY, no
+    # recipient was configured, via a loose Regexp match rather than an
     # exact string match.
     assert_match(/No recipient/, body["message"])
   end
@@ -180,7 +180,7 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
   test "test_discord reports a connection failure without raising" do
     # This time a (fake-looking but well-formed) webhook URL IS configured,
     # so the code will actually attempt to make an outbound HTTP call to
-    # it — which this test needs to intercept rather than really hitting
+    # it, which this test needs to intercept rather than really hitting
     # the network.
     Setting.set("discord_webhook_url", "https://discord.com/api/webhooks/x/y")
 
@@ -190,29 +190,29 @@ class SettingsControllerTest < ActionDispatch::IntegrationTest
     # then restores the original afterward. Here it replaces
     # `Faraday::Connection#post` (Faraday is the HTTP client library this
     # app uses to call the Discord webhook) so that calling it doesn't make
-    # a real network request — instead it always raises a
+    # a real network request, instead it always raises a
     # `Faraday::ConnectionFailed` error, simulating "the network call
     # failed" (e.g. DNS failure, connection refused) deterministically and
     # without needing real network access in tests. `->(*) { ... }` is a
-    # Ruby lambda (an anonymous function) — `(*)` accepts any number of
+    # Ruby lambda (an anonymous function), `(*)` accepts any number of
     # arguments without needing to name them individually, since this fake
     # implementation doesn't care what arguments the real `post` call would
     # have received.
     stub_any_instance(Faraday::Connection, :post, ->(*) { raise Faraday::ConnectionFailed, "connection refused" }) do
       # The actual request under test, made while the stub above is
-      # active — any Faraday::Connection#post call triggered inside the
+      # active, any Faraday::Connection#post call triggered inside the
       # controller during this request will hit the fake, raising
       # implementation instead of a real HTTP call.
       post test_discord_settings_path, as: :json
     end
-    # `end` closes the `stub_any_instance(...) do` block — once execution
+    # `end` closes the `stub_any_instance(...) do` block, once execution
     # passes this point, Faraday::Connection#post is back to its real
     # implementation (handled by the `ensure` in test_helper.rb's
     # stub_any_instance definition).
 
     # Even though the underlying network call blew up, the controller
     # should have RESCUED that error and returned a normal, successful HTTP
-    # response reporting the failure in the JSON body — proving the
+    # response reporting the failure in the JSON body, proving the
     # controller doesn't let a downstream network error crash the whole
     # request (which would surface as a 500 Internal Server Error instead).
     assert_response :success

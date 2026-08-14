@@ -2,19 +2,19 @@
 # EXPORTS CONTROLLER
 # =============================================================================
 # Handles CSV and Excel downloads of the current results.
-# Nothing auto-downloads — the user must click a button.
+# Nothing auto-downloads, the user must click a button.
 # =============================================================================
 
-# `class ExportsController < ApplicationController` — see
+# `class ExportsController < ApplicationController`, see
 # app/controllers/application_controller.rb for what "controller" and
 # "inherits from" mean.
 class ExportsController < ApplicationController
   # ---------------------------------------------------------------------------
-  # CSV — download current results as a CSV file
+  # CSV, download current results as a CSV file
   # ---------------------------------------------------------------------------
   # `csv` is a custom action (needs an explicit route) triggered when the
   # user clicks a "Download CSV" link/button (GET /exports/csv or similar).
-  # CSV = "Comma-Separated Values" — a plain-text spreadsheet format that
+  # CSV = "Comma-Separated Values", a plain-text spreadsheet format that
   # opens directly in Excel/Google Sheets.
   def csv
     latest_crawl = CrawlRun.latest_completed
@@ -59,7 +59,7 @@ class ExportsController < ApplicationController
               type:        "text/csv; charset=utf-8",
               disposition: "attachment"  # "attachment" = download, not display
 
-  # `rescue => e` (bare rescue, catches StandardError and subclasses — see
+  # `rescue => e` (bare rescue, catches StandardError and subclasses, see
   # DashboardController#build_price_history for the same pattern) applies
   # to the whole method body above, since exporting shouldn't hard-crash
   # the app if something in the CSV-building process goes wrong.
@@ -74,9 +74,9 @@ class ExportsController < ApplicationController
   # is part of this same method).
 
   # ---------------------------------------------------------------------------
-  # EXCEL — download current results as a .xlsx Excel file
+  # EXCEL, download current results as a .xlsx Excel file
   # ---------------------------------------------------------------------------
-  # `excel` is the Excel-format counterpart to `csv` above — same overall
+  # `excel` is the Excel-format counterpart to `csv` above, same overall
   # shape, but building a real .xlsx spreadsheet file instead of plain text.
   def excel
     latest_crawl = CrawlRun.latest_completed
@@ -90,7 +90,7 @@ class ExportsController < ApplicationController
 
     # Unlike `csv` above (which builds the file content directly in Ruby
     # and streams it with `send_data`), Excel generation here is done via a
-    # VIEW TEMPLATE (app/views/exports/excel.xlsx.axlsx) — so `@units`
+    # VIEW TEMPLATE (app/views/exports/excel.xlsx.axlsx), so `@units`
     # needs to be an instance variable (not just a local variable) so that
     # template can read it, the same way any other Rails view reads
     # instance variables set by its controller action.
@@ -98,14 +98,14 @@ class ExportsController < ApplicationController
     filename = "storagefinder_#{Time.current.strftime("%Y%m%d_%H%M%S")}.xlsx"
 
     # The dashboard's "Excel" link is a plain <a href> with no format
-    # specifier, so the browser sends Accept: text/html — without forcing
+    # specifier, so the browser sends Accept: text/html, without forcing
     # the format here, respond_to's format.xlsx block never matches and
     # every request raises ActionController::UnknownFormat. This endpoint
     # only ever serves xlsx, regardless of what the browser asked for.
     # `request.format = :xlsx` overrides Rails' automatic format detection
     # (normally based on the URL's file extension or the browser's Accept
     # header) and forces it to treat this request as asking for the
-    # `:xlsx` format specifically — necessary because of the plain-link
+    # `:xlsx` format specifically, necessary because of the plain-link
     # issue explained in the comment above.
     request.format = :xlsx
 
@@ -115,19 +115,19 @@ class ExportsController < ApplicationController
     # render `.axlsx`-extension view templates into real binary .xlsx
     # spreadsheet files.
     respond_to do |format|
-      # `format.xlsx { ... }` — because `request.format` was forced to
+      # `format.xlsx { ... }`, because `request.format` was forced to
       # `:xlsx` above, this is the only branch that will ever run; there's
       # no `format.html` fallback here since this controller action is
       # xlsx-only.
       format.xlsx {
         # Sets the Content-Disposition response header directly (rather
         # than via `send_data`'s `disposition:` option, as `csv` did above)
-        # — same effect: it tells the browser to download the response as
+        # , same effect: it tells the browser to download the response as
         # a file with this name, rather than displaying it inline.
         response.headers["Content-Disposition"] = "attachment; filename=#{filename}"
       }
       # `}` closes the `format.xlsx { ... }` block above. Note there's no
-      # explicit `render` call inside it — Rails' default behavior (when no
+      # explicit `render` call inside it, Rails' default behavior (when no
       # `render`/`redirect_to` is called inside a `respond_to` block) is to
       # automatically render the template matching this action's name and
       # the negotiated format, i.e. app/views/exports/excel.xlsx.axlsx.
@@ -150,7 +150,7 @@ class ExportsController < ApplicationController
   # Fetch units from the latest crawl with the same filters the dashboard uses
   # Takes the crawl_run to pull units from, and returns them pre-filtered
   # to match what the dashboard's default (climate-controlled, indoor,
-  # available, standard-size) view would show — exports intentionally use a
+  # available, standard-size) view would show, exports intentionally use a
   # FIXED filter set here rather than reading the dashboard's current
   # params, so an export always reflects the "clean" default view
   # regardless of whatever filters happen to be active on-screen.
@@ -167,7 +167,7 @@ class ExportsController < ApplicationController
              .where(available: true)
              .where.not(unit_type: Unit::EXCLUDED_TYPES)
              .where(size: Unit::DEFAULT_SIZES)
-             # `.order(:monthly_price)` sorts cheapest-first — the final
+             # `.order(:monthly_price)` sorts cheapest-first, the final
              # step in the chain, and this method's return value since it's
              # the chain's last expression.
              .order(:monthly_price)
@@ -178,7 +178,7 @@ class ExportsController < ApplicationController
   # Takes an ActiveRecord collection of units and returns a single String
   # containing the full CSV file content.
   def build_csv(units)
-    # `require "csv"` loads Ruby's standard-library CSV module — needed
+    # `require "csv"` loads Ruby's standard-library CSV module, needed
     # here because this file otherwise has no reason to have it already
     # loaded. (Unlike a Rails gem, Ruby's standard library isn't always
     # auto-loaded, so files that use it explicitly `require` it.)
@@ -188,13 +188,13 @@ class ExportsController < ApplicationController
     # memory: it yields a `csv` object to the block, and every `csv << [...]`
     # call inside appends one more row. `headers: true` and `encoding:
     # "UTF-8"` are keyword arguments configuring the CSV generation (the
-    # `headers: true` option here mainly documents intent — the actual
+    # `headers: true` option here mainly documents intent, the actual
     # header row is added manually below via the first `csv << [...]`
-    # call). The whole `CSV.generate` call's return value — the finished
-    # CSV string — becomes this method's return value.
+    # call). The whole `CSV.generate` call's return value, the finished
+    # CSV string, becomes this method's return value.
     CSV.generate(headers: true, encoding: "UTF-8") do |csv|
       # Header row
-      # `csv << [...]` appends an Array as one row — `<<` here is CSV's
+      # `csv << [...]` appends an Array as one row, `<<` here is CSV's
       # "append" operator (not related to string/array `<<` used
       # elsewhere for concatenation, though it's the same Ruby operator,
       # just overloaded/redefined by the CSV class to mean "add a row").
@@ -224,7 +224,7 @@ class ExportsController < ApplicationController
 
       # Data rows
       # `units.each do |unit| ... end` iterates over every unit in the
-      # collection, running the block body once per unit — unlike `.map`
+      # collection, running the block body once per unit, unlike `.map`
       # (used elsewhere in this app), `.each` doesn't build/return a new
       # array; it's used purely for its side effect here (appending CSV
       # rows).
@@ -232,7 +232,7 @@ class ExportsController < ApplicationController
         f = unit.facility  # Shorthand for facility
         # Appends one data row per unit, with values in the SAME ORDER as
         # the header row above (CSV format has no column names embedded
-        # per-row — position is everything, so keeping this order in sync
+        # per-row, position is everything, so keeping this order in sync
         # with the header row above matters).
         csv << [
           f.company,
@@ -251,13 +251,13 @@ class ExportsController < ApplicationController
           unit.web_special_note,
           unit.admin_fee,
           unit.insurance_note,
-          # `? "Yes" : "No"` — a ternary turning the raw boolean predicate
+          # `? "Yes" : "No"`, a ternary turning the raw boolean predicate
           # methods into human-readable Yes/No text for the spreadsheet,
           # rather than Ruby's raw `true`/`false`.
           unit.climate_controlled? ? "Yes" : "No",
           unit.available? ? "Yes" : "No",
           unit.booking_url,
-          # `&.strftime(...)` — safe navigation in case collected_at is
+          # `&.strftime(...)`, safe navigation in case collected_at is
           # nil (unit never successfully scraped); formats as e.g.
           # "2026-07-18 14:30:00" (year-month-day hour:minute:second).
           unit.collected_at&.strftime("%Y-%m-%d %H:%M:%S")
