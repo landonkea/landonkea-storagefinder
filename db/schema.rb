@@ -1,7 +1,7 @@
 # =============================================================================
 # READ THIS FIRST: this file is auto-generated and gets OVERWRITTEN.
 # =============================================================================
-# Every comment in this file — including this one — will be SILENTLY LOST
+# Every comment in this file, including this one, will be SILENTLY LOST
 # the next time anyone runs `bin/rails db:migrate` or
 # `bin/rails db:schema:load`. That is expected and fine, not a bug.
 #
@@ -13,7 +13,7 @@
 # reading now). So the *real*, permanent source of truth for "what does this
 # database look like" is the migration files in db/migrate/ (see
 # db/migrate/20240101000001_create_all_tables.rb and
-# db/migrate/20260718200000_add_facility_uniqueness_indexes.rb) — this file
+# db/migrate/20260718200000_add_facility_uniqueness_indexes.rb), this file
 # is just their combined, up-to-date result, cached here so a brand-new
 # database can be built in one fast step instead of re-running every
 # migration one by one.
@@ -37,32 +37,32 @@
 # It's strongly recommended that you check this file into your version control system.
 
 # `ActiveRecord::Schema[8.1]` says "build this schema using the rules/syntax
-# of ActiveRecord as they existed in Rails version 8.1" — pinning a version
+# of ActiveRecord as they existed in Rails version 8.1", pinning a version
 # number here means later Rails upgrades won't silently change how this file
 # is interpreted, even years from now. `.define(version: ...) do ... end`
 # starts the block listing every table in the app's MAIN database (as
 # opposed to the separate cable/cache/queue databases, which each have their
-# own schema files — see db/cable_schema.rb, db/cache_schema.rb,
+# own schema files, see db/cable_schema.rb, db/cache_schema.rb,
 # db/queue_schema.rb). `version: 2026_07_18_200000` records the TIMESTAMP
 # (from a migration's filename, with underscores just for human readability
-# — Ruby ignores underscores inside number literals) of the most recent
-# migration that has been applied — here, matching
+#, Ruby ignores underscores inside number literals) of the most recent
+# migration that has been applied, here, matching
 # db/migrate/20260718200000_add_facility_uniqueness_indexes.rb. This is how
 # Rails knows which migrations still need to run on `db:migrate` versus
 # which are already reflected in the database. The matching `end` at the
 # very bottom of this file closes this `.define do` block.
-ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_03_000000) do
   # `create_table "alert_rules"` defines a database table (think: a
-  # spreadsheet with named columns) named "alert_rules" — one row per
+  # spreadsheet with named columns) named "alert_rules", one row per
   # user-defined notification rule (see the migration
   # db/migrate/20240101000001_create_all_tables.rb for the original,
   # narrated version of how this table came to exist). `force: :cascade`
   # tells Rails "if a table with this name already exists, drop it first
-  # and recreate it" — safe here since this file is only used to build a
+  # and recreate it", safe here since this file is only used to build a
   # database from nothing. `do |t|` opens a block where `t` is a
   # table-definition helper; each `t.something` line adds one column. Note:
   # unlike the migration file, columns here are listed in ALPHABETICAL
-  # ORDER rather than the order they were originally added — that's simply
+  # ORDER rather than the order they were originally added, that's simply
   # how Rails' schema dumper formats this generated file, not a meaningful
   # difference.
   create_table "alert_rules", force: :cascade do |t|
@@ -74,9 +74,18 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # this rule to one storage company. No `default:`/`null: false` shown,
     # so it's optional and can be left blank (nil).
     t.string "company_filter"
+    # `t.integer "cooldown_minutes"` adds a "quiet hours" window (see the
+    # migration db/migrate/20260803000000_add_cooldown_minutes_to_alert_rules.rb)
+    #, once this rule fires, it won't fire again until this many minutes
+    # have passed, even if its trigger condition still matches on a later
+    # crawl. `default: 0` means "no cooldown" (fire every time it matches,
+    # today's original behavior) unless a rule explicitly opts in to a
+    # longer window. `null: false`, every row always has SOME integer
+    # value here, guaranteed by that same default.
+    t.integer "cooldown_minutes", default: 0, null: false
     # `t.datetime "created_at"` adds a timestamp column recording when this
     # row was created. `null: false` means the database requires every row
-    # to have this value — it's one of the automatic columns Rails' earlier
+    # to have this value, it's one of the automatic columns Rails' earlier
     # `t.timestamps` shortcut (used in the migration) expands into.
     t.datetime "created_at", null: false
     # Boolean column: whether this rule posts to Discord when triggered,
@@ -89,7 +98,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # Boolean column: whether this rule sends email when triggered,
     # defaulting to false.
     t.boolean "email_enabled", default: false
-    # Datetime column recording the last time this rule fired. Optional —
+    # Datetime column recording the last time this rule fired. Optional,
     # nil until it triggers once.
     t.datetime "last_triggered_at"
     # Text column for the rule's human-readable name. `null: false` means
@@ -102,7 +111,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     t.string "sms_phone_number"
     # `t.decimal "threshold_price"` adds a column that stores an EXACT
     # decimal number (unlike a float, which can introduce tiny rounding
-    # errors) — the right choice for money. `precision: 8, scale: 2` means
+    # errors), the right choice for money. `precision: 8, scale: 2` means
     # up to 8 total digits, 2 after the decimal point (values up to
     # 999999.99). Optional.
     t.decimal "threshold_price", precision: 8, scale: 2
@@ -113,13 +122,13 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # Optional.
     t.string "unit_size_filter"
     # Timestamp column recording when this row was last updated. `null:
-    # false` means required — like created_at, this comes from
+    # false` means required, like created_at, this comes from
     # `t.timestamps` in the original migration.
     t.datetime "updated_at", null: false
   end
   # Closes the `create_table "alert_rules" do |t|` block above. Note this
   # table has no `t.index` lines and no add_index calls elsewhere in this
-  # file — matching the original migration, which also added no extra
+  # file, matching the original migration, which also added no extra
   # lookup indexes for alert_rules.
 
   # Table holding one row per log message produced while a crawl runs.
@@ -130,7 +139,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # `t.integer "crawl_run_id"` adds a whole-number column linking this
     # log entry back to the crawl run it belongs to. This is the plain
     # column that Rails' `t.references :crawl_run, foreign_key: true` (used
-    # in the migration) expands into once dumped as a schema — `null:
+    # in the migration) expands into once dumped as a schema, `null:
     # false` means required.
     t.integer "crawl_run_id", null: false
     # Timestamp column recording when this row was created. Required.
@@ -139,7 +148,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # entries default to informational.
     t.string "level", default: "info"
     # `t.text "message"` adds a column for longer free-form text than
-    # `t.string` typically allows — holds the actual log message. Required.
+    # `t.string` typically allows, holds the actual log message. Required.
     t.text "message", null: false
     # Whole-number column counting retries, defaulting to 0.
     t.integer "retry_count", default: 0
@@ -153,7 +162,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     t.string "url"
     # Index speeding up lookups/filters by "company".
     t.index ["company"], name: "index_crawl_log_entries_on_company"
-    # Index speeding up lookups of all log entries for a given crawl run —
+    # Index speeding up lookups of all log entries for a given crawl run,
     # this is the index that Rails' `foreign_key: true` option
     # automatically creates alongside the foreign key itself, so lookups by
     # crawl_run_id stay fast.
@@ -171,10 +180,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # defaulting to 0.
     t.integer "companies_failed", default: 0
     # `t.json "companies_included"` adds a column storing structured JSON
-    # data directly, rather than one plain string — records which companies
+    # data directly, rather than one plain string, records which companies
     # were part of this crawl. Optional.
     t.json "companies_included"
-    # Datetime column recording when the crawl finished. Optional — nil
+    # Datetime column recording when the crawl finished. Optional, nil
     # until completion.
     t.datetime "completed_at"
     # Timestamp column recording when this row was created. Required.
@@ -198,7 +207,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     t.float "search_lng"
     # Whole-number column for the search radius in miles. Optional.
     t.integer "search_radius_miles"
-    # Datetime column recording when the crawl started. Optional — nil
+    # Datetime column recording when the crawl started. Optional, nil
     # until it begins.
     t.datetime "started_at"
     # Text column tracking the crawl's current status. `default: "pending"`
@@ -231,7 +240,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # location. Optional.
     t.float "distance_miles"
     # Text column for an identifier the storage company uses internally for
-    # this facility, when available. Optional — used together with
+    # this facility, when available. Optional, used together with
     # "company" below to detect duplicate facilities from the same company.
     t.string "external_id"
     # Text column for the URL of this facility's page on the company's
@@ -253,7 +262,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     t.string "zip", null: false
     # Index speeding up lookups/filters by "city".
     t.index ["city"], name: "index_facilities_on_city"
-    # A UNIQUE INDEX (see `unique: true`) across four columns together —
+    # A UNIQUE INDEX (see `unique: true`) across four columns together,
     # company, address, city, state. A unique index means the database
     # will reject inserting a second row with the exact same combination of
     # values across all of these columns at once. `where: "external_id IS
@@ -263,7 +272,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # db/migrate/20260718200000_add_facility_uniqueness_indexes.rb (the
     # migration that added this index after the table already existed).
     t.index ["company", "address", "city", "state"], name: "index_facilities_on_company_and_address_uniq", unique: true, where: "external_id IS NULL"
-    # A second unique, partial index — this one across (company,
+    # A second unique, partial index, this one across (company,
     # external_id), only applied to rows WHERE "external_id IS NOT NULL".
     # Together with the index above, every facility row is covered by
     # exactly one of these two uniqueness rules, since a row either has an
@@ -302,7 +311,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # Longer free-form text column for the setting's current value, stored
     # as text regardless of its logical type. Optional.
     t.text "value"
-    # UNIQUE INDEX on "key" — the database rejects a second row with a
+    # UNIQUE INDEX on "key", the database rejects a second row with a
     # "key" that already exists, so every setting name appears at most
     # once.
     t.index ["key"], name: "index_settings_on_key", unique: true
@@ -328,7 +337,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # collected/scraped. `null: false` means required.
     t.datetime "collected_at", null: false
     # Whole-number column linking this unit to the crawl run that found it
-    # — the plain column form of `t.references :crawl_run, foreign_key:
+    #, the plain column form of `t.references :crawl_run, foreign_key:
     # true` from the original migration. Required.
     t.integer "crawl_run_id", null: false
     # Timestamp column recording when this row was created. Required.
@@ -339,7 +348,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # false.
     t.boolean "drive_up", default: false
     # Whole-number column linking this unit to the facility it's located
-    # at — the plain column form of `t.references :facility, foreign_key:
+    # at, the plain column form of `t.references :facility, foreign_key:
     # true` from the original migration. Required.
     t.integer "facility_id", null: false
     # Boolean column: whether the unit is indoors, defaulting to true.
@@ -374,10 +383,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
     # collected.
     t.index ["collected_at"], name: "index_units_on_collected_at"
     # Index speeding up lookups of all units belonging to a given crawl run
-    # — automatically created alongside the foreign key below.
+    #, automatically created alongside the foreign key below.
     t.index ["crawl_run_id"], name: "index_units_on_crawl_run_id"
     # Index speeding up lookups of all units belonging to a given facility
-    # — automatically created alongside the foreign key below.
+    #, automatically created alongside the foreign key below.
     t.index ["facility_id"], name: "index_units_on_facility_id"
     # Index speeding up sorting/filtering by "monthly_price" (e.g. sorting
     # search results cheapest-first).
@@ -387,7 +396,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
   end
   # Closes the `create_table "units" do |t|` block above.
 
-  # `add_foreign_key` adds a FOREIGN KEY constraint to an existing table — a
+  # `add_foreign_key` adds a FOREIGN KEY constraint to an existing table, a
   # database-level rule that a column's value must match an existing row's
   # id in another table. Here it says every "crawl_log_entries" row's
   # crawl_run_id must point at a real row in "crawl_runs" (Rails infers the
@@ -405,7 +414,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_07_18_200000) do
   add_foreign_key "units", "facilities"
 end
 # This final `end` closes the `ActiveRecord::Schema[8.1].define(...) do`
-# block opened at the top of the file — every table in the main database
+# block opened at the top of the file, every table in the main database
 # has now been fully described. Remember: this whole file, comments
-# included, is regenerated automatically the next time a migration runs —
+# included, is regenerated automatically the next time a migration runs,
 # see the note at the very top of the file.

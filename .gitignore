@@ -155,3 +155,11 @@
 # Ignore key files for decrypting credentials and more.
 /config/credentials/*.key
 
+# Blank separator line.
+
+# Ignore generated test-results report content (see lib/tasks/test_report.rake
+# and the "Test results report" section of the README) but keep the
+# directory itself present via a .keep file, same pattern as storage/ above.
+/test-results/*
+!/test-results/.keep
+

@@ -5,31 +5,31 @@
 # =============================================================================
 
 # `require "ostruct"` loads Ruby's standard-library `OpenStruct` class
-# (used further down in `test_email`) — like the `require "csv"` seen in
+# (used further down in `test_email`), like the `require "csv"` seen in
 # ExportsController, Ruby's standard library isn't automatically loaded
 # everywhere, so files that use it must explicitly require it. This is a
 # top-level `require`, meaning it runs once when this file is first loaded
 # by Rails, before the class definition below even exists yet.
 require "ostruct"
 
-# `class SettingsController < ApplicationController` — see
+# `class SettingsController < ApplicationController`, see
 # app/controllers/application_controller.rb for what "controller" and
 # "inherits from" mean.
 class SettingsController < ApplicationController
   # ---------------------------------------------------------------------------
-  # INDEX — show all settings grouped by category
+  # INDEX, show all settings grouped by category
   # ---------------------------------------------------------------------------
   # `index` is the conventional action for the settings page itself (GET
   # /settings).
   def index
-    @page_title = "Settings — StorageFinder"
+    @page_title = "Settings, StorageFinder"
 
     # Load settings grouped by category for the tabbed settings UI
     # `Setting.all` fetches every row from the settings table.
     # `.group_by(&:category)` is Ruby's Enumerable#group_by, using the
     # `&:category` shorthand (equivalent to `{ |s| s.category }`) to bucket
-    # every Setting record into a hash keyed by its `category` value — e.g.
-    # { "email" => [...], "discord" => [...] } — so the view can render one
+    # every Setting record into a hash keyed by its `category` value, e.g.
+    # { "email" => [...], "discord" => [...] }, so the view can render one
     # tab per category.
     @settings_by_category = Setting.all.group_by(&:category)
 
@@ -39,22 +39,22 @@ class SettingsController < ApplicationController
   # `end` closes the `def index` action definition opened above.
 
   # ---------------------------------------------------------------------------
-  # UPDATE — save settings (submitted from the settings form)
+  # UPDATE, save settings (submitted from the settings form)
   # ---------------------------------------------------------------------------
   # `update` runs when the settings form is submitted (PATCH/POST
-  # /settings) — this handles every settings category/field in one shared
+  # /settings), this handles every settings category/field in one shared
   # action, since Settings are a flexible key-value store rather than fixed
   # model columns.
   def update
     # params[:settings] is a hash of { key => value } from the form. Settings
     # are a dynamic key-value store (not fixed model columns), so the
     # permitted list has to be built from what's actually in the table rather
-    # than named individually — but it's still an explicit allowlist, not a
+    # than named individually, but it's still an explicit allowlist, not a
     # blanket permit!, and each "<key>_unchecked" companion field (see the
     # boolean-checkbox handling below) needs the same allowance.
     # `Setting.pluck(:key)` runs an efficient database query that returns
     # ONLY the `key` column's values (as a plain Ruby array of strings),
-    # rather than loading full Setting objects — faster when only one
+    # rather than loading full Setting objects, faster when only one
     # column is needed.
     known_keys    = Setting.pluck(:key)
     # Builds a combined allowlist covering both the real setting keys AND
@@ -67,7 +67,7 @@ class SettingsController < ApplicationController
     # top-level `:settings` key (see AlertRulesController#alert_rule_params
     # for the same `.require`/`.permit` "strong parameters" pattern).
     # `.permit(*allowed_keys)` filters it down to only the allowed field
-    # names — the `*` here is Ruby's "splat" operator, which expands the
+    # names, the `*` here is Ruby's "splat" operator, which expands the
     # `allowed_keys` ARRAY into individual arguments, since `.permit`
     # expects each allowed key as a separate argument rather than one
     # array argument. `.to_h` converts the resulting (still Rails-specific)
@@ -92,7 +92,7 @@ class SettingsController < ApplicationController
 
     # Step 1: Build a hash of just the unchecked fallback values
     # e.g. { "email_enabled" => "false" } from { "email_enabled_unchecked" => "false" }
-    # `{}` is an empty hash literal — starting point to be filled in below.
+    # `{}` is an empty hash literal, starting point to be filled in below.
     unchecked_fallbacks = {}
     # `raw_params.each do |key, value| ... end` iterates over every
     # key/value pair in the hash; unlike `.map`, `.each` here is used for
@@ -103,9 +103,9 @@ class SettingsController < ApplicationController
       # one of the companion hidden-field keys rather than a real setting.
       if key.end_with?("_unchecked")
         # `.sub(/_unchecked$/, "")` removes the "_unchecked" suffix using a
-        # regular expression (`/_unchecked$/` — the `$` means "only match
+        # regular expression (`/_unchecked$/`, the `$` means "only match
         # at the end of the string"), turning e.g. "email_enabled_unchecked"
-        # back into "email_enabled" — `.sub` replaces just the FIRST match
+        # back into "email_enabled", `.sub` replaces just the FIRST match
         # (there's only one match possible here anyway) with the given
         # replacement, an empty string, i.e. deleting it.
         real_key = key.sub(/_unchecked$/, "")
@@ -122,17 +122,17 @@ class SettingsController < ApplicationController
     # `.merge(...)` combines two hashes: it starts with
     # `unchecked_fallbacks`, then layers the second hash's keys on top,
     # with the second hash's values winning on any key that appears in
-    # both — so a real submitted value (e.g. "email_enabled" => "true")
+    # both, so a real submitted value (e.g. "email_enabled" => "true")
     # overrides its own fallback ("email_enabled" => "false" from the
     # companion field), while fields that truly have no real value keep
     # their "false" fallback.
     merged = unchecked_fallbacks.merge(
       # `raw_params.reject { |key, _| key.end_with?("_unchecked") }` builds
-      # a copy of raw_params with all "_unchecked"-suffixed keys removed —
+      # a copy of raw_params with all "_unchecked"-suffixed keys removed,
       # `.reject` keeps only the pairs where the block returns FALSE
       # (opposite of `.select`/`.filter`). The block parameter `_` (a bare
       # underscore) is Ruby convention for "an argument I'm intentionally
-      # not using" — here, the value half of each pair isn't needed to
+      # not using", here, the value half of each pair isn't needed to
       # decide whether to reject it.
       raw_params.reject { |key, _| key.end_with?("_unchecked") }
     )
@@ -140,14 +140,14 @@ class SettingsController < ApplicationController
 
     # Step 3: Save each setting
     saved_count = 0
-    # `[]` is an empty array literal — will collect error message strings
+    # `[]` is an empty array literal, will collect error message strings
     # for any settings that fail to save below.
     errors      = []
 
-    # `merged.each do |key, value| ... end` — final pass over the cleaned-up
+    # `merged.each do |key, value| ... end`, final pass over the cleaned-up
     # key/value pairs, actually persisting each one to the database.
     merged.each do |key, value|
-      # `begin ... rescue ... end` is Ruby's general error-handling block —
+      # `begin ... rescue ... end` is Ruby's general error-handling block,
       # unlike the method-level `rescue` clauses seen in other controllers
       # in this app, this `begin` is used INSIDE the loop so that ONE
       # setting failing to save doesn't stop the rest from being attempted;
@@ -157,14 +157,14 @@ class SettingsController < ApplicationController
         # This prevents accidental creation of rogue settings from form tampering
         # `Setting.find_by(key: key)` looks up a Setting row by its `key`
         # column, returning nil (rather than raising an error, unlike
-        # `.find`) if no match exists — appropriate here since "not found"
+        # `.find`) if no match exists, appropriate here since "not found"
         # is an expected, handled case, not an exceptional one.
         setting = Setting.find_by(key: key)
         # `.nil?` checks specifically for Ruby's `nil` value.
         if setting.nil?
           Rails.logger.warn("[SettingsController] Ignoring unknown setting key '#{key}'")
           # `next` skips the rest of THIS iteration of the enclosing
-          # `.each` loop and moves on to the next key/value pair — it does
+          # `.each` loop and moves on to the next key/value pair, it does
           # NOT exit the whole loop (that would be `break`), just this one
           # pass.
           next
@@ -173,9 +173,9 @@ class SettingsController < ApplicationController
 
         # Password fields render blank (see settings/index.html.erb) so the
         # current value never appears in the page HTML. That means an
-        # untouched password field submits "" on every save — skip it so we
+        # untouched password field submits "" on every save, skip it so we
         # don't wipe out the stored value every time the form is submitted.
-        # `next if ...` is a trailing conditional form of `next` — read as
+        # `next if ...` is a trailing conditional form of `next`, read as
         # "skip this iteration if the condition after `if` is true."
         # `setting.input_type == "password"` checks this setting's declared
         # field type; `value.blank?` (Rails helper, true for nil/"" /
@@ -187,7 +187,7 @@ class SettingsController < ApplicationController
         Setting.set(key, value)
         saved_count += 1
       # `rescue => e` here catches any error raised while processing THIS
-      # one key/value pair — scoped to the `begin` block just above, not
+      # one key/value pair, scoped to the `begin` block just above, not
       # the whole method, thanks to `begin...rescue...end`.
       rescue => e
         # `<<` here is Array's "append" operator, adding one more error
@@ -200,10 +200,10 @@ class SettingsController < ApplicationController
     end
     # `end` closes the `merged.each do |key, value| ... end` loop above.
 
-    # `.empty?` checks whether the errors array has zero elements — i.e.
+    # `.empty?` checks whether the errors array has zero elements, i.e.
     # every setting saved successfully.
     if errors.empty?
-      # `"s" if saved_count != 1` — trailing `if` modifier: only include
+      # `"s" if saved_count != 1`, trailing `if` modifier: only include
       # the plural "s" when saved_count is NOT exactly 1, for correct
       # grammar ("1 setting saved." vs "3 settings saved.").
       flash[:notice] = "#{saved_count} setting#{"s" if saved_count != 1} saved."
@@ -219,7 +219,7 @@ class SettingsController < ApplicationController
   # `end` closes the `def update` action definition opened above.
 
   # ---------------------------------------------------------------------------
-  # TEST EMAIL — send a test email to verify SMTP settings
+  # TEST EMAIL, send a test email to verify SMTP settings
   # ---------------------------------------------------------------------------
   # `test_email` is a custom action (needs an explicit route), triggered by
   # a "Send Test Email" button on the settings page, letting the user
@@ -231,7 +231,7 @@ class SettingsController < ApplicationController
     # "send test/alert emails to this address" setting.
     to_address = Setting.get("email_to_address")
 
-    # `.blank?` — see earlier note; true if nothing (or only whitespace)
+    # `.blank?`, see earlier note; true if nothing (or only whitespace)
     # was ever configured for this setting.
     if to_address.blank?
       render json: { success: false, message: "No recipient email address configured in settings." }
@@ -243,12 +243,12 @@ class SettingsController < ApplicationController
     # (AlertDeliveryService normally takes an AlertRule, but we need a standalone test)
     # `OpenStruct.new(...)` (from the `require "ostruct"` at the top of this
     # file) builds an object on the fly that responds to whatever method
-    # names are given as hash keys below — e.g. `fake_rule.email_enabled?`
+    # names are given as hash keys below, e.g. `fake_rule.email_enabled?`
     # will return `true`. This is used here to mimic the shape of a real
     # AlertRule database record (which has these same methods) without
     # actually needing one saved in the database, since this is just a
     # one-off test send. Note the hash keys below include trailing `?`
-    # characters (e.g. `email_enabled?:`) — that's allowed because Ruby
+    # characters (e.g. `email_enabled?:`), that's allowed because Ruby
     # method/symbol names can end in `?`, and OpenStruct turns each key
     # directly into a same-named method.
     fake_rule = OpenStruct.new(
@@ -262,17 +262,17 @@ class SettingsController < ApplicationController
     )
     # `)` closes the `OpenStruct.new(...)` call opened above.
 
-    # Builds a plain hash describing the test message's content — the
+    # Builds a plain hash describing the test message's content, the
     # shape AlertDeliveryService.deliver expects (subject/body text for
     # each channel it might send through).
     message = {
-      subject:   "StorageFinder Test — email is working!",
+      subject:   "StorageFinder Test, email is working!",
       text_body: "This is a test email from StorageFinder. Your email alerts are configured correctly.",
-      # `"<h2>&#10003; ...` — an HTML string containing a checkmark
+      # `"<h2>&#10003; ...`, an HTML string containing a checkmark
       # character written as an HTML numeric entity (`&#10003;`), used for
       # the HTML-formatted version of the email body.
       html_body: "<h2>&#10003; StorageFinder Test Email</h2><p>Your email alerts are configured correctly.</p>",
-      # `nil` here — no SMS body needed since `sms_enabled?` on the fake
+      # `nil` here, no SMS body needed since `sms_enabled?` on the fake
       # rule above is false.
       sms_body:  nil
     }
@@ -280,13 +280,13 @@ class SettingsController < ApplicationController
 
     # `begin ... rescue ... end` wraps just the actual delivery attempt,
     # since sending mail can fail for many external reasons (bad SMTP
-    # settings, network issues) that shouldn't crash this action — instead
+    # settings, network issues) that shouldn't crash this action, instead
     # they're reported back as JSON.
     begin
       # `AlertDeliveryService.deliver(fake_rule, message)` is a custom
       # service class (not shown in this file) that actually sends the
       # email (and would send Discord/SMS too, for a real alert rule with
-      # those channels enabled — here they're forced off via `fake_rule`).
+      # those channels enabled, here they're forced off via `fake_rule`).
       AlertDeliveryService.deliver(fake_rule, message)
       render json: { success: true, message: "Test email sent to #{to_address}. Check your inbox." }
     rescue => e
@@ -297,10 +297,10 @@ class SettingsController < ApplicationController
   # `end` closes the `def test_email` action definition opened above.
 
   # ---------------------------------------------------------------------------
-  # TEST DISCORD — send a test message to verify the Discord webhook
+  # TEST DISCORD, send a test message to verify the Discord webhook
   # ---------------------------------------------------------------------------
   # `test_discord` mirrors `test_email` above, but for Discord notifications
-  # — Discord webhooks are simple HTTP POST endpoints, so this sends a real
+  #, Discord webhooks are simple HTTP POST endpoints, so this sends a real
   # HTTP request directly rather than going through AlertDeliveryService.
   def test_discord
     webhook_url = Setting.get("discord_webhook_url")
@@ -340,23 +340,23 @@ class SettingsController < ApplicationController
         # Tells Discord's webhook endpoint the request body is JSON.
         req.headers["Content-Type"] = "application/json"
         # `JSON.generate({...})` converts a Ruby hash into a JSON-formatted
-        # string — the actual text sent as the request body. Discord's
+        # string, the actual text sent as the request body. Discord's
         # webhook API expects a JSON body with (at least) a `content`
         # field for the message text; `username:` overrides the display
         # name Discord shows for this webhook message.
         req.body = JSON.generate({
         username: "StorageFinder",
         # `✓` is a Unicode escape sequence inside a Ruby string
-        # literal — it inserts the checkmark character (✓) by its Unicode
+        # literal, it inserts the checkmark character (✓) by its Unicode
         # code point number, rather than typing the character directly;
         # `—` further down is an em-dash (—) the same way.
-        content:  "✓ StorageFinder test message — Discord alerts are configured correctly!"
+        content:  "✓ StorageFinder test message, Discord alerts are configured correctly!"
         })
         # `)` closes the `JSON.generate({...})` call.
       end
       # `end` closes the `conn.post do |req| ... end` block above.
 
-      # `.success?` is a Faraday response method — true for any HTTP 2xx
+      # `.success?` is a Faraday response method, true for any HTTP 2xx
       # status code, indicating Discord accepted the message.
       if response.success?
         render json: { success: true, message: "Test message sent to Discord successfully." }
@@ -364,7 +364,7 @@ class SettingsController < ApplicationController
         render json: {
           success: false,
           # `\` at the end of a line inside a string is Ruby's line-
-          # continuation operator FOR STRING LITERALS — it joins this
+          # continuation operator FOR STRING LITERALS, it joins this
           # string with the one on the next line into a single combined
           # string, letting a long message be split across source lines
           # without an actual line break appearing in the final text.
@@ -377,14 +377,14 @@ class SettingsController < ApplicationController
       end
     # `end` closes the `if response.success? ... else ... end` block above.
 
-    # Three specific `rescue` clauses, checked top-to-bottom — Ruby tries
+    # Three specific `rescue` clauses, checked top-to-bottom, Ruby tries
     # each `rescue ExceptionClass` in order and runs the first one whose
     # class matches the actual error raised; if none of the specific ones
     # match, the final bare `rescue` below catches anything else
     # (StandardError and subclasses).
     rescue Faraday::ConnectionFailed => e
       # Raised when the network connection itself could not be established
-      # (e.g. DNS failure, connection refused) — different from Discord
+      # (e.g. DNS failure, connection refused), different from Discord
       # returning an error status, which is handled by `response.success?`
       # above instead.
       render json: { success: false, message: "Could not connect to Discord: #{e.message}" }

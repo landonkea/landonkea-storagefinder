@@ -18,7 +18,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     # Checks the response status was in the 2xx ("success") range.
     assert_response :success
     # `assert_select` is a Rails test helper that parses the HTML response
-    # body and checks for elements matching a CSS selector — here `"title"`
+    # body and checks for elements matching a CSS selector, here `"title"`
     # matches the page's `<title>` tag. The second argument, a Regexp
     # (`/Dashboard/`), is matched against that element's text content,
     # confirming the page title contains the word "Dashboard" somewhere.
@@ -30,7 +30,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   test "index succeeds when there has never been a completed crawl" do
     # `CrawlRun.destroy_all` deletes every CrawlRun row (including whatever
     # fixtures loaded), simulating a totally fresh install with no crawl
-    # history — this test wants to prove the dashboard doesn't error out (a
+    # history, this test wants to prove the dashboard doesn't error out (a
     # common bug source: code that assumes "there's always at least one
     # record" and crashes on `nil`) when there's nothing to show yet.
     CrawlRun.destroy_all
@@ -43,7 +43,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   test "index respects the history_keep_months setting for the history panel" do
     # `Setting.set(key, value)` is presumably this app's own model method
     # for writing a key/value application setting into the database (as
-    # opposed to a Rails config file) — here configuring the dashboard's
+    # opposed to a Rails config file), here configuring the dashboard's
     # history panel to only keep/show the last 1 month of crawl history.
     Setting.set("history_keep_months", "1")
     # `CrawlRun.create!` builds and immediately saves a new CrawlRun row.
@@ -81,7 +81,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   test "status returns JSON with the running/latest crawl state" do
     # `as: :json` is a keyword argument telling the test helper to set
     # request headers (Content-Type/Accept) as a JSON API client would,
-    # rather than requesting a full HTML page — appropriate here since this
+    # rather than requesting a full HTML page, appropriate here since this
     # endpoint is meant to be polled by JavaScript, not viewed directly.
     get dashboard_status_path, as: :json
     assert_response :success
@@ -91,7 +91,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     # so the test can inspect specific fields.
     body = JSON.parse(response.body)
     # `assert body["crawl_running"]` checks this value is truthy (Ruby
-    # treats everything except `false` and `nil` as truthy) — expecting the
+    # treats everything except `false` and `nil` as truthy), expecting the
     # JSON to report a crawl is currently running, matching fixture data.
     assert body["crawl_running"]
     # `crawl_runs(:running_crawl)` loads the fixture record labeled
@@ -100,7 +100,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     # running, not just that one is.
     assert_equal crawl_runs(:running_crawl).id, body["running_crawl_id"]
     # Confirms the JSON's "latest_crawl" nested object correctly points at
-    # the fixture labeled "current_completed" — the most recent finished
+    # the fixture labeled "current_completed", the most recent finished
     # crawl, distinct from the one still running.
     assert_equal crawl_runs(:current_completed).id, body["latest_crawl"]["id"]
   end
@@ -115,7 +115,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
 
     body = JSON.parse(response.body)
     # Confirms the JSON's "units" field is an empty array `[]` (Ruby array
-    # literal syntax) rather than `nil` or an error — an API contract worth
+    # literal syntax) rather than `nil` or an error, an API contract worth
     # locking down, since client-side JS likely expects to always be able
     # to call array methods on this field without a nil-check.
     assert_equal [], body["units"]
@@ -127,7 +127,7 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
 
     body = JSON.parse(response.body)
-    # Checks the "total" count reported in the JSON is greater than zero —
+    # Checks the "total" count reported in the JSON is greater than zero,
     # relying on whatever units the default fixtures provide, rather than
     # pinning an exact number (which would make this test brittle to
     # unrelated fixture changes).
@@ -144,18 +144,69 @@ class DashboardControllerTest < ActionDispatch::IntegrationTest
   # crawl" test block.
 
   test "results sort param is sanitized against SQL injection" do
-    # Deliberately sends a malicious-looking value for the `sort` param —
+    # Deliberately sends a malicious-looking value for the `sort` param,
     # text that would be a SQL injection attack if it were dropped
     # unsanitized into a raw SQL "ORDER BY" clause. This test doesn't check
     # the sort actually applied correctly; it only checks the request
     # doesn't error out (e.g. by raising a SQL syntax error or, worse,
-    # actually executing the injected SQL) — a minimal but important
+    # actually executing the injected SQL), a minimal but important
     # security regression check.
     get dashboard_results_path, params: { sort: "1; DROP TABLE units; --" }, as: :json
     assert_response :success
   end
   # `end` closes the "results sort param is sanitized against SQL injection"
   # test block.
+
+  test "index shows a warning/error badge count on crawl history rows that have log issues" do
+    # test/fixtures/crawl_log_entries.yml's "error_entry" fixture belongs to
+    # crawl_run_id 1 (crawl_runs(:previous_completed), pinned to that exact
+    # id), this asserts DashboardController#index's @crawl_log_counts
+    # query surfaces that single error entry as a rendered "⚠ 1" badge
+    # rather than silently dropping it.
+    get root_path
+    assert_response :success
+    assert_match "⚠ 1", response.body
+  end
+  # `end` closes the "index shows a warning/error badge count..." test block.
+
+  test "index shows no issue badge for a crawl with no warning/error log entries" do
+    # crawl_runs(:current_completed) (id 2) has no crawl_log_entries fixture
+    # rows at all, its history row should render the plain "—" placeholder
+    # instead of any badge.
+    get root_path
+    assert_response :success
+    assert_match "—", response.body
+  end
+  # `end` closes the "index shows no issue badge..." test block.
+
+  test "index does not disable any company checkbox when every parser is implemented" do
+    # CompanyRegistry.stubbed? drives the dashboard's checkbox rendering
+    # (see app/views/dashboard/index.html.erb) to disable a company's
+    # checkbox and label it "(not yet supported)" instead of silently
+    # letting it be selected. StorAmerica (app/services/companies/stor_america.rb)
+    # used to be the one stub exercising that path; now that it has a real
+    # parser, CompanyRegistry::STUBBED_COMPANIES is empty, so no checkbox
+    # should render as disabled and the "(not yet supported)" label
+    # shouldn't appear at all.
+    #
+    # The company checkboxes only render on the "start a new crawl" form,
+    # which the dashboard hides while a crawl is already running (see
+    # `if @crawl_running && @running_crawl` in index.html.erb),
+    # test/fixtures/crawl_runs.yml's "running_crawl" fixture is active by
+    # default, so it's reset to "completed" here first.
+    CrawlRun.where(status: "running").update_all(status: "completed")
+
+    get root_path
+    assert_response :success
+
+    # `assert_select` parses the response HTML and finds elements matching
+    # a CSS selector, this confirms NO checkbox anywhere in the response
+    # carries the `disabled` attribute.
+    assert_select "input[name='companies[]'][disabled]", count: 0
+    assert_no_match "(not yet supported)", response.body
+  end
+  # `end` closes the "index does not disable any company checkbox..." test
+  # block.
 end
 # `end` closes the `class DashboardControllerTest < ActionDispatch::IntegrationTest`
 # definition that started at the top of the file.

@@ -1,0 +1,67 @@
+{
+  "ignored_warnings": [
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 4,
+      "fingerprint": "1e5db89988435bce02cfae2d7f52c27a668ab612848e1f7f8ba348e6f637406b",
+      "check_name": "LinkToHref",
+      "message": "Potentially unsafe model attribute in `link_to` href",
+      "file": "app/views/public_search/show.html.erb",
+      "line": 24,
+      "link": "https://brakemanscanner.org/docs/warning_types/link_to_href",
+      "code": "link_to(\"View on Map \\u2197\", Facility.find(params[:id]).maps_url, :target => \"_blank\", :rel => \"noopener noreferrer\", :class => \"btn-secondary text-sm\")",
+      "render_path": [
+        {
+          "type": "controller",
+          "class": "PublicSearchController",
+          "method": "show",
+          "line": 86,
+          "file": "app/controllers/public_search_controller.rb",
+          "rendered": {
+            "name": "public_search/show",
+            "file": "app/views/public_search/show.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "public_search/show"
+      },
+      "user_input": "Facility.find(params[:id]).maps_url",
+      "confidence": "Weak",
+      "note": "Both link_to href values pass through PublicSearchHelper#safe_external_url? (app/helpers/public_search_helper.rb), an explicit http(s)-scheme allowlist guard applied in the view before the link is ever rendered (see app/views/public_search/show.html.erb lines 23-24 and 78-79). Brakeman flags these as weak-confidence because its static analysis does not trace data flow through arbitrary custom helper methods, so it cannot see that the guard already runs. Real defense-in-depth exists; this is a documented false positive, not an unmitigated risk."
+    },
+    {
+      "warning_type": "Cross-Site Scripting",
+      "warning_code": 4,
+      "fingerprint": "784d66fb8a85eac68e5e9b6be4b829b8a7d39cd329cc3b8609a7f70f2a79dcde",
+      "check_name": "LinkToHref",
+      "message": "Potentially unsafe model attribute in `link_to` href",
+      "file": "app/views/public_search/show.html.erb",
+      "line": 79,
+      "link": "https://brakemanscanner.org/docs/warning_types/link_to_href",
+      "code": "link_to(\"Book \\u2197\", (Unresolved Model).new.booking_url, :target => \"_blank\", :rel => \"noopener noreferrer\", :class => \"btn-primary text-xs\")",
+      "render_path": [
+        {
+          "type": "controller",
+          "class": "PublicSearchController",
+          "method": "show",
+          "line": 86,
+          "file": "app/controllers/public_search_controller.rb",
+          "rendered": {
+            "name": "public_search/show",
+            "file": "app/views/public_search/show.html.erb"
+          }
+        }
+      ],
+      "location": {
+        "type": "template",
+        "template": "public_search/show"
+      },
+      "user_input": "(Unresolved Model).new.booking_url",
+      "confidence": "Weak",
+      "note": "Both link_to href values pass through PublicSearchHelper#safe_external_url? (app/helpers/public_search_helper.rb), an explicit http(s)-scheme allowlist guard applied in the view before the link is ever rendered (see app/views/public_search/show.html.erb lines 23-24 and 78-79). Brakeman flags these as weak-confidence because its static analysis does not trace data flow through arbitrary custom helper methods, so it cannot see that the guard already runs. Real defense-in-depth exists; this is a documented false positive, not an unmitigated risk."
+    }
+  ],
+  "updated": "2026-08-05"
+}

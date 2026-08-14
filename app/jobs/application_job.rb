@@ -14,7 +14,7 @@
 #
 # `class ApplicationJob < ActiveJob::Base` defines a new Ruby class named
 # ApplicationJob. The `< ActiveJob::Base` part means "inherits from
-# ActiveJob::Base" — this class automatically gets all of ActiveJob's
+# ActiveJob::Base", this class automatically gets all of ActiveJob's
 # built-in behavior (being queueable, retryable, serializable, etc.)
 # without us having to write that plumbing ourselves.
 #
@@ -35,22 +35,22 @@ class ApplicationJob < ActiveJob::Base
   # ActiveJob will catch it and re-run the job instead of letting it die.
   #
   # ActiveRecord::Deadlocked is the error Rails raises when two database
-  # operations block each other (a "deadlock") — this is usually a
+  # operations block each other (a "deadlock"), this is usually a
   # temporary timing issue, so simply trying again is a reasonable fix.
   # `attempts: 3` means it will try up to 3 times total before giving up.
   # `wait: :polynomially_longer` means each retry waits longer than the
   # last (instead of retrying instantly, which could hit the same deadlock
-  # again immediately) — this is a built-in ActiveJob backoff strategy.
+  # again immediately), this is a built-in ActiveJob backoff strategy.
   retry_on ActiveRecord::Deadlocked, attempts: 3, wait: :polynomially_longer
 
   # ActiveJob::DeserializationError happens when a job was queued with a
   # reference to a database record (like "the CrawlRun with id 5") but by
   # the time a worker picks the job up to run it, that record has since
-  # been deleted — so ActiveJob can't "deserialize" (rebuild) the argument
+  # been deleted, so ActiveJob can't "deserialize" (rebuild) the argument
   # from the database anymore. Retrying here uses ActiveJob's default retry
   # settings (no `attempts:`/`wait:` given), on the chance the record
   # reappears or the underlying issue was transient.
   retry_on ActiveJob::DeserializationError
 end
-# `end` closes the `class ApplicationJob` definition that started above —
+# `end` closes the `class ApplicationJob` definition that started above,
 # nothing after this point is part of the class.

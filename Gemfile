@@ -98,6 +98,18 @@ gem "chartkick"
 # records by time period (e.g. "count of X per day/week/month") — commonly
 # paired with chartkick above to build time-series charts.
 gem "groupdate"
+# `gem "solid_queue"` adds Solid Queue, Rails 8's default database-backed
+# background-job processor: queued jobs (and, importantly for this app,
+# recurring/scheduled tasks — see config/recurring.yml) are persisted to a
+# real SQL table instead of living only in the current process's memory
+# (like the `:async` adapter this app used before — see
+# config/application.rb and config/environments/production.rb). This is
+# what makes the scheduled-crawl feature (Setting rows schedule_enabled/
+# schedule_cron/schedule_city/schedule_radius_miles) actually work:
+# something needs to keep checking the clock even when no browser request
+# is in flight, and Solid Queue's recurring-task dispatcher (started via
+# `bin/jobs` — see config/deploy.yml) is that "something."
+gem "solid_queue"
 # `gem "caxlsx"` adds the ability to generate real Microsoft Excel (.xlsx)
 # spreadsheet files from Ruby code — useful for "export to Excel" features.
 gem "caxlsx"

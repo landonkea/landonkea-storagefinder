@@ -1,18 +1,16 @@
 # This file (config/recurring.yml) configures Solid Queue's "recurring
 # tasks" feature — jobs/commands that should run automatically on a
 # repeating schedule (like a cron job), rather than being enqueued one-off
-# by application code. NOTE: as explained in config/queue.yml, this app's
-# actual active job adapter is `:async`, not Solid Queue. Solid Queue's own
-# recurring-task scheduler is a separate process (started via `bin/jobs` or
-# the `:solid_queue` Puma plugin) that reads this file — since this app runs
-# neither of those, the "production:" schedule below does NOT currently run
-# at all; it's inert. This file, like config/queue.yml, is unused Rails 8
-# generator scaffolding, kept in the repo in case a future move to Solid
-# Queue (e.g. if this app is ever split across multiple machines/processes
-# and needs real persistent job tracking instead of in-memory `:async`)
-# picks it back up — deleting it isn't worth the churn for something that
-# costs nothing to leave in place, but don't assume it's doing anything
-# today.
+# by application code. As of the scheduled-crawl feature, this file IS
+# active in production/staging: config/environments/production.rb (and
+# staging.rb) set `config.active_job.queue_adapter = :solid_queue`, and
+# `bin/jobs` (run as its own process — see config/deploy.yml's "job:" server
+# role) is what actually reads this file and runs the tasks below on
+# schedule. Development and test still use the in-process `:async` adapter
+# (see config/application.rb), so nothing here runs while developing
+# locally or running the test suite — that's fine, since these tasks are
+# either housekeeping (clear_solid_queue_finished_jobs) or a once-a-minute
+# check (check_scheduled_crawl) that only matters against a real clock.
 #
 # YAML primer: lines starting with "#" are comments, ignored by whatever
 # parses this file. Plain "key: value" pairs work like entries in a Ruby
@@ -87,3 +85,15 @@ production:
     # than exactly on the hour, likely to avoid clustering with other
     # scheduled work that might run exactly on the hour.
     schedule: every hour at minute 12
+
+  # "check_scheduled_crawl:" — the task that wires up the schedule_enabled /
+  # schedule_cron / schedule_city / schedule_radius_miles Setting rows (see
+  # db/seeds.rb) to a real, running crawl. This task runs ScheduledCrawlJob
+  # — see app/jobs/scheduled_crawl_check_job.rb's own top comment for the
+  # full explanation of why it polls once a minute and re-checks the
+  # database's current schedule_cron value on every tick, rather than being
+  # scheduled at one fixed time.
+  check_scheduled_crawl:
+    class: ScheduledCrawlCheckJob
+    queue: default
+    schedule: every minute

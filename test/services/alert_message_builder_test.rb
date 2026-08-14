@@ -4,16 +4,16 @@
 require "test_helper"
 
 # This file tests AlertMessageBuilder (app/services/alerting/alert_message_builder.rb)
-# — the class that formats the subject/text/HTML/SMS content of an alert
+#, the class that formats the subject/text/HTML/SMS content of an alert
 # notification, given an AlertRule and a list of units that triggered it.
 # It does NOT test delivery (that's AlertDeliveryService, covered in
-# alert_delivery_service_test.rb) — just the message content itself.
+# alert_delivery_service_test.rb), just the message content itself.
 class AlertMessageBuilderTest < ActiveSupport::TestCase
   # `def triggered_units` defines a helper method (not a `test` block)
   # shared by every test below. It builds a small Array of Hashes matching
   # the shape AlertCheckerJob passes into AlertMessageBuilder.build (see
   # app/jobs/alert_checker_job.rb's `triggered_units << { unit:, previous_price: }`)
-  # — one entry per unit that "triggered" an alert, each holding the Unit
+  #, one entry per unit that "triggered" an alert, each holding the Unit
   # record itself plus its price from the previous crawl (or nil if there
   # was none).
   def triggered_units
@@ -37,7 +37,7 @@ class AlertMessageBuilderTest < ActiveSupport::TestCase
     # new AlertMessageBuilder instance and runs `.build` on it, returning a
     # Hash with the four keys checked below. `alert_rules(:price_drop_rule)`
     # looks up that AlertRule fixture; `triggered_units` here calls the
-    # helper method defined above (not a local variable — Ruby only tells
+    # helper method defined above (not a local variable, Ruby only tells
     # them apart by whether a local variable with that name already exists
     # in scope, and here it doesn't, so this is a method call).
     message = AlertMessageBuilder.build(alert_rules(:price_drop_rule), triggered_units)
@@ -70,7 +70,7 @@ class AlertMessageBuilderTest < ActiveSupport::TestCase
   test "price_threshold subject mentions the threshold" do
     message = AlertMessageBuilder.build(alert_rules(:price_threshold_rule), triggered_units)
     # Confirms the subject for a "price_threshold"-type rule includes its
-    # dollar threshold value — `\$100\.0` in the regex escapes the literal
+    # dollar threshold value, `\$100\.0` in the regex escapes the literal
     # `$` and `.` characters (both of which have special meaning in regular
     # expressions otherwise: `$` normally means "end of line" and `.`
     # normally means "any character") so they're matched as literal text
@@ -82,7 +82,7 @@ class AlertMessageBuilderTest < ActiveSupport::TestCase
   test "text_body lists each unit's facility, size, and price" do
     message = AlertMessageBuilder.build(alert_rules(:price_drop_rule), triggered_units)
 
-    # `assert_match "Public Storage", message[:text_body]` — here the first
+    # `assert_match "Public Storage", message[:text_body]`, here the first
     # argument is a plain String, not a Regexp; `assert_match` accepts
     # either, and for a String it just checks that the second argument
     # contains it as a literal substring. This confirms the text body
@@ -104,7 +104,7 @@ class AlertMessageBuilderTest < ActiveSupport::TestCase
     # with 12 entries. `(1..12)` is a Ruby Range literal (the integers 1
     # through 12, inclusive); `.map { ... }` runs the block once per number
     # in the range and collects each block's return value into a new
-    # Array — since the block ignores the actual number and always returns
+    # Array, since the block ignores the actual number and always returns
     # the same Hash shape, the result is simply 12 (nearly) identical
     # triggered-unit entries, useful here purely to test what happens with
     # MORE than 10 units, without needing 12 distinct unit fixtures.
@@ -121,13 +121,13 @@ class AlertMessageBuilderTest < ActiveSupport::TestCase
   test "html_body renders a table row per unit" do
     message = AlertMessageBuilder.build(alert_rules(:price_drop_rule), triggered_units)
 
-    # `message[:html_body].scan("<tr>")` is Ruby's String#scan — it finds
+    # `message[:html_body].scan("<tr>")` is Ruby's String#scan, it finds
     # EVERY occurrence of the substring "<tr>" (an HTML "table row" opening
     # tag) in the html_body string and returns them all as an Array (one
     # entry per match), so `.length` gives the total count of "<tr>" tags.
     # build_html_body (see alert_message_builder.rb) emits one header row
     # PLUS one row per triggered unit, so subtracting 1 (for the header
-    # row) should leave exactly 2 — matching the 2 entries `triggered_units`
+    # row) should leave exactly 2, matching the 2 entries `triggered_units`
     # returns.
     assert_equal 2, message[:html_body].scan("<tr>").length - 1 # -1 for the header row
   end
@@ -138,7 +138,7 @@ class AlertMessageBuilderTest < ActiveSupport::TestCase
 
     assert_match "Public Storage", message[:sms_body]
     # `refute_includes message[:sms_body], "\n"` is Minitest's negative
-    # assertion counterpart to `assert_includes` — it passes only if the
+    # assertion counterpart to `assert_includes`, it passes only if the
     # sms_body string does NOT contain a newline character (`"\n"` is
     # Ruby's escape sequence for a single newline). This confirms
     # build_sms_body (see alert_message_builder.rb) really does produce one

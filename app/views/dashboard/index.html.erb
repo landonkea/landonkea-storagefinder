@@ -310,6 +310,16 @@
                 this block once per name with `company` bound to the
                 current one, generating one checkbox per company. %>
             <% @available_companies.each do |company| %>
+              <%# `CompanyRegistry.stubbed?(company)` is true only for
+                  companies whose parser is a known stub (none right now —
+                  see app/services/company_registry.rb's STUBBED_COMPANIES,
+                  StorAmerica was the last one until its parser got
+                  implemented) — a crawl against one would silently return
+                  zero results, which used to be indistinguishable in the
+                  UI from "this company legitimately has no availability
+                  right now." `stub` below drives both this checkbox's
+                  disabled state and the label text/styling. %>
+              <% stub = CompanyRegistry.stubbed?(company) %>
               <%# Wrapping the checkbox and its text in one `<label>` makes
                   the whole pill clickable, not just the tiny checkbox
                   square — plain HTML/browser behavior. "flex items-center
@@ -317,8 +327,13 @@
                   text-xs cursor-pointer transition-colors" styles it as a
                   small rounded "pill" button that darkens/lightens
                   slightly on hover (transition-colors makes that color
-                  change animate smoothly instead of snapping instantly). %>
-              <label class="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 px-2 py-1 rounded text-xs cursor-pointer transition-colors">
+                  change animate smoothly instead of snapping instantly).
+                  For a stub company, "opacity-50 cursor-not-allowed
+                  hover:bg-gray-800" (via the ternary below) mutes the pill
+                  and swaps the cursor to signal it can't actually be
+                  toggled, and drops the hover-darken effect since there's
+                  nothing to click. %>
+              <label class="flex items-center gap-1.5 bg-gray-800 px-2 py-1 rounded text-xs transition-colors <%= stub ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-700 cursor-pointer" %>">
                 <%# This is a PLAIN HTML checkbox, not a Rails form-builder
                     helper like `f.check_box` — that's fine since this form
                     has no single backing model object per checkbox anyway.
@@ -327,21 +342,29 @@
                     every CHECKED box among all these company checkboxes
                     gets submitted together as one `companies` array param
                     (e.g. companies: ["Public Storage", "U-Haul"]),
-                    unchecked ones simply aren't included at all.
-                    `value="<%= company % >"` sets which company name this
-                    particular checkbox represents. The bare word `checked`
-                    (no value, just its presence) is a plain HTML boolean
-                    attribute that starts every company pre-selected by
-                    default. "accent-emerald-500" recolors the checkbox's
-                    own check mark/fill to this app's green accent. %>
+                    unchecked ones simply aren't included at all — and a
+                    DISABLED checkbox (see `disabled: stub` below) is never
+                    submitted regardless of its checked state, which is
+                    exactly what's wanted for a stub company: it should
+                    never end up in the submitted `companies[]` list at
+                    all. `value="<%= company % >"` sets which company name
+                    this particular checkbox represents. `checked: !stub`
+                    starts every real company pre-selected by default, but
+                    leaves a stub company unchecked (checking a disabled
+                    box would be misleading UI). "accent-emerald-500"
+                    recolors the checkbox's own check mark/fill to this
+                    app's green accent. %>
                 <input type="checkbox"
                        name="companies[]"
                        value="<%= company %>"
-                       checked
+                       <%= "checked" unless stub %>
+                       <%= "disabled" if stub %>
                        class="accent-emerald-500">
                 <%# Prints the company's name as this checkbox's visible
-                    label text. %>
-                <%= company %>
+                    label text — with a "(not yet supported)" suffix for a
+                    stub company, so it's clear from the label alone (not
+                    just the muted styling) why it can't be selected. %>
+                <%= company %><% if stub %> <span class="text-gray-500">(not yet supported)</span><% end %>
               </label>
             <% end %>
             <%# Closes the `@available_companies.each do |company|` loop
@@ -531,6 +554,44 @@
   </div>
 <% end %>
 <%# Closes the `if @latest_crawl && @units.any?` check opened above. %>
+
+<%# =========================================================================
+  3B. NEAREST FACILITIES — quick view
+  A compact list, independent of whatever filters/sort are applied to the
+  main results table below. Powered by Facility.nearest_to (see
+  app/models/facility.rb) via DashboardController#build_nearest_facilities.
+========================================================================= %>
+<%# `@nearest_facilities` is an array of { facility:, distance_miles:,
+    cheapest_unit: } hashes (empty if there's no crawl, or its search
+    origin was never geocoded — see build_nearest_facilities). %>
+<% if @nearest_facilities.any? %>
+  <div class="card mb-4">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-3">
+      📍 Nearest Facilities
+    </h2>
+    <%# "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" lays these out
+        as a responsive grid: one column on small screens, two on medium,
+        four on large — rather than one long vertical list. %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <% @nearest_facilities.each do |entry| %>
+        <% f = entry[:facility] %>
+        <% unit = entry[:cheapest_unit] %>
+        <div class="bg-gray-800/50 rounded p-3">
+          <div class="font-semibold text-white text-xs truncate"><%= f.company %></div>
+          <div class="text-gray-500 text-xs truncate"><%= f.name %></div>
+          <div class="flex items-baseline justify-between mt-2">
+            <span class="text-gray-400 text-xs"><%= entry[:distance_miles] %> mi</span>
+            <% if unit %>
+              <span class="font-bold text-sm <%= unit.price_color_class %>"><%= unit.formatted_price %></span>
+            <% else %>
+              <span class="text-gray-600 text-xs">No price</span>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
 
 <%# =========================================================================
   4. RESULTS TABLE
@@ -846,6 +907,43 @@
 </div>
 
 <%# =========================================================================
+  4B. FACILITY MAP
+  A Leaflet map (no API key needed, unlike Google Maps) with one pin per
+  facility currently shown in the results table above, colored to match the
+  same green/yellow/red price bands used in the table and its legend.
+========================================================================= %>
+<%# `@map_facilities` is an array of plain Hashes built by
+    DashboardController#build_map_facilities — empty whenever there's no
+    crawl yet, or no matching unit has geocoded coordinates. %>
+<% if @map_facilities.any? %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+      🗺️ Facility Map
+    </h2>
+    <%# `data: { controller: "facility-map", facility_map_facilities_value: @map_facilities.to_json }`
+        attaches the "facility-map" Stimulus controller (see
+        app/javascript/controllers/facility_map_controller.js) to this div,
+        and passes it the pin data as a Stimulus "value" — Stimulus's
+        convention for handing a controller typed data from the DOM,
+        serialized here as a JSON string via `.to_json`. "h-96" fixes this
+        map's height (Leaflet requires an explicit height on its container
+        — an unbounded height collapses to 0px and shows nothing).
+        "rounded overflow-hidden" clips the map's contents (including its
+        default white background) to this app's rounded-corner style. %>
+    <div id="facility-map"
+         class="h-96 rounded overflow-hidden"
+         data-controller="facility-map"
+         data-facility-map-facilities-value="<%= @map_facilities.to_json %>"></div>
+    <div class="flex gap-4 mt-3 text-xs text-gray-500">
+      <span>Price color key:</span>
+      <span class="price-green">● Under $100</span>
+      <span class="price-yellow">● $100–$149</span>
+      <span class="price-red">● $150+</span>
+    </div>
+  </div>
+<% end %>
+
+<%# =========================================================================
   5. PRICE TREND CHART
 ========================================================================= %>
 <%# `@price_history` is a Hash (a key → value lookup structure) built by
@@ -891,6 +989,85 @@
   </div>
 <% end %>
 <%# Closes the `if @price_history.any?` check above. %>
+
+<%# =========================================================================
+  5b. AVERAGE PRICE BY COMPANY (bar chart)
+========================================================================= %>
+<%# `@avg_price_by_company` is a Hash of { company_name => average_price }
+    built by the controller's `build_avg_price_by_company` method, scoped to
+    the latest completed crawl's priced units. `.any?` guards against
+    rendering an empty chart when there's no data yet. %>
+<% if @avg_price_by_company.any? %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+      Average Price by Company
+    </h2>
+    <%# `bar_chart` is another chartkick helper, same family as `line_chart`
+        above but drawing horizontal/vertical bars instead of a line — one
+        bar per hash key (company name here). Same `prefix`/`thousands`
+        currency formatting and transparent-background library options as
+        the price trend chart, for a consistent look. %>
+    <%= bar_chart @avg_price_by_company,
+          prefix:     "$",
+          thousands:  ",",
+          colors:     ["#34d399"],
+          library:    {
+            backgroundColor: "transparent"
+          } %>
+  </div>
+<% end %>
+<%# Closes the `if @avg_price_by_company.any?` check above. %>
+
+<%# =========================================================================
+  5c. UNIT AVAILABILITY BY SIZE (pie chart)
+========================================================================= %>
+<%# `@unit_availability_by_size` is a Hash of { size => count_of_available_units }
+    built by `build_unit_availability_by_size`, also scoped to the latest
+    completed crawl. %>
+<% if @unit_availability_by_size.any? %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+      Available Units by Size
+    </h2>
+    <%# `pie_chart` is a chartkick helper drawing one wedge per hash key.
+        `colors:` here supplies a small palette (one color per wedge) rather
+        than the single-color arrays used above, since a pie chart needs to
+        visually distinguish each slice. %>
+    <%= pie_chart @unit_availability_by_size,
+          colors:  ["#34d399", "#60a5fa", "#fbbf24", "#f87171", "#a78bfa", "#f472b6"],
+          library: {
+            backgroundColor: "transparent"
+          } %>
+  </div>
+<% end %>
+<%# Closes the `if @unit_availability_by_size.any?` check above. %>
+
+<%# =========================================================================
+  5d. CRAWL SUCCESS/FAILURE RATE (group_by_day chart)
+========================================================================= %>
+<%# `@crawl_status_by_day` is a Hash built by `build_crawl_status_by_day`,
+    grouping CrawlRun rows by `status` ("completed"/"failed") and by day
+    over the last 30 days — its keys are `[status, day]` pairs, a shape
+    chartkick/groupdate render as one line per status automatically. %>
+<% if @crawl_status_by_day.any? %>
+  <div class="card mb-6">
+    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">
+      Crawl Success/Failure Rate (last 30 days)
+    </h2>
+    <%# `line_chart` again, same helper as the price trend chart — chartkick
+        detects the `[group, day]`-keyed Hash shape and draws one colored
+        line per group ("completed" and "failed") instead of a single
+        series. `colors:` supplies one color per line, in the order the
+        groups first appear in the data (green for completed, red for
+        failed, matching this app's price-color conventions elsewhere). %>
+    <%= line_chart @crawl_status_by_day,
+          colors:  ["#34d399", "#f87171"],
+          library: {
+            backgroundColor: "transparent"
+          } %>
+  </div>
+<% end %>
+<%# Closes the `if @crawl_status_by_day.any?` check above. %>
 
 <%# =========================================================================
   6. CRAWL HISTORY

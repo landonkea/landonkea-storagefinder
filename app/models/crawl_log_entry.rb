@@ -32,12 +32,12 @@ class CrawlLogEntry < ApplicationRecord
 
   # Requires `company` to be present (not nil, not an empty string).
   validates :company, presence: { message: "Company is required on a log entry" }
-  # Requires `message` to be present too — a log entry with no text is
+  # Requires `message` to be present too, a log entry with no text is
   # useless, so this prevents accidentally saving a blank one.
   validates :message, presence: { message: "Log message cannot be blank" }
   # Requires `level` to be one of exactly these three strings. `%w[info
   # warning error]` is Ruby shorthand for the array
-  # `["info", "warning", "error"]` — each space-separated word becomes its
+  # `["info", "warning", "error"]`, each space-separated word becomes its
   # own array element automatically, no quotes/commas needed.
   validates :level,   inclusion: {
     in:      %w[info warning error],
@@ -74,21 +74,21 @@ class CrawlLogEntry < ApplicationRecord
     # %d = 2-digit day, %H = hour (24h), %M = minute, %S = second.
     timestamp = created_at.strftime("%Y-%m-%d %H:%M:%S")
     # Builds an array of the fixed pieces of the log line. `"[#{timestamp}]"`
-    # uses Ruby string interpolation — the `#{ }` part is evaluated as Ruby
+    # uses Ruby string interpolation, the `#{ }` part is evaluated as Ruby
     # code and its result is spliced into the surrounding string.
     # `level.upcase` converts the level string ("info") to uppercase ("INFO").
     parts = [ "[#{timestamp}]", "[#{level.upcase}]", "[#{company}]", message ]
     # `parts << "..."` appends (using the `<<` "shovel" operator) an extra
     # piece onto the end of the array, but only when the condition after
     # `if` is true. `.present?` is a Rails helper meaning "not nil and not
-    # blank" — so a URL segment is only added if this entry actually has one.
+    # blank", so a URL segment is only added if this entry actually has one.
     parts << "URL: #{url}" if url.present?
     # `retry_count.to_i` converts retry_count to an integer (safely handling
     # nil, which becomes 0) so it can be compared with `> 0`. Only append
     # the "(retry N)" note if this entry actually represents a retry.
     parts << "(retry #{retry_count})" if retry_count.to_i > 0
     # `.join(" ")` combines every element of `parts` into one string,
-    # separated by single spaces — this is the method's return value since
+    # separated by single spaces, this is the method's return value since
     # it's the last expression evaluated (Ruby methods return their last
     # evaluated expression without needing an explicit `return`).
     parts.join(" ")

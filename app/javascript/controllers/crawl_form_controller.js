@@ -6,7 +6,7 @@
 //   - Validate required fields before submit
 // =============================================================================
 
-// `import { Controller } from "@hotwired/stimulus"` — a "named import"
+// `import { Controller } from "@hotwired/stimulus"`, a "named import"
 // (curly braces) that pulls the base `Controller` class out of the
 // Stimulus library. Every Stimulus controller you write extends
 // (inherits from) this class to get its core behavior (lifecycle
@@ -19,10 +19,10 @@ import { Controller } from "@hotwired/stimulus"
 // automatically knows how to find its own DOM element, wire up
 // data-action bindings, etc.); the class here has no name of its own
 // (an "anonymous class") because `export default` means "whatever this
-// file's main/default export is" — the importer gets to name it (see
+// file's main/default export is", the importer gets to name it (see
 // app/javascript/application.js, which imports this as
 // `CrawlFormController`). This controller is attached to the HTML element
-// that has `data-controller="crawl-form"` — see the <%= form_with ... %>
+// that has `data-controller="crawl-form"`, see the <%= form_with ... %>
 // call in app/views/dashboard/index.html.erb.
 export default class extends Controller {
 
@@ -30,7 +30,7 @@ export default class extends Controller {
   // Methods defined directly inside a class body (no `function` keyword
   // needed) become that class's methods. Stimulus calls this one
   // automatically because of the HTML attribute
-  // `data-action="click->crawl-form#toggleAllCompanies"` in the view —
+  // `data-action="click->crawl-form#toggleAllCompanies"` in the view,
   // that attribute means "on a click event, call the toggleAllCompanies
   // method on the crawl-form controller." `event` is the browser's
   // click-event object, passed in automatically.
@@ -41,14 +41,23 @@ export default class extends Controller {
     event.preventDefault()
 
     // Find all company checkboxes in this form
-    // `this.element` is provided by Stimulus's base Controller class — it's
+    // `this.element` is provided by Stimulus's base Controller class, it's
     // the actual DOM element this controller is attached to (the element
     // with `data-controller="crawl-form"`). `.querySelectorAll(...)` finds
-    // every descendant element matching the given CSS selector — here,
+    // every descendant element matching the given CSS selector, here,
     // every <input> whose `name` attribute is exactly "companies[]" (the
     // square brackets in the name make Rails treat submitted values as an
     // array on the server side).
-    const checkboxes = this.element.querySelectorAll("input[name='companies[]']")
+    // `:not(:disabled)` excludes stub-company checkboxes (see
+    // app/views/dashboard/index.html.erb, any company whose parser isn't
+    // implemented yet gets `disabled` set, none currently, see
+    // CompanyRegistry::STUBBED_COMPANIES) from both the "are they all
+    // checked?" calculation below and the toggle itself;
+    // a disabled checkbox can't be usefully checked/unchecked by a user
+    // anyway, and leaving it out of the count keeps "Toggle all" from
+    // treating one permanently-unchecked stub as a reason to think
+    // something's still unselected.
+    const checkboxes = this.element.querySelectorAll("input[name='companies[]']:not(:disabled)")
 
     // If all are checked, uncheck all. If any are unchecked, check all.
     // `Array.from(checkboxes)` converts the NodeList returned by
@@ -60,21 +69,21 @@ export default class extends Controller {
     const allChecked = Array.from(checkboxes).every(cb => cb.checked)
 
     // `.forEach(cb => { ... })` runs the given function once for every
-    // checkbox in the (NodeList) collection — NodeLists support forEach
+    // checkbox in the (NodeList) collection, NodeLists support forEach
     // directly, no Array.from conversion needed for this method.
     checkboxes.forEach(cb => {
       cb.checked = !allChecked  // Flip the state
       // `!allChecked` is JS's "not" operator applied to allChecked: if
       // every box was already checked, this sets each box to `false`
       // (unchecked); if not all were checked, this sets each box to
-      // `true` (checked) — i.e. "select all" unless everything's already
+      // `true` (checked), i.e. "select all" unless everything's already
       // selected, in which case "deselect all."
     })
     // `}` closes the `checkboxes.forEach(cb => { ... })` callback function.
   }
   // `}` closes the `toggleAllCompanies(event) { ... }` method.
 
-  // Called when the form is submitted — do a quick client-side check
+  // Called when the form is submitted, do a quick client-side check
   // before letting the request go to the server
   // This method is wired up the same way, via a data-action attribute (not
   // shown directly in the excerpt read, but implied by the form's
@@ -91,18 +100,18 @@ export default class extends Controller {
     // only spaces is treated the same as an empty field.
     if (!cityField || cityField.value.trim() === "") {
       event.preventDefault()  // Stop the form from submitting
-      // `preventDefault()` here is essential — it stops the browser's
+      // `preventDefault()` here is essential, it stops the browser's
       // normal form-submission behavior (sending the request to the
       // server), because we want to block an invalid submission entirely.
       alert("Please enter a city name or ZIP code.")
       // `alert(...)` shows a blocking browser popup with the given
-      // message — a simple, no-dependencies way to warn the user.
-      // `cityField?.focus()` — optional chaining (`?.`) guards against
+      // message, a simple, no-dependencies way to warn the user.
+      // `cityField?.focus()`, optional chaining (`?.`) guards against
       // cityField being null (from the `!cityField` case above); `.focus()`
       // moves the browser's text cursor into that field so the user can
       // immediately start typing a correction.
       cityField?.focus()
-      // `return` exits this method immediately — none of the code below
+      // `return` exits this method immediately, none of the code below
       // (the company-checkbox check, disabling the submit button) runs
       // once we've already decided to block this submission.
       return
@@ -111,7 +120,7 @@ export default class extends Controller {
 
     // Looks for any company checkboxes that ARE currently checked (note
     // the `:checked` CSS pseudo-selector added to the same selector used
-    // in toggleAllCompanies above) — at least one company must be selected
+    // in toggleAllCompanies above), at least one company must be selected
     // to run a crawl.
     const checkboxes = this.element.querySelectorAll("input[name='companies[]']:checked")
     if (checkboxes.length === 0) {
@@ -120,7 +129,7 @@ export default class extends Controller {
       event.preventDefault()
       alert("Please select at least one company to crawl.")
       return
-      // Exits early again, same reasoning as above — an invalid form
+      // Exits early again, same reasoning as above, an invalid form
       // shouldn't proceed to disable the submit button either.
     }
     // `}` closes the `if (checkboxes.length === 0) { ... }` block above.
@@ -130,7 +139,7 @@ export default class extends Controller {
     // already `return`). Looks for the actual <button type="submit"> to
     // give feedback and prevent duplicate submissions.
     const submitBtn = this.element.querySelector("button[type='submit']")
-    // Guard in case the button isn't found for some reason — avoids a
+    // Guard in case the button isn't found for some reason, avoids a
     // "cannot set property on null" crash.
     if (submitBtn) {
       // Disabling the button visually greys it out and makes it

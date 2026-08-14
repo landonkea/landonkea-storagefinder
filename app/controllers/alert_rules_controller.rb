@@ -1,7 +1,7 @@
 # =============================================================================
 # ALERT RULES CONTROLLER
 # =============================================================================
-# CRUD for alert rules — create, view, edit, delete price alert rules.
+# CRUD for alert rules, create, view, edit, delete price alert rules.
 # =============================================================================
 # "CRUD" is a common shorthand for the four basic data operations every
 # resource typically needs: Create, Read, Update, Delete. This controller
@@ -16,29 +16,29 @@
 class AlertRulesController < ApplicationController
   # `before_action` registers a method to run automatically BEFORE certain
   # actions, without having to call it manually inside each one. The first
-  # argument, `:set_alert_rule` (a Ruby symbol — a lightweight name/label),
+  # argument, `:set_alert_rule` (a Ruby symbol, a lightweight name/label),
   # names the private method defined further down to run. `only: [...]` is a
   # keyword argument restricting it to just the four listed actions (an
   # Array literal, written with square brackets and comma-separated
-  # symbols) — it will NOT run before `index`, `new`, or `create`, since
+  # symbols), it will NOT run before `index`, `new`, or `create`, since
   # those don't need an existing record loaded.
   before_action :set_alert_rule, only: [ :show, :edit, :update, :destroy ]
 
   # `index` is the conventional Rails action name for "list all records of
-  # this type" — it's what runs when a browser requests the alert rules
+  # this type", it's what runs when a browser requests the alert rules
   # listing page (GET /alert_rules).
   def index
     # `AlertRule.all` asks the database for every row in the alert_rules
     # table; `.order(:name)` sorts those results alphabetically by the
     # `name` column. The result is stored in `@alert_rules`, an instance
-    # variable — this makes it automatically available to the view template
+    # variable, this makes it automatically available to the view template
     # that Rails renders after this action finishes (views can read
     # instance variables set by the controller action, but not local/plain
     # variables).
     @alert_rules = AlertRule.all.order(:name)
     # Sets the page's browser-tab title, read later by
     # ApplicationController#current_page_title (see application_controller.rb).
-    @page_title  = "Alert Rules — StorageFinder"
+    @page_title  = "Alert Rules, StorageFinder"
   end
   # `end` closes the `def index` action definition opened above.
 
@@ -48,34 +48,34 @@ class AlertRulesController < ApplicationController
   # and populated `@alert_rule` by the time this method's body executes.
   def show
     # Builds the page title using the already-loaded record's name.
-    # `"#{...}"` is Ruby string interpolation — it evaluates the Ruby
+    # `"#{...}"` is Ruby string interpolation, it evaluates the Ruby
     # expression inside `#{}` and inserts its result into the surrounding
     # string.
-    @page_title = "#{@alert_rule.name} — StorageFinder"
+    @page_title = "#{@alert_rule.name}, StorageFinder"
   end
   # `end` closes the `def show` action definition opened above.
 
   # `new` is the conventional action for "show a blank form to create a
   # record" (GET /alert_rules/new). Unlike show/edit/update/destroy, `new`
   # is NOT in the before_action list, because there's no existing record to
-  # load yet — this action builds a brand new, unsaved one instead.
+  # load yet, this action builds a brand new, unsaved one instead.
   def new
-    # `AlertRule.new` builds a new AlertRule object in memory ONLY — it does
+    # `AlertRule.new` builds a new AlertRule object in memory ONLY, it does
     # NOT save anything to the database yet. This lets the form view
     # reference `@alert_rule.name`, `@alert_rule.trigger_type`, etc., for
     # blank input fields without erroring on a missing record.
     @alert_rule = AlertRule.new
-    @page_title = "New Alert Rule — StorageFinder"
+    @page_title = "New Alert Rule, StorageFinder"
   end
   # `end` closes the `def new` action definition opened above.
 
   # `create` is the conventional action that actually saves a new record
-  # (POST /alert_rules) — this is what runs when the "new alert rule" form
+  # (POST /alert_rules), this is what runs when the "new alert rule" form
   # from the `new` action above gets submitted.
   def create
     # Builds a new, unsaved AlertRule using only the specific fields
     # whitelisted by `alert_rule_params` below (never raw, unfiltered
-    # `params` — see that method's comments for why).
+    # `params`, see that method's comments for why).
     @alert_rule = AlertRule.new(alert_rule_params)
 
     # `.save` attempts to write the record to the database and returns
@@ -84,13 +84,13 @@ class AlertRulesController < ApplicationController
     # true/false result.
     if @alert_rule.save
       # `flash` is Rails' mechanism for a one-time message that survives
-      # exactly one redirect, then disappears — perfect for "success!"
+      # exactly one redirect, then disappears, perfect for "success!"
       # banners after a form submission. `flash[:notice]` sets it under the
       # `:notice` key, which the layout template renders as a positive/info
       # style message.
       flash[:notice] = "Alert rule '#{@alert_rule.name}' created."
       # `redirect_to` tells the browser to make a brand-new GET request to
-      # a different URL (here, the alert rules listing page) — this is
+      # a different URL (here, the alert rules listing page), this is
       # different from `render` (used in the `else` branch below), which
       # sends back a page directly without a second round-trip to the
       # browser. `alert_rules_path` is a Rails-generated helper method that
@@ -98,12 +98,12 @@ class AlertRulesController < ApplicationController
       # config/routes.rb).
       redirect_to alert_rules_path
     else
-      # Save failed — build an error message so the re-rendered form can
+      # Save failed, build an error message so the re-rendered form can
       # show what went wrong. `flash.now[:alert]` differs from plain
       # `flash[:alert]`: `.now` makes the message available ONLY for the
       # page rendered in THIS same request/response cycle (via `render`
       # just below), not carried over to a future request the way
-      # `redirect_to`-paired flash messages are — appropriate here since
+      # `redirect_to`-paired flash messages are, appropriate here since
       # we're NOT redirecting.
       # `@alert_rule.errors.full_messages` returns an array of human-
       # readable validation error strings (e.g. "Name can't be blank");
@@ -116,7 +116,7 @@ class AlertRulesController < ApplicationController
       # object) and the error message are shown together. `status:
       # :unprocessable_entity` sets the HTTP response status code to 422,
       # the conventional code meaning "the request was well-formed but
-      # failed validation" — this matters for JavaScript/browsers that
+      # failed validation", this matters for JavaScript/browsers that
       # check the status code to know a submission failed.
       render :new, status: :unprocessable_entity
     end
@@ -128,12 +128,12 @@ class AlertRulesController < ApplicationController
   # /alert_rules/:id/edit). `set_alert_rule` (via before_action) has
   # already loaded `@alert_rule` by this point.
   def edit
-    @page_title = "Edit #{@alert_rule.name} — StorageFinder"
+    @page_title = "Edit #{@alert_rule.name}, StorageFinder"
   end
   # `end` closes the `def edit` action definition opened above.
 
   # `update` saves changes to an existing record (PATCH/PUT
-  # /alert_rules/:id) — submitted from the `edit` form above.
+  # /alert_rules/:id), submitted from the `edit` form above.
   def update
     # `.update(...)` on an ALREADY-LOADED record (unlike `.save` on a brand
     # new one in `create`) both assigns the given attributes AND saves them
@@ -166,20 +166,58 @@ class AlertRulesController < ApplicationController
   end
   # `end` closes the `def destroy` action definition opened above.
 
-  # `private` marks every method below as internal to this class — not
+  # `destroy_selected` bulk-deletes several alert rules in one request,
+  # mirrors CrawlsController#destroy_selected (see that method's own
+  # comments for the fuller explanation of each step; unlike crawl records,
+  # every alert rule is always safely deletable regardless of state, so
+  # there's no "skip still-running ones" branch here to mirror).
+  def destroy_selected
+    ids = Array(params[:ids]).map(&:to_i).reject(&:zero?)
+
+    if ids.empty?
+      respond_to do |format|
+        format.html {
+          flash[:alert] = "No alert rules were selected."
+          redirect_to alert_rules_path
+        }
+        format.json { render json: { error: "No ids given" }, status: :unprocessable_entity }
+      end
+      return
+    end
+    # `end` closes the `if ids.empty?` block above.
+
+    # `.where(id: ids)` scopes down to just the selected rows before
+    # counting/destroying, so a stale/tampered id that doesn't exist (or
+    # belongs to some other table) can't inflate the reported count.
+    deleted_count = AlertRule.where(id: ids).count
+    AlertRule.where(id: ids).destroy_all
+
+    message = "Deleted #{deleted_count} alert rule#{"s" unless deleted_count == 1}."
+
+    respond_to do |format|
+      format.html {
+        flash[:notice] = message
+        redirect_to alert_rules_path
+      }
+      format.json { render json: { message: message, deleted: deleted_count } }
+    end
+  end
+  # `end` closes the `def destroy_selected` action definition opened above.
+
+  # `private` marks every method below as internal to this class, not
   # directly reachable as a URL/action, and not callable from outside this
   # controller. `set_alert_rule` and `alert_rule_params` below are
   # implementation details supporting the public actions above them.
   private
 
   # This is the method wired up by `before_action :set_alert_rule` at the
-  # top of the file — it runs automatically before show/edit/update/destroy
+  # top of the file, it runs automatically before show/edit/update/destroy
   # to load the specific record those actions operate on.
   def set_alert_rule
     # `params` is a hash-like object Rails builds from the incoming
     # request's URL segments, query string, and form/JSON body.
     # `params[:id]` reads the `:id` segment (e.g. the "5" in
-    # /alert_rules/5) — Rails' routes wire up `:id` as part of the URL
+    # /alert_rules/5), Rails' routes wire up `:id` as part of the URL
     # pattern for these RESTful routes. `AlertRule.find(...)` looks up the
     # single database row with that primary key, raising an error
     # (ActiveRecord::RecordNotFound) if no such row exists.
@@ -196,17 +234,17 @@ class AlertRulesController < ApplicationController
   # clause above is part of the same method, not a separate block).
 
   # Defines the whitelist of form fields allowed to be mass-assigned into an
-  # AlertRule when creating/updating one — used by both `create` and
+  # AlertRule when creating/updating one, used by both `create` and
   # `update` above. This is Rails' "strong parameters" pattern: it exists so
   # a malicious or malformed request can't sneak in extra fields (e.g. an
   # `:id` or some other column) that the form was never meant to submit.
   def alert_rule_params
     # `params.require(:alert_rule)` asserts the incoming params MUST
     # contain a top-level `:alert_rule` key (matching how Rails form
-    # helpers nest fields, e.g. `alert_rule[name]`) — raising an error if
+    # helpers nest fields, e.g. `alert_rule[name]`), raising an error if
     # it's missing, since something is badly wrong with the request if it's
     # not there. `.permit(...)` then filters that nested hash down to ONLY
-    # the explicitly listed field names, silently dropping anything else —
+    # the explicitly listed field names, silently dropping anything else,
     # each symbol below names one allowed field/database column.
     params.require(:alert_rule).permit(
       :name, :trigger_type, :threshold_price,
@@ -214,10 +252,10 @@ class AlertRulesController < ApplicationController
       :email_enabled, :email_address,
       :discord_enabled, :discord_webhook_url,
       :sms_enabled, :sms_phone_number,
-      :active
+      :active, :cooldown_minutes
     )
     # The multi-line list above is one single method call to `.permit`,
-    # split across lines for readability — Ruby doesn't require each
+    # split across lines for readability, Ruby doesn't require each
     # argument on its own line, but allows it.
   end
   # `end` closes the `def alert_rule_params` method definition opened above.
