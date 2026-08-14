@@ -59,13 +59,14 @@ covered up to the point where a browser would actually be needed.
 
 ## Environments
 
-This app has three environments, each with its own settings file under
-`config/environments/` and — for the two that get deployed — its own
+This app has four environments, each with its own settings file under
+`config/environments/` and, for the three that get deployed, its own
 isolated data:
 
 | Environment  | `RAILS_ENV`  | Where it runs                          | Data files |
 |--------------|--------------|-----------------------------------------|------------|
 | `development`| `development`| Your own machine, via `./start.sh`      | `storage/development.sqlite3` |
+| `dev`        | `dev`        | The same LAN server as production (192.168.0.1), as a separate container | `storage/dev*.sqlite3` |
 | `staging`    | `staging`    | The same LAN server as production (192.168.0.1), as a separate container | `storage/staging*.sqlite3` |
 | `production` | `production` | The LAN server (192.168.0.1), the real deploy | `storage/production*.sqlite3` |
 
@@ -79,6 +80,17 @@ the works — but against entirely separate data (`config/database.yml`'s
 `staging:` block points at `storage/staging*.sqlite3`, never touching
 `storage/production*.sqlite3`) and a separate Kamal-managed container
 (`config/deploy.staging.yml`, a Kamal "destination" file — see below).
+
+**`dev` is one rung below staging**: a throwaway container for previewing
+whatever's on a branch before it's worth a staging rehearsal, let alone a
+real deploy. `config/environments/dev.rb` mirrors production/staging the
+same way staging mirrors production, and `config/database.yml`'s `dev:`
+block and `config/deploy.dev.yml` give it the same file/container/volume
+isolation staging gets. The one deliberate difference: dev's Kamal
+destination doesn't get the `job:` role staging and production have, so
+recurring/scheduled-crawl work (see "Background jobs & the scheduler"
+below) doesn't run there, that's not the point of a container meant to be
+redeployed constantly and thrown away.
 
 ### Deploying staging
 
@@ -117,6 +129,37 @@ This prints Kamal's fully-merged configuration (base `config/deploy.yml` +
 `config/deploy.staging.yml`) and will fail loudly if anything doesn't
 validate — a good pre-flight check before ever opening an SSH connection.
 
+### Deploying dev
+
+```
+bin/kamal deploy -d dev
+```
+
+Same idea as staging, one destination file further out:
+`config/deploy.dev.yml` deploys a third, independent container
+(`storagefinder-dev`, its own image name, its own
+`storagefinder_dev_storage` volume) to the same physical server, reachable
+at its own Host header (`storagefinder-dev.local`, same "send the Host
+header explicitly" caveat as staging above, mDNS only ever announces
+`storagefinder.local`). It touches neither staging's nor production's
+container, volume, or data.
+
+Unlike staging, dev's `servers:` list is a plain array rather than a
+`web:`/`job:` role map, that's what actually drops the `job:` role for
+this destination (see `config/deploy.dev.yml`'s own comment on this if
+you're ever tempted to "simplify" it back to the role-map form, a role
+map merges with the base config instead of replacing it, and would
+silently bring the job container back). Verify the merged config the same
+way as staging, before ever deploying for real:
+
+```
+bin/kamal config -d dev
+```
+
+**Important:** same LAN-only caveat as staging, `bin/kamal deploy -d dev`
+must be run from the repo owner's own machine on the same network as
+192.168.0.1.
+
 ## Deployment (Kamal)
 
 This app deploys as a Docker container via [Kamal](https://kamal-deploy.org).
@@ -127,14 +170,39 @@ This app deploys as a Docker container via [Kamal](https://kamal-deploy.org).
    `RAILS_MASTER_KEY` from it (`RAILS_MASTER_KEY=$(cat config/master.key)`).
    **Never commit `config/master.key`** (it's gitignored already).
 3. `bin/kamal setup` the first time, `bin/kamal deploy` after that.
-4. For a staging rehearsal instead of a real production deploy, add
-   `-d staging` to any Kamal command (e.g. `bin/kamal deploy -d staging`) —
-   see the "Environments" section above.
+4. For a staging rehearsal or a disposable dev preview instead of a real
+   production deploy, add `-d staging` or `-d dev` to any Kamal command
+   (e.g. `bin/kamal deploy -d dev`), see the "Environments" section above.
 
 Data (SQLite database, Active Storage files) persists across deploys via the
-`storagefinder_storage` volume declared in `config/deploy.yml` (production)
-or the separate `storagefinder_staging_storage` volume declared in
-`config/deploy.staging.yml` (staging).
+`storagefinder_storage` volume declared in `config/deploy.yml` (production),
+the separate `storagefinder_staging_storage` volume declared in
+`config/deploy.staging.yml` (staging), or the separate
+`storagefinder_dev_storage` volume declared in `config/deploy.dev.yml`
+(dev).
+
+### Background jobs & the scheduler
+
+Production and staging run background jobs through
+[Solid Queue](https://github.com/rails/solid_queue) instead of the
+in-process `:async` adapter development uses, `config/deploy.yml` deploys
+a second container (the `job:` role, running `bin/jobs`) alongside the
+normal web container specifically to run it. This is what makes the
+Settings page's "Enable scheduled automatic crawls" toggle actually work:
+`config/recurring.yml` has Solid Queue run `ScheduledCrawlCheckJob`
+(`app/jobs/scheduled_crawl_check_job.rb`) once a minute; it checks
+`schedule_enabled`/`schedule_cron`/`schedule_city`/`schedule_radius_miles`
+against the current time and, when they match, kicks off a crawl exactly
+like clicking "Run Crawl" would. If you deploy with `bin/kamal setup`, both
+roles get created automatically; if you're upgrading an existing deploy,
+re-run `bin/kamal setup` (not just `deploy`) so the new `job:` role's
+container gets created.
+
+dev does **not** get a `job:` role (see "Environments" above), so
+scheduled crawls won't fire there even if the Settings toggle is on,
+crawls still run fine when triggered manually from the dashboard, jobs
+just enqueue into dev's own Solid Queue tables and sit there unprocessed
+until something reads them.
 
 ### CI
 
@@ -153,3 +221,17 @@ it, the app can't decrypt credentials at boot and the job fails.
   data is kept; older records are purged automatically after each crawl.
 - This is built for one trusted user on a LAN, not multi-tenant or
   public-internet use.
+- `config/cable.yml`, `config/queue.yml`, and `config/recurring.yml` only
+  define explicit sections for `production` (`cable.yml` also has
+  `development`/`test`). Neither `staging` nor `dev` has its own section
+  in any of the three. `config/database.yml`'s `staging: cable:` block
+  comment covers the practical effect: Action Cable falls back to its own
+  default adapter (which needs the `redis` gem, not in this app's
+  Gemfile) rather than `solid_cable`, so a real WebSocket connection
+  under `RAILS_ENV=staging` or `RAILS_ENV=dev` would error. `queue.yml`'s
+  gap is harmless (Solid Queue falls back to the same worker/dispatcher
+  defaults `queue.yml` already sets). `recurring.yml`'s gap has not been
+  exercised in staging, since no live server exists yet to run
+  `bin/kamal deploy -d staging` for real; dev sidesteps it entirely by
+  not running a `job:` role at all. Worth fixing before either tier is
+  actually deployed and exercised for real.

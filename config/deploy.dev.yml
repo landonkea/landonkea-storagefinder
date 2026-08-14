@@ -1,0 +1,68 @@
+# config/deploy.dev.yml — a Kamal "destination" file, same mechanism as
+# config/deploy.staging.yml. Running `bin/kamal <command> -d dev` reads
+# this file and deep-merges it on top of the base config/deploy.yml; every
+# setting not overridden below (registry, the RAILS_MASTER_KEY secret,
+# builder arch, aliases, asset_path, ...) is inherited unchanged.
+#
+# What "dev" is: the first, most disposable rung of this app's deploy
+# ladder (dev -> staging -> production, see config/environments/dev.rb).
+# Where staging exists to rehearse an exact production deploy, dev exists
+# to preview whatever's currently on a branch, before it's even considered
+# release-worthy. Same single-LAN-server reality as staging: there's one
+# physical machine (192.168.0.1), so "dev" means "a third isolated
+# container on that one machine," not a separate box.
+#
+# NOTE, same one as config/deploy.staging.yml carries: no live server is
+# configured anywhere in this app yet (192.168.0.1 is a placeholder LAN
+# address). This file defines the pipeline shape, not a working deploy —
+# see BUILD_LOG.md for what's config-only versus what still needs a real
+# server before `bin/kamal setup -d dev` could actually run.
+
+service: storagefinder-dev
+
+image: storagefinder-dev
+
+servers:
+  - 192.168.0.1
+
+# CORRECTNESS NOTE for whoever edits this next: the flat list above
+# ("- 192.168.0.1", no "web:" key) is deliberate, not a simplification.
+# The base config/deploy.yml defines two roles, "web" and "job" (a second
+# container running `bin/jobs` for the scheduled-crawl feature, see
+# config/recurring.yml). Kamal deep-merges destination files onto the
+# base config, and Ruby's deep_merge only recurses into matching Hashes —
+# writing "servers: { web: [...] }" here (a Hash, same shape as the base)
+# would merge key-by-key and leave the base's "job:" entry untouched,
+# meaning dev would silently inherit a job container anyway (confirmed
+# with `bin/kamal config -d dev`, before this was caught: it listed both
+# "job" and "web" under :roles even though this file never mentions
+# "job:" at all). Overriding "servers:" with a plain ARRAY instead is a
+# different data type than the base's Hash, so deep_merge treats it as a
+# full replacement rather than a per-key merge, that's what actually
+# drops the job role for dev (`bin/kamal config -d dev` now lists only
+# "web" under :roles). Recurring/scheduled-crawl background work isn't
+# the point of a throwaway preview container, and one fewer container per
+# dev deploy keeps it cheap to redeploy often, so this was the intended
+# behavior all along, it just needed the array form to actually work. If
+# dev ever needs its own job role, switch back to the "web:"/"job:" Hash
+# form and add a "job:" entry explicitly (copying it from config/deploy.
+# yml), don't rely on inheriting the base's.
+
+# Own host, so kamal-proxy routes dev traffic separately from both
+# production's catch-all and staging's "storagefinder-staging.local".
+# Same caveat as staging: config/initializers/mdns.rb only ever announces
+# "storagefinder.local" over mDNS, so this hostname won't resolve on its
+# own — send the Host header explicitly, e.g.:
+#   curl -H "Host: storagefinder-dev.local" http://192.168.0.1/
+proxy:
+  host: storagefinder-dev.local
+
+env:
+  clear:
+    RAILS_ENV: dev
+
+# Own volume, so dev's SQLite files (storage/dev*.sqlite3, per config/
+# database.yml's "dev:" block) never share a disk location with staging's
+# or production's.
+volumes:
+  - "storagefinder_dev_storage:/rails/storage"
