@@ -68,7 +68,7 @@ module ApplicationCable
       # slowly narrow down the real password one character at a time. `.to_s`
       # above guards against `nil` (e.g. credentials never configured, or no
       # Authorization header at all giving `username`/`password` as `nil`)
-      #, `secure_compare` requires real strings, and comparing two empty
+      # , `secure_compare` requires real strings, and comparing two empty
       # strings is safely just "not a match" rather than raising an error.
       return true if username.present? &&
         ActiveSupport::SecurityUtils.secure_compare(username.to_s, expected_username) &&

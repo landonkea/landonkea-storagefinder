@@ -151,7 +151,7 @@ class Companies::SmartStop < Companies::BaseParser
           # "Multiple assignment": calls the private helper (defined near
           # the bottom of this file), which returns a 3-element Array, and
           # Ruby unpacks it into three separate local variables in one line
-          #, equivalent to writing `parts = parse_city_state_zip(...);
+          # , equivalent to writing `parts = parse_city_state_zip(...);
           # city = parts[0]; state = parts[1]; zip = parts[2]` by hand.
 
           next if street.blank?
@@ -319,7 +319,7 @@ class Companies::SmartStop < Companies::BaseParser
               web_special_note = badge_text.split(/Move-In Costs/i).first.to_s.strip.presence
               # `.split(regex)` breaks the string at every place matching
               # `/Move-In Costs/i` (the `i` flag makes it case-insensitive)
-              #, `.first` takes the piece BEFORE that marker (the actual
+              # , `.first` takes the piece BEFORE that marker (the actual
               # promo headline), `.to_s` guards against `nil` if the split
               # produced nothing, `.strip` trims whitespace, and `.presence`
               # (Rails helper) converts an empty result to `nil` rather than
@@ -345,7 +345,7 @@ class Companies::SmartStop < Companies::BaseParser
 
             web_special_note ||= safe_text(card, ".unit-card__cost__web__online-rate")
             # `||=` is Ruby's "assign only if currently nil/false" operator
-            #, only runs the right-hand `safe_text` lookup and reassigns
+            # , only runs the right-hand `safe_text` lookup and reassigns
             # `web_special_note` if it's still `nil` at this point (i.e. the
             # badge text above didn't produce a usable note), giving a
             # second chance to find promo text from a different element.

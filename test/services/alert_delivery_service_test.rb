@@ -4,7 +4,7 @@
 require "test_helper"
 
 # This file tests AlertDeliveryService (app/services/alerting/alert_delivery_service.rb)
-#, the class responsible for actually sending an alert notification via
+# , the class responsible for actually sending an alert notification via
 # email and/or Discord, once AlertMessageBuilder has built the message
 # content and AlertCheckerJob has decided a rule fired.
 class AlertDeliveryServiceTest < ActiveSupport::TestCase

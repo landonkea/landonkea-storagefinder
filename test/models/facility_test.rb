@@ -80,7 +80,7 @@ class FacilityTest < ActiveSupport::TestCase
     # `Facility.new(...)` builds a brand-new, unsaved record (not a
     # duplicate of `existing` this time, but a fresh Hash of attributes)
     # that intentionally reuses `existing.external_id` for the SAME company
-    #, this should trip the model's uniqueness validation.
+    # , this should trip the model's uniqueness validation.
     dup = Facility.new(
       company: existing.company, name: "Dup", address: "999 Other Rd",
       city: "Gilbert", state: "AZ", zip: "85296", external_id: existing.external_id
@@ -176,7 +176,7 @@ class FacilityTest < ActiveSupport::TestCase
   test "distance_label formats distance or falls back to Unknown" do
     facility = facilities(:gilbert_public_storage)
     # The fixture has `distance_miles: 0.5` (see test/fixtures/facilities.yml)
-    #, distance_label (see app/models/facility.rb) formats it to one
+    # , distance_label (see app/models/facility.rb) formats it to one
     # decimal place with a "miles" suffix.
     assert_equal "0.5 miles", facility.distance_label
 

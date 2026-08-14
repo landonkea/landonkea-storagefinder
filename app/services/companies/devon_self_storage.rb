@@ -295,7 +295,7 @@ class Companies::DevonSelfStorage < Companies::BaseParser
         # parsing of one card.
       end
       # `end` closes the `cards.each_with_index do |card, idx| ... end` loop
-      #, every card has now been processed.
+      # , every card has now been processed.
 
     rescue Playwright::TimeoutError => e
       # This OUTER rescue only catches errors of the specific type

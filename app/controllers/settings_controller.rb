@@ -300,7 +300,7 @@ class SettingsController < ApplicationController
   # TEST DISCORD, send a test message to verify the Discord webhook
   # ---------------------------------------------------------------------------
   # `test_discord` mirrors `test_email` above, but for Discord notifications
-  #, Discord webhooks are simple HTTP POST endpoints, so this sends a real
+  # , Discord webhooks are simple HTTP POST endpoints, so this sends a real
   # HTTP request directly rather than going through AlertDeliveryService.
   def test_discord
     webhook_url = Setting.get("discord_webhook_url")

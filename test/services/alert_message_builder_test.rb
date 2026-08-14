@@ -4,7 +4,7 @@
 require "test_helper"
 
 # This file tests AlertMessageBuilder (app/services/alerting/alert_message_builder.rb)
-#, the class that formats the subject/text/HTML/SMS content of an alert
+# , the class that formats the subject/text/HTML/SMS content of an alert
 # notification, given an AlertRule and a list of units that triggered it.
 # It does NOT test delivery (that's AlertDeliveryService, covered in
 # alert_delivery_service_test.rb), just the message content itself.
@@ -13,7 +13,7 @@ class AlertMessageBuilderTest < ActiveSupport::TestCase
   # shared by every test below. It builds a small Array of Hashes matching
   # the shape AlertCheckerJob passes into AlertMessageBuilder.build (see
   # app/jobs/alert_checker_job.rb's `triggered_units << { unit:, previous_price: }`)
-  #, one entry per unit that "triggered" an alert, each holding the Unit
+  # , one entry per unit that "triggered" an alert, each holding the Unit
   # record itself plus its price from the previous crawl (or nil if there
   # was none).
   def triggered_units

@@ -258,7 +258,7 @@ class CrawlJob < ApplicationJob
     # keyword, catching errors raised ANYWHERE in the method above.
     # ActiveRecord::RecordNotFound here specifically means the very first
     # `CrawlRun.find(crawl_run_id)` call at the top of this method failed
-    #, since crawl_run was never successfully assigned, there's nothing
+    # , since crawl_run was never successfully assigned, there's nothing
     # meaningful this rescue block can update; it just logs and stops.
     Rails.logger.error("[CrawlJob] CrawlRun ##{crawl_run_id} not found: #{e.message}")
 
@@ -920,7 +920,7 @@ class CrawlJob < ApplicationJob
     #
     # `CompanyRegistry.build_parser` (called above) raises
     # ArgumentError if `company_name` isn't a registered company
-    #, this branch catches that specific case.
+    # , this branch catches that specific case.
     crawl_run.log_error(
       "No parser found for '#{company_name}': #{e.message}",
       company: company_name

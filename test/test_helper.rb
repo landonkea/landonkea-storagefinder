@@ -138,7 +138,7 @@ module ActiveSupport
     #                    is how it's used elsewhere in this app's tests,
     #                    the lambda IS the `implementation` argument here).
     # This method ALSO implicitly expects the caller to pass a second block
-    #, the real test code that should run while the method is patched,
+    # , the real test code that should run while the method is patched,
     # which is invoked below via `yield`.
     def stub_any_instance(klass, method_name, implementation)
       # `klass.instance_method(method_name)` looks up the CURRENT (real,

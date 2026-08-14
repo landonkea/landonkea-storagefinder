@@ -122,7 +122,7 @@ class ExportsController < ApplicationController
       format.xlsx {
         # Sets the Content-Disposition response header directly (rather
         # than via `send_data`'s `disposition:` option, as `csv` did above)
-        #, same effect: it tells the browser to download the response as
+        # , same effect: it tells the browser to download the response as
         # a file with this name, rather than displaying it inline.
         response.headers["Content-Disposition"] = "attachment; filename=#{filename}"
       }

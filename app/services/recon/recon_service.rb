@@ -71,7 +71,7 @@ class ReconService
   # CLASS METHOD, the main entry point
   # ---------------------------------------------------------------------------
   # `company_name: nil` is a keyword argument with a default value of nil
-  #, callers may omit it, in which case the class will try to guess a
+  # , callers may omit it, in which case the class will try to guess a
   # company name from the URL itself (see extract_company_name below).
   def self.run(url, company_name: nil)
     # Same convenience pattern seen in the other service objects in this
@@ -632,7 +632,7 @@ class ReconService
         # running count by 1 in the class_counts hash.
         classes.each { |c| class_counts[c] += 1 }
         # `{ |c| ... }` here is the same kind of block as `do |c| ... end`
-        #, Ruby allows curly-brace blocks as a compact alternative syntax
+        # , Ruby allows curly-brace blocks as a compact alternative syntax
         # for short, single-line blocks.
       rescue
       end

@@ -394,7 +394,7 @@ class Companies::IStorage < Companies::BaseParser
           # unit).
           indoor               = !drive_up if features.empty?
           # A SECOND assignment to `indoor`, only applied `if features.empty?`
-          #, i.e. this line only runs (overwriting the value computed just
+          # , i.e. this line only runs (overwriting the value computed just
           # above) when there was no feature text at all to go on, in which
           # case we fall back to the simplest possible guess: "indoor unless
           # we know it's drive-up." See the "flag but don't fix" notes at

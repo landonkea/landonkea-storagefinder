@@ -50,7 +50,7 @@ Rails.application.configure do
   # autoloading itself). Eager loading makes BOOT slower but each individual
   # request slightly faster and more predictable (nothing needs to be
   # loaded mid-request). `false` here means development skips eager loading
-  #, fast restarts matter more than per-request speed while coding.
+  # , fast restarts matter more than per-request speed while coding.
   # Do not eager load code on boot.
   config.eager_load = false
 
@@ -129,7 +129,7 @@ Rails.application.configure do
   # upload framework) needs to know WHICH named service configuration from
   # config/storage.yml to actually use. `:local` is a Ruby Symbol selecting
   # the "local" entry in that file, which, per storage.yml's own comments
-  #, stores uploaded files as plain files on this machine's own disk,
+  # , stores uploaded files as plain files on this machine's own disk,
   # under the app's storage/ directory, rather than a cloud service like S3.
   # Store uploaded files on the local file system (see config/storage.yml for options).
   config.active_storage.service = :local

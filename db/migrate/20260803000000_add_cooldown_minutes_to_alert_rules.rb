@@ -22,7 +22,7 @@
 # already-applied migration with an earlier timestamp.
 class AddCooldownMinutesToAlertRules < ActiveRecord::Migration[8.1]
   # `change` is the conventional method name Rails looks for in a migration
-  #, it describes the schema change to make, and (for simple,
+  # , it describes the schema change to make, and (for simple,
   # automatically-reversible operations like `add_column`) Rails can also
   # figure out how to UNDO this same change if the migration is ever rolled
   # back, without a separate `down` method needing to be written by hand.

@@ -3,13 +3,13 @@
 require "test_helper"
 
 # This file tests ScheduledCrawlCheckJob (app/jobs/scheduled_crawl_check_job.rb)
-#, the job that wires the schedule_enabled/schedule_cron/schedule_city/
+# , the job that wires the schedule_enabled/schedule_cron/schedule_city/
 # schedule_radius_miles Setting rows up to an actual triggered crawl. See
 # that job's own top comment for the full "why" behind how it's built.
 class ScheduledCrawlCheckJobTest < ActiveSupport::TestCase
   # `include ActiveSupport::Testing::TimeHelpers` adds `travel_to`, used
   # below to pin "the current time" to an exact, known moment for each test
-  #, without this, whether a given cron expression "matches now" would
+  # , without this, whether a given cron expression "matches now" would
   # depend on the literal wall-clock second the test happens to run, making
   # these tests flaky.
   include ActiveSupport::Testing::TimeHelpers

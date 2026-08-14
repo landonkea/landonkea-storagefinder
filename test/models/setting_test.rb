@@ -5,7 +5,7 @@
 require "test_helper"
 
 # An automated test suite for the Setting model (see app/models/setting.rb)
-#, a simple key/value configuration store used throughout this app instead
+# , a simple key/value configuration store used throughout this app instead
 # of hardcoded config files. `class SettingTest < ActiveSupport::TestCase`
 # inherits from Rails' base test class, providing the `test "..." do ... end`
 # syntax below, the `assert_*`/`refute_*` assertion methods, and fixture

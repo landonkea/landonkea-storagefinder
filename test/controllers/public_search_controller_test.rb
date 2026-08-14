@@ -8,7 +8,7 @@ require "test_helper"
 # controller in this app, which test_helper.rb auto-authenticates). Every
 # test below that wants to prove "no auth needed" does so explicitly by
 # overriding the auto-injected header with `headers: { "HTTP_AUTHORIZATION" => nil }`
-#, the same pattern test/controllers/authentication_test.rb uses to prove
+# , the same pattern test/controllers/authentication_test.rb uses to prove
 # the OPPOSITE (that the admin gate rejects unauthenticated requests).
 class PublicSearchControllerTest < ActionDispatch::IntegrationTest
   # ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ class PublicSearchControllerTest < ActionDispatch::IntegrationTest
 
   test "index filters by unit size" do
     # Only mesa_extra_space has any 10x15 units (see test/fixtures/units.yml)
-    #, gilbert_public_storage only has 10x10s.
+    # , gilbert_public_storage only has 10x10s.
     get public_search_path, params: { sizes: [ "10x15" ] }
     assert_response :success
     assert_match facilities(:mesa_extra_space).name, response.body

@@ -297,7 +297,7 @@ module Storagefinder
       # follow Zeitwerk's one-file-one-constant convention (Companies::YourCompanyName
       # in a file named TEMPLATE.rb), so exclude it from autoloading entirely.
       # `.ignore(...)` tells Zeitwerk to skip this exact file path entirely
-      #, never attempt to autoload it as a constant at all, which is a
+      # , never attempt to autoload it as a constant at all, which is a
       # stronger exclusion than `.collapse` above (`.collapse` still
       # autoloads files in that directory, just under a flattened/different
       # namespace; `.ignore` means Zeitwerk pretends this file doesn't

@@ -406,7 +406,7 @@ class Companies::CubeSmart < Companies::BaseParser
             monthly_price = discount_price || original_price
             # Otherwise (only one price was found, or they're equal), just
             # use whichever price is available as the single monthly_price
-            #, `||` falls back to `original_price` if `discount_price` is
+            # , `||` falls back to `original_price` if `discount_price` is
             # nil.
           end
           # `end` closes the `if ... else ... end` branch.

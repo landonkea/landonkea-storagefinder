@@ -47,7 +47,7 @@ class CrawlsControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
     # `CrawlRun.order(:created_at).last` sorts all CrawlRun rows by their
     # `created_at` timestamp ascending and takes the last (most recent) one
-    #, i.e. "the crawl row that was just created by the request above."
+    # , i.e. "the crawl row that was just created by the request above."
     # `.search_city` reads its search_city column, confirming the value we
     # submitted was actually persisted correctly.
     assert_equal "Tempe, Arizona", CrawlRun.order(:created_at).last.search_city

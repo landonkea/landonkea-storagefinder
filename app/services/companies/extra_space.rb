@@ -315,7 +315,7 @@ class Companies::ExtraSpace < Companies::BaseParser
       # ourselves. This just tells us the tab exists (useful for debugging
       # if needed).
       # NOTE: `cc_tab` is assigned here but never read again anywhere below
-      #, see the "flag but don't fix" notes at the end of this review; as
+      # , see the "flag but don't fix" notes at the end of this review; as
       # written, this line performs a page lookup whose result is discarded.
 
       # Find all unit rows/cards on the page.
@@ -389,7 +389,7 @@ class Companies::ExtraSpace < Companies::BaseParser
           unavailable = el.get_attribute("data-available") == "false" ||
                         el.query_selector(".sold-out, .unavailable, [data-status='unavailable']").present?
           # `.present?` here is called on whatever `query_selector` returns
-          #, a Playwright element object or `nil`; `.present?` (from Rails,
+          # , a Playwright element object or `nil`; `.present?` (from Rails,
           # via ActiveSupport being loaded everywhere in this Rails app) is
           # true for anything that isn't nil/blank, so this is true only if
           # a matching "sold out"/"unavailable" element was actually found.

@@ -82,7 +82,7 @@ class AlertCheckerJob < ApplicationJob
       "Previous crawl: #{previous_run ? "##{previous_run.id}" : "none (first crawl)"}"
       # `previous_run ? "##{previous_run.id}" : "none (first crawl)"` is a
       # ternary conditional (`condition ? value_if_true : value_if_false`)
-      #, shorthand for a full if/else, used here inline inside the string
+      # , shorthand for a full if/else, used here inline inside the string
       # interpolation to describe the previous run or say there wasn't one.
     )
 

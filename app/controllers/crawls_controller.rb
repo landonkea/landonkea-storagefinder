@@ -241,7 +241,7 @@ class CrawlsController < ApplicationController
     @crawl_run = CrawlRun.find(params[:id])
     # `.crawl_log_entries` is an ActiveRecord association, a method Rails
     # generates from the model's `has_many :crawl_log_entries` declaration
-    #, returning every CrawlLogEntry row linked to this crawl.
+    # , returning every CrawlLogEntry row linked to this crawl.
     # `.order(:created_at)` sorts them oldest-first.
     @log_entries = @crawl_run.crawl_log_entries.order(:created_at)
     @page_title = "Crawl ##{@crawl_run.id}, StorageFinder"

@@ -104,7 +104,7 @@ if !Rails.env.test?
         # `"_http._tcp"` (a String naming the standard mDNS service-type
         # code for "a web server reachable over TCP", other services, like
         # printers, use different codes); `nil` (the domain to register in
-        #, `nil` means "use the default," normally "local"); and `port`
+        # , `nil` means "use the default," normally "local"); and `port`
         # (the local variable holding the port number computed above).
         # `do |reply| ... end` is a block that DNSSD will call once
         # registration succeeds, receiving a `reply` object describing the

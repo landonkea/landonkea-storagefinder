@@ -85,7 +85,7 @@ class Companies::UHaul < Companies::BaseParser
     # String interpolation joins city and state with a literal hyphen (e.g.
     # "San Tan Valley-AZ"), then `.gsub(/\s+/, "-")` globally replaces every
     # run of one-or-more whitespace characters (`\s+`) with a single hyphen
-    #, turning "San Tan Valley-AZ" into "San-Tan-Valley-AZ", matching the
+    # , turning "San Tan Valley-AZ" into "San-Tan-Valley-AZ", matching the
     # hyphenated path segment U-Haul's own search box produces.
     "#{BASE_URL}/Storage/#{ERB::Util.url_encode(slug)}/Results/"
     # Builds the final URL. `ERB::Util.url_encode` percent-encodes the slug
