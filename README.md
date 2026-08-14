@@ -137,17 +137,6 @@ recurring/scheduled-crawl work (see "Background jobs & the scheduler"
 below) doesn't run there, that's not the point of a container meant to be
 redeployed constantly and thrown away.
 
-**`dev` is one rung below staging**: a throwaway container for previewing
-whatever's on a branch before it's worth a staging rehearsal, let alone a
-real deploy. `config/environments/dev.rb` mirrors production/staging the
-same way staging mirrors production, and `config/database.yml`'s `dev:`
-block and `config/deploy.dev.yml` give it the same file/container/volume
-isolation staging gets. The one deliberate difference: dev's Kamal
-destination doesn't get the `job:` role staging and production have, so
-recurring/scheduled-crawl work (see "Background jobs & the scheduler"
-below) doesn't run there, that's not the point of a container meant to be
-redeployed constantly and thrown away.
-
 ### Deploying staging
 
 ```
@@ -184,37 +173,6 @@ bin/kamal config -d staging
 This prints Kamal's fully-merged configuration (base `config/deploy.yml` +
 `config/deploy.staging.yml`) and will fail loudly if anything doesn't
 validate, a good pre-flight check before ever opening an SSH connection.
-
-### Deploying dev
-
-```
-bin/kamal deploy -d dev
-```
-
-Same idea as staging, one destination file further out:
-`config/deploy.dev.yml` deploys a third, independent container
-(`storagefinder-dev`, its own image name, its own
-`storagefinder_dev_storage` volume) to the same physical server, reachable
-at its own Host header (`storagefinder-dev.local`, same "send the Host
-header explicitly" caveat as staging above, mDNS only ever announces
-`storagefinder.local`). It touches neither staging's nor production's
-container, volume, or data.
-
-Unlike staging, dev's `servers:` list is a plain array rather than a
-`web:`/`job:` role map, that's what actually drops the `job:` role for
-this destination (see `config/deploy.dev.yml`'s own comment on this if
-you're ever tempted to "simplify" it back to the role-map form, a role
-map merges with the base config instead of replacing it, and would
-silently bring the job container back). Verify the merged config the same
-way as staging, before ever deploying for real:
-
-```
-bin/kamal config -d dev
-```
-
-**Important:** same LAN-only caveat as staging, `bin/kamal deploy -d dev`
-must be run from the repo owner's own machine on the same network as
-192.168.0.1.
 
 ### Deploying dev
 
