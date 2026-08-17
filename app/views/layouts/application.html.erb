@@ -162,8 +162,14 @@
             routes-generated URL helper. %>
         <%= link_to "Settings", settings_path,
               class: "text-sm text-gray-300 hover:text-emerald-400 transition-colors" %>
+
+        <%# Links to the API Keys admin page; api_keys_path is a
+            routes-generated URL helper for the `resources :api_keys`
+            declaration in config/routes.rb. %>
+        <%= link_to "API Keys", api_keys_path,
+              class: "text-sm text-gray-300 hover:text-emerald-400 transition-colors" %>
       <%# Closes the `<div class="flex items-center gap-6">` that wraps the
-          three navigation links above. %>
+          four navigation links above. %>
       </div>
     <%# Closes the centering `<div class="max-w-screen-xl ...">` opened
         above, which wraps both the logo and the nav links. %>

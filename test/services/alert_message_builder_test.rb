@@ -133,6 +133,27 @@ class AlertMessageBuilderTest < ActiveSupport::TestCase
   end
   # `end` closes the "html_body renders a table row per unit" test block above.
 
+  test "html_body escapes scraped facility/unit data instead of embedding it raw" do
+    # Facility/unit fields come from scraped, third-party HTML (see
+    # app/services/companies/), not from this app's own trusted data, so
+    # build_html_body must escape them before interpolating into the
+    # outgoing HTML email. Mutating the fixture object in memory (not
+    # persisting it) is enough here, AlertMessageBuilder never re-reads
+    # facility.company from the database mid-build, it works off the same
+    # in-memory Unit/Facility objects passed in.
+    unit = units(:current_gilbert_10x10)
+    unit.facility.company = %(<script>alert("xss")</script>)
+
+    message = AlertMessageBuilder.build(
+      alert_rules(:price_drop_rule),
+      [ { unit: unit, previous_price: 150 } ]
+    )
+
+    refute_includes message[:html_body], "<script>alert"
+    assert_includes message[:html_body], "&lt;script&gt;"
+  end
+  # `end` closes the "html_body escapes scraped facility/unit data..." test block above.
+
   test "sms_body is a single short line about the first unit" do
     message = AlertMessageBuilder.build(alert_rules(:price_drop_rule), triggered_units)
 
