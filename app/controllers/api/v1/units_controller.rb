@@ -23,7 +23,7 @@ module Api
       def index
         scope = Unit.apply_filters(filter_options).includes(:facility)
         scope = scope.where(facility_id: params[:facility_id]) if params[:facility_id].present?
-        scope = scope.where(monthly_price: ..params[:max_price].to_d) if params[:max_price].present?
+        scope = scope.where(monthly_price: ..parsed_max_price) if params[:max_price].present?
 
         total = scope.count
         units = scope.order(:monthly_price).limit(page_limit).offset(page_offset)
@@ -44,12 +44,11 @@ module Api
         }
       end
 
-      def page_limit
-        [ params.fetch(:limit, 50).to_i, 100 ].min.clamp(1, 100)
-      end
+      def parsed_max_price
+        price = Float(params[:max_price], exception: false)
+        raise Api::BaseController::InvalidParameter, "max_price must be numeric." if price.nil?
 
-      def page_offset
-        [ params.fetch(:offset, 0).to_i, 0 ].max
+        price
       end
 
       def unit_json(unit)

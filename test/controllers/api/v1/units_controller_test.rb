@@ -42,6 +42,14 @@ module Api
         assert body["units"].all? { |u| u["monthly_price"].to_f <= 100 }
       end
 
+      test "rejects a non-numeric max_price with a 400 instead of silently matching nothing" do
+        get api_v1_units_path(max_price: "cheap"), headers: auth_headers
+        assert_response :bad_request
+
+        body = JSON.parse(response.body)
+        assert_match(/numeric/, body["error"])
+      end
+
       test "includes facility summary on each unit" do
         get api_v1_units_path, headers: auth_headers
         assert_response :success

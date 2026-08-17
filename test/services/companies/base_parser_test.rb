@@ -152,13 +152,28 @@ class BaseParserTest < ActiveSupport::TestCase
   test "apply_filters drops excluded unit types" do
     p = parser
     # `unit_type: "parking"`, BaseParser's default `Unit::EXCLUDED_TYPES`
-    # list (referenced inside apply_filters when no `options[:excluded_types]`
+    # list (referenced inside apply_filters when no `options[:exclude_types]`
     # override is given) includes types like "parking" that should never
     # be surfaced as storage units.
     units = [ { size: "10x10", unit_type: "parking", climate_controlled: true } ]
     assert_empty p.send(:apply_filters, units)
   end
   # `end` closes the "apply_filters drops excluded unit types" test block above.
+
+  test "apply_filters honors an options[:exclude_types] override" do
+    # Locks in the fix for a key-name mismatch: apply_filters used to read
+    # `@options[:excluded_types]` (extra "d") while every caller in the app
+    # (CrawlsController, ScheduledCrawlCheckJob, Unit.apply_filters) builds/
+    # reads `exclude_types`, so a caller-supplied override here was silently
+    # ignored and this always fell back to Unit::EXCLUDED_TYPES instead.
+    # "standard" isn't in Unit::EXCLUDED_TYPES by default, so this only
+    # passes if the override itself is actually being read.
+    p = parser(options: { exclude_types: [ "standard" ] })
+    units = [ { size: "10x10", unit_type: "standard", climate_controlled: true } ]
+    assert_empty p.send(:apply_filters, units)
+  end
+  # `end` closes the "apply_filters honors an options[:exclude_types]
+  # override" test block above.
 
   test "apply_filters requires climate control only when that option is set" do
     # `parser(options: { climate_controlled: true })` calls the `parser`

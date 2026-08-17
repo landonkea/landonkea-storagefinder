@@ -200,14 +200,21 @@ class AlertMessageBuilder
       # code around it. Everything between `<<~HTML` and the closing
       # `HTML` marker is the String's content, with `#{...}` interpolation
       # still working inside it just like in a regular double-quoted string.
+      # `facility.company`/`facility.name`/`unit.size`/`unit.booking_url`
+      # all come from scraped, third-party HTML (see app/services/companies/),
+      # not from this app's own trusted data, so they're escaped with
+      # `CGI.escapeHTML` before being embedded in this email's HTML body.
+      # Without it, a company name or booking URL containing HTML special
+      # characters (e.g. a stray `"` breaking out of the href attribute)
+      # would be interpolated into the outgoing email verbatim.
       <<~HTML
         <tr>
-          <td>#{facility.company}</td>
-          <td>#{facility.name}</td>
-          <td>#{unit.size}</td>
+          <td>#{CGI.escapeHTML(facility.company.to_s)}</td>
+          <td>#{CGI.escapeHTML(facility.name.to_s)}</td>
+          <td>#{CGI.escapeHTML(unit.size.to_s)}</td>
           <td>#{unit.formatted_price}</td>
           #{ change ? "<td>#{change >= 0 ? "+" : ""}$#{change}</td>" : "<td>—</td>" }
-          <td><a href="#{unit.booking_url}">Book now</a></td>
+          <td><a href="#{CGI.escapeHTML(unit.booking_url.to_s)}">Book now</a></td>
         </tr>
       HTML
       # This nested ternary builds the "Change" table cell: if `change` is
@@ -224,7 +231,7 @@ class AlertMessageBuilder
     <<~HTML
       <html><body>
         <h2>StorageFinder Alert: #{build_subject}</h2>
-        <p>Rule: <strong>#{@rule.name}</strong></p>
+        <p>Rule: <strong>#{CGI.escapeHTML(@rule.name.to_s)}</strong></p>
         <table border="1" cellpadding="5" style="border-collapse:collapse">
           <tr>
             <th>Company</th><th>Facility</th><th>Size</th>

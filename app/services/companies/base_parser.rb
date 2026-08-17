@@ -912,8 +912,13 @@ class Companies::BaseParser
     # is how Ruby reaches a constant defined inside another
     # class/module).
 
-    # What unit types to exclude?
-    excluded_types = @options[:excluded_types] || Unit::EXCLUDED_TYPES
+    # What unit types to exclude? Key name matches CrawlsController#create,
+    # ScheduledCrawlCheckJob, and Unit.apply_filters, all of which build/read
+    # `exclude_types` (no "d"), this used to read `:excluded_types` here,
+    # a typo that meant every crawl silently ignored whatever was passed
+    # in and always fell back to the Unit::EXCLUDED_TYPES default, harmless
+    # today only because that's also the one value ever actually passed in.
+    excluded_types = @options[:exclude_types] || Unit::EXCLUDED_TYPES
 
     raw_units.select do |unit|
       # `.select do |unit| ... end` (also spelled `.filter` in Ruby) builds a

@@ -62,6 +62,14 @@ module Api
         assert body["facilities"].all? { |f| f.key?("distance_miles") }
       end
 
+      test "rejects non-numeric lat/lng with a 400 instead of silently treating it as 0,0" do
+        get api_v1_facilities_path(lat: "not-a-number", lng: -111.7890), headers: auth_headers
+        assert_response :bad_request
+
+        body = JSON.parse(response.body)
+        assert_match(/numeric/, body["error"])
+      end
+
       test "records usage on the api key" do
         assert_equal 0, @api_key.request_count
 

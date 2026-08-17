@@ -46,15 +46,14 @@ module Api
       def origin_coordinates
         return nil if params[:lat].blank? || params[:lng].blank?
 
-        { lat: params[:lat].to_f, lng: params[:lng].to_f }
-      end
+        lat = Float(params[:lat], exception: false)
+        lng = Float(params[:lng], exception: false)
 
-      def page_limit
-        [ params.fetch(:limit, 50).to_i, 100 ].min.clamp(1, 100)
-      end
+        if lat.nil? || lng.nil?
+          raise Api::BaseController::InvalidParameter, "lat and lng must be numeric."
+        end
 
-      def page_offset
-        [ params.fetch(:offset, 0).to_i, 0 ].max
+        { lat: lat, lng: lng }
       end
 
       def facility_json(facility, origin, include_units: false)

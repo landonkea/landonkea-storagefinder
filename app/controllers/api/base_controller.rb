@@ -19,6 +19,16 @@
 
 module Api
   class BaseController < ActionController::API
+    # Raised by a subclass action (or one of its private helpers, e.g.
+    # FacilitiesController#origin_coordinates) when a query param is
+    # present but not usable, a non-numeric `lat`/`lng`/`max_price`, for
+    # example. Kept as a real, named exception (rather than each action
+    # rendering the error itself and remembering to `return` right after)
+    # so raising it from a deeply-nested private helper still reliably
+    # produces one clean JSON error response, the same reasoning that
+    # already applies to ActiveRecord::RecordNotFound below.
+    class InvalidParameter < StandardError; end
+
     before_action :authenticate_api_key!
     after_action :record_api_key_usage
 
@@ -28,8 +38,20 @@ module Api
     # and rendering JSON keeps every response from this API consistently
     # JSON-shaped instead of occasionally leaking an HTML error page.
     rescue_from ActiveRecord::RecordNotFound, with: :render_not_found
+    rescue_from InvalidParameter, with: :render_bad_request
 
     private
+
+    # Shared pagination helpers, identical rules for every list endpoint
+    # under app/controllers/api/v1/ (previously duplicated verbatim in
+    # FacilitiesController and UnitsController).
+    def page_limit
+      [ params.fetch(:limit, 50).to_i, 100 ].min.clamp(1, 100)
+    end
+
+    def page_offset
+      [ params.fetch(:offset, 0).to_i, 0 ].max
+    end
 
     # Accepts the token either as a standard Bearer Authorization header
     # (preferred: `Authorization: Bearer <token>`) or as an `api_key` query
@@ -57,6 +79,10 @@ module Api
 
     def render_not_found
       render json: { error: "Not found" }, status: :not_found
+    end
+
+    def render_bad_request(error)
+      render json: { error: error.message }, status: :bad_request
     end
 
     # Bumps last_used_at/request_count once per successfully-authenticated
